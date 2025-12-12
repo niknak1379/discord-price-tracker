@@ -14,6 +14,6 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	bot.BotToken = os.Getenv("PUBLIC_KEY")
-	println("public key:", os.Getenv("PUBLIC_KEY"))
+
 	bot.Run() // call the run function of bot/bot.go
 }

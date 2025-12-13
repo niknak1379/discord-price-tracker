@@ -14,16 +14,166 @@ var BotToken string
 
 var commandList = []*discordgo.ApplicationCommand{
 	{
-		Name:        "hi",
-		Description: "basic stuff",
+		Name:        "add_tracker",
+		Description: "Add new Price Tracker",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Name:        "name",
+				Description: "Add item name",
+				Type:        discordgo.ApplicationCommandOptionString,
+				Required:    true,
+			},
+			{
+				Name:        "uri",
+				Description: "Add Scrapping URI",
+				Type:        discordgo.ApplicationCommandOptionString,
+				Required:    true,
+			},
+			{
+				Name:        "html_tag",
+				Description: "Add Scrapping HTML Tag",
+				Type:        discordgo.ApplicationCommandOptionString,
+				Required:    true,
+			},
+		},
+	},
+	{
+		Name:        "list_tracker_links",
+		Description: "Add all links for the item",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Name:        "name",
+				Description: "Add item name",
+				Type:        discordgo.ApplicationCommandOptionString,
+				Required:    true,
+			},
+		},
+	},
+	{
+		Name:        "remove_tracker",
+		Description: "Remove Price Tracker",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Name:        "item_name",
+				Description: "Item Name to be removed",
+				Type:        discordgo.ApplicationCommandOptionString,
+				Required:    true,
+			},
+		},
+	},
+	{
+		Name:        "remove_item",
+		Description: "remove item completely",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Name:        "name",
+				Description: "Add item name",
+				Type:        discordgo.ApplicationCommandOptionString,
+				Required:    true,
+			},
+		},
+	},
+	{
+		Name:        "edit_tracker",
+		Description: "Edit a currently Existing Tracker",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Name:        "add_additional_tracking",
+				Description: "add new pair of tracking URI and HTML",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Name:        "name",
+						Description: "Add item name",
+						Type:        discordgo.ApplicationCommandOptionString,
+						Required:    true,
+					},
+					{
+						Name:        "uri",
+						Description: "Add Scrapping URI",
+						Type:        discordgo.ApplicationCommandOptionString,
+						Required:    true,
+					},
+					{
+						Name:        "html_tag",
+						Description: "Add Scrapping HTML Tag",
+						Type:        discordgo.ApplicationCommandOptionString,
+						Required:    true,
+					},
+				},
+			},
+			{
+				Name:        "remove_existing_tracking_option",
+				Description: "remove pair of tracking URI and HTML",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Name:        "name",
+						Description: "Add item name",
+						Type:        discordgo.ApplicationCommandOptionString,
+						Required:    true,
+					},
+					{
+						Name:        "uri",
+						Description: "Add Scrapping URI",
+						Type:        discordgo.ApplicationCommandOptionString,
+						Required:    true,
+					},
+					{
+						Name:        "html_tag",
+						Description: "Add Scrapping HTML Tag",
+						Type:        discordgo.ApplicationCommandOptionString,
+						Required:    true,
+					},
+				},
+			},
+		},
 	},
 }
 var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.InteractionCreate){
-	"hi": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"add_tracker": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		options := i.ApplicationCommandData().Options
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "Hey there! Congratulations, you just executed your first slash command",
+				// three options for the three that were required by the command definition
+				Content: fmt.Sprintf("%s , %s, %s", options[0].Name, options[1].Name, options[2].Value),
+			},
+		})
+	},
+	"remove_tracker": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Removing Tracker, will confirm later",
+			},
+		})
+	},
+	"remove_item": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Removing item from catalog",
+			},
+		})
+	},
+	"eidt_tracker": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		options := i.ApplicationCommandData().Options
+		content := ""
+
+		// As you can see, names of subcommands (nested, top-level)
+		// and subcommand groups are provided through the arguments.
+		switch options[0].Name {
+		case "add_additional_tracking":
+			content = "The top-level subcommand is executed. Now try to execute the nested one."
+		case "remove_existing_tracking_option":
+			content = "remove existing"
+		}
+
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: content,
 			},
 		})
 	},

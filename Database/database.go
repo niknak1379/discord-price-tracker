@@ -12,25 +12,25 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
-type trackingInfo struct {
+type TrackingInfo struct {
 	URI       string `bson:"URI"`
-	htmlQuery string `bson:"htmlQuery"`
+	HtmlQuery string `bson:"htmlQuery"`
 }
-type item struct {
+type Item struct {
 	Name         string `bson:"Name"`
-	trackingList []*trackingInfo `bson:"trackingList"`
+	TrackingList []*TrackingInfo `bson:"trackingList"`
 }
+var Client *mongo.Client
 
-
-func addItem(itemName string, uri string, query string, client *mongo.Client) *mongo.InsertOneResult{
-	t := trackingInfo{
+func AddItem(itemName string, uri string, query string, client *mongo.Client) *mongo.InsertOneResult{
+	t := TrackingInfo{
 		URI: uri,
-		htmlQuery: query,
+		HtmlQuery: query,
 	}
-	arr := []*trackingInfo{&t}
-	i := item{
+	arr := []*TrackingInfo{&t}
+	i := Item{
 		Name: itemName,
-		trackingList: arr,
+		TrackingList: arr,
 	}
 	table := client.Database("tracker").Collection("items")
 	result, err := table.InsertOne(context.TODO(), i)
@@ -66,17 +66,17 @@ func init() {
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.Client().ApplyURI(os.Getenv("MONGODB_URI")).SetServerAPIOptions(serverAPI)
 	// Create a new client and connect to the server
-	client, err := mongo.Connect(opts)
+	Client, err = mongo.Connect(opts)
 	if err != nil {
 		panic(err)
 	}
 	defer func() {
-		if err = client.Disconnect(context.TODO()); err != nil {
+		if err = Client.Disconnect(context.TODO()); err != nil {
 			panic(err)
 		}
 	}()
 	// Send a ping to confirm a successful connection
-	if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
+	if err := Client.Ping(context.TODO(), readpref.Primary()); err != nil {
 		panic(err)
 	}
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")

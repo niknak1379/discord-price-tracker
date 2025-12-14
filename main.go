@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	database "priceTracker/Database"
 	"priceTracker/bot"
 
 	"github.com/joho/godotenv"
@@ -14,15 +15,7 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	bot.BotToken = os.Getenv("PUBLIC_KEY")
-	t := database.trackingInfo{
-		URI: "hi",
-		htmlQuery: "hi",
-	}
-	arr := []*database.trackingInfo{&t}
-	i := database.item{
-		Name: "name",
-		trackingList: arr,
-	}
-	database.addItem()
+	
+	database.AddItem("name", "uri", "query", database.Client)
 	bot.Run() // call the run function of bot/bot.go
 }

@@ -157,7 +157,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			},
 		})
 	},
-	"eidt_tracker": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"edit_tracker": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
 		content := ""
 

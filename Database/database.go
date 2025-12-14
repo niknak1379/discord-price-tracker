@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
@@ -21,7 +22,7 @@ type Item struct {
 	TrackingList []*TrackingInfo `bson:"trackingList"`
 }
 var Client *mongo.Client
-
+var Table *mongo.Collection
 func AddItem(itemName string, uri string, query string, client *mongo.Client) *mongo.InsertOneResult{
 	t := TrackingInfo{
 		URI: uri,
@@ -32,21 +33,38 @@ func AddItem(itemName string, uri string, query string, client *mongo.Client) *m
 		Name: itemName,
 		TrackingList: arr,
 	}
-	table := client.Database("tracker").Collection("Items")
-	fmt.Println("table", table)
-	result, err := table.InsertOne(context.TODO(), i)
+	fmt.Println("table", Table)
+	result, err := Table.InsertOne(context.TODO(), i)
 	if err != nil{
 		panic(err)
 	}
 	return result
 }
+
+
+
+func getAllItems() []Item {
+	cursor, err := Table.Find(context.TODO(), bson.M{})
+	if err == nil{
+		panic(err)
+	}
+	var result []Item
+	err = cursor.All(context.TODO(), result)
+	if err == nil{
+		panic(err)
+	}
+	return result
+}
+
+func getItem(itemName string) Item {
+	var res Item
+	err := Table.FindOne(context.TODO(), bson.M{}).Decode(res)
+	if err == nil{
+		panic(err)
+	}
+	return res
+}
 /*
-func getItem(itemName string) item {
-
-}
-func getAllItems() []*item {
-
-}
 func removeItem(itemName string) item {
 
 }
@@ -76,6 +94,6 @@ func init() {
 	if err := Client.Ping(context.TODO(), readpref.Primary()); err != nil {
 		panic(err)
 	}
-
+	Table := Client.Database("tracker").Collection("Items")
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 }

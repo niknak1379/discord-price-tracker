@@ -13,14 +13,32 @@ import (
 )
 
 type trackingInfo struct {
-	URI       string
-	htmlQuery string
+	URI       string `bson:"URI"`
+	htmlQuery string `bson:"htmlQuery"`
 }
 type item struct {
-	Name         string
-	trackingList []*trackingInfo
+	Name         string `bson:"Name"`
+	trackingList []*trackingInfo `bson:"trackingList"`
 }
 
+
+func addItem(itemName string, uri string, query string, client *mongo.Client) *mongo.InsertOneResult{
+	t := trackingInfo{
+		URI: uri,
+		htmlQuery: query,
+	}
+	arr := []*trackingInfo{&t}
+	i := item{
+		Name: itemName,
+		trackingList: arr,
+	}
+	table := client.Database("tracker").Collection("items")
+	result, err := table.InsertOne(context.TODO(), i)
+	if err != nil{
+		panic(err)
+	}
+	return result
+}
 /*
 func getItem(itemName string) item {
 
@@ -39,7 +57,7 @@ func removeTrackingInfo(itemName string, uri string) item {
 }
 */
 
-func Run() {
+func init() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("error loading .env file")

@@ -23,7 +23,7 @@ type Item struct {
 }
 var Client *mongo.Client
 var Table *mongo.Collection
-func AddItem(itemName string, uri string, query string, client *mongo.Client) *mongo.InsertOneResult{
+func AddItem(itemName string, uri string, query string) *mongo.InsertOneResult{
 	t := TrackingInfo{
 		URI: uri,
 		HtmlQuery: query,
@@ -43,23 +43,25 @@ func AddItem(itemName string, uri string, query string, client *mongo.Client) *m
 
 
 
-func getAllItems() []Item {
+func GetAllItems() []Item {
 	cursor, err := Table.Find(context.TODO(), bson.M{})
-	if err == nil{
+	if err != nil{
 		panic(err)
 	}
 	var result []Item
-	err = cursor.All(context.TODO(), result)
-	if err == nil{
+	err = cursor.All(context.TODO(), &result)
+	defer cursor.Close(context.TODO())
+	if err != nil{
 		panic(err)
 	}
 	return result
 }
 
-func getItem(itemName string) Item {
+func GetItem(itemName string) Item {
 	var res Item
-	err := Table.FindOne(context.TODO(), bson.M{}).Decode(res)
-	if err == nil{
+	filter := bson.M{"Name": itemName}
+	err := Table.FindOne(context.TODO(), filter).Decode(&res)
+	if err != nil{
 		panic(err)
 	}
 	return res
@@ -85,7 +87,7 @@ func init() {
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.Client().ApplyURI(os.Getenv("MONGODB_URI")).SetServerAPIOptions(serverAPI)
 	// Create a new client and connect to the server
-	Client, _ = mongo.Connect(opts)
+	Client, err = mongo.Connect(opts)
 	if err != nil {
 		panic(err)
 	}
@@ -94,6 +96,10 @@ func init() {
 	if err := Client.Ping(context.TODO(), readpref.Primary()); err != nil {
 		panic(err)
 	}
-	Table := Client.Database("tracker").Collection("Items")
+	Table = Client.Database("tracker").Collection("Items")
+	AddItem("hi", "hi", "htmlTag")
+	fmt.Println("did add item")
+	fmt.Println("get all items", GetAllItems())
+	fmt.Println("get hi", GetItem("hi"))
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 }

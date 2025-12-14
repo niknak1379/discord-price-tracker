@@ -32,7 +32,8 @@ func AddItem(itemName string, uri string, query string, client *mongo.Client) *m
 		Name: itemName,
 		TrackingList: arr,
 	}
-	table := client.Database("tracker").Collection("items")
+	table := client.Database("tracker").Collection("Items")
+	fmt.Println("table", table)
 	result, err := table.InsertOne(context.TODO(), i)
 	if err != nil{
 		panic(err)
@@ -66,18 +67,15 @@ func init() {
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.Client().ApplyURI(os.Getenv("MONGODB_URI")).SetServerAPIOptions(serverAPI)
 	// Create a new client and connect to the server
-	Client, err = mongo.Connect(opts)
+	Client, _ = mongo.Connect(opts)
 	if err != nil {
 		panic(err)
 	}
-	defer func() {
-		if err = Client.Disconnect(context.TODO()); err != nil {
-			panic(err)
-		}
-	}()
+	
 	// Send a ping to confirm a successful connection
 	if err := Client.Ping(context.TODO(), readpref.Primary()); err != nil {
 		panic(err)
 	}
+
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 }

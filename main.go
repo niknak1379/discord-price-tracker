@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	database "priceTracker/Database"
@@ -18,4 +19,9 @@ func main() {
 	
 	database.AddItem("name", "uri", "query", database.Client)
 	bot.Run() // call the run function of bot/bot.go
+	defer func() {
+		if err = database.Client.Disconnect(context.TODO()); err != nil {
+			panic(err)
+		}
+	}()
 }

@@ -141,16 +141,23 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
 		// 0 is item name, 1 is uri, 2 is htmlqueryselector
+		content := ""
 
 		// add tracker to database
-		getRes := database.GetItem(options[0].StringValue())
-		returnstr, _ := json.Marshal(getRes)
+		getRes, err := database.GetItem(options[0].StringValue())
+		if (err != nil){
+			content = err.Error()
+		} else{
+			returnstr, _ := json.Marshal(getRes)
+			content = string(returnstr)
+		}
+
 		// set up response to discord client
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				// three options for the three that were required by the command definition
-				Content: string(returnstr),
+				Content: content,
 			},
 		})
 	},
@@ -195,12 +202,20 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		switch options[0].Name {
 		case "add_additional_tracking":
 			htmlQuery := options[0].Options[2].StringValue()
-			database.AddTrackingInfo(name, uri, htmlQuery)
+			res, err := database.AddTrackingInfo(name, uri, htmlQuery)
+			if (err != nil){
+				content = err.Error()
+			}else{
+				content = fmt.Sprint(res)
+			}
 			
-			content = fmt.Sprint(content)
 		case "remove_existing_tracking_option":
-			database.RemoveTrackingInfo(name, uri)
-			content = fmt.Sprint(content)
+			res, err := database.RemoveTrackingInfo(name, uri)
+			if (err != nil){
+				content = err.Error()
+			}else{
+				content = fmt.Sprint(res)
+			}
 		}
 
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{

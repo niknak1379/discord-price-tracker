@@ -57,14 +57,14 @@ func GetAllItems() []Item {
 	return result
 }
 
-func GetItem(itemName string) Item {
+func GetItem(itemName string) (Item, error) {
 	var res Item
 	filter := bson.M{"Name": itemName}
 	err := Table.FindOne(context.TODO(), filter).Decode(&res)
 	if err != nil{
-		panic(err)
+		return res, err
 	}
-	return res
+	return res, err
 }
 
 func RemoveItem(itemName string)  *mongo.DeleteResult{
@@ -76,7 +76,7 @@ func RemoveItem(itemName string)  *mongo.DeleteResult{
 	return results
 }
 
-func AddTrackingInfo(itemName string, uri string, querySelector string) Item{
+func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, error){
 	filter := bson.M{"Name": itemName}
 	t := TrackingInfo{
 		URI:       uri,
@@ -88,12 +88,12 @@ func AddTrackingInfo(itemName string, uri string, querySelector string) Item{
 	var result Item
 	err := Table.FindOneAndUpdate(context.TODO(), filter, update).Decode(&result)
 	if err != nil{
-		panic(err)
+		return result, err
 	}
-	return result
+	return result, err
 } 
 
-func RemoveTrackingInfo(itemName string, uri string) Item {
+func RemoveTrackingInfo(itemName string, uri string) (Item, error) {
 	filter := bson.M{
 		"Name": itemName, 
 	}
@@ -103,9 +103,9 @@ func RemoveTrackingInfo(itemName string, uri string) Item {
 	var result Item
 	err := Table.FindOneAndUpdate(context.TODO(), filter, update).Decode(&result)
 	if err != nil{
-		panic(err)
+		return result, err
 	}
-	return result
+	return result, err
 }
 
 

@@ -128,12 +128,12 @@ func init() {
 		panic(err)
 	}
 	Table = Client.Database("tracker").Collection("Items")
-	AddItem("hi", "hi", "htmlTag")
+	/* AddItem("hi", "hi", "htmlTag")
 	fmt.Println("did add item")
 	fmt.Println("get all items", GetAllItems())
 	fmt.Println("get hi", GetItem("hi"))
 	fmt.Println(AddTrackingInfo("hi", "second URI", "second Query"))
 	fmt.Println(RemoveTrackingInfo("hi", "hi"))
-	fmt.Println("get hi", GetItem("hi"))
+	fmt.Println("get hi", GetItem("hi")) */
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 }

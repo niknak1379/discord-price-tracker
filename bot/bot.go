@@ -1,10 +1,12 @@
 package bot
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	database "priceTracker/Database"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -14,7 +16,7 @@ var BotToken string
 
 var commandList = []*discordgo.ApplicationCommand{
 	{
-		Name:        "add_tracker",
+		Name:        "add_item",
 		Description: "Add new Price Tracker",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
@@ -38,7 +40,7 @@ var commandList = []*discordgo.ApplicationCommand{
 		},
 	},
 	{
-		Name:        "list_tracker_links",
+		Name:        "get_item",
 		Description: "Add all links for the item",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
@@ -50,16 +52,8 @@ var commandList = []*discordgo.ApplicationCommand{
 		},
 	},
 	{
-		Name:        "remove_tracker",
-		Description: "Remove Price Tracker",
-		Options: []*discordgo.ApplicationCommandOption{
-			{
-				Name:        "item_name",
-				Description: "Item Name to be removed",
-				Type:        discordgo.ApplicationCommandOptionString,
-				Required:    true,
-			},
-		},
+		Name:        "get_all_items",
+		Description: "get all items",
 	},
 	{
 		Name:        "remove_item",
@@ -119,41 +113,72 @@ var commandList = []*discordgo.ApplicationCommand{
 						Type:        discordgo.ApplicationCommandOptionString,
 						Required:    true,
 					},
-					{
-						Name:        "html_tag",
-						Description: "Add Scrapping HTML Tag",
-						Type:        discordgo.ApplicationCommandOptionString,
-						Required:    true,
-					},
 				},
 			},
 		},
 	},
 }
 var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.InteractionCreate){
-	"add_tracker": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"add_item": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
+		// 0 is item name, 1 is uri, 2 is htmlqueryselector
+
+		// add tracker to database
+		addRes := database.AddItem(options[0].StringValue(), options[1].StringValue(), options[2].StringValue())
+
+		// set up response to discord client
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				// three options for the three that were required by the command definition
-				Content: fmt.Sprintf("%s , %s, %s", options[0].Name, options[1].Name, options[2].Value),
+				Content: fmt.Sprint(addRes),
 			},
 		})
 	},
-	"remove_tracker": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	
+	"get_item": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+		// 0 is item name, 1 is uri, 2 is htmlqueryselector
+
+		// add tracker to database
+		getRes := database.GetItem(options[0].StringValue())
+		returnstr, _ := json.Marshal(getRes)
+		// set up response to discord client
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "Removing Tracker, will confirm later",
+				// three options for the three that were required by the command definition
+				Content: string(returnstr),
+			},
+		})
+	},
+	"get_all_items": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// add tracker to database
+		getRes := database.GetAllItems()
+		returnstr, _ := json.Marshal(getRes)
+		// set up response to discord client
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				// three options for the three that were required by the command definition
+				Content: string(returnstr),
 			},
 		})
 	},
 	"remove_item": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+
+		// add tracker to database
+		deleteRes := database.RemoveItem(options[0].StringValue())
+
+		// set up response to discord client
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "Removing item from catalog",
+				Content: fmt.Sprint(deleteRes),
 			},
 		})
 	},
@@ -161,13 +186,21 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		options := i.ApplicationCommandData().Options
 		content := ""
 
+		// get option values
+		name := options[0].Options[0].StringValue()
+		uri := options[0].Options[1].StringValue()
+		
 		// As you can see, names of subcommands (nested, top-level)
 		// and subcommand groups are provided through the arguments.
 		switch options[0].Name {
 		case "add_additional_tracking":
-			content = "The top-level subcommand is executed. Now try to execute the nested one."
+			htmlQuery := options[0].Options[2].StringValue()
+			database.AddTrackingInfo(name, uri, htmlQuery)
+			
+			content = fmt.Sprint(content)
 		case "remove_existing_tracking_option":
-			content = "remove existing"
+			database.RemoveTrackingInfo(name, uri)
+			content = fmt.Sprint(content)
 		}
 
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{

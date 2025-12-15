@@ -15,11 +15,11 @@ import (
 
 type TrackingInfo struct {
 	URI       string `bson:"URI"`
-	HtmlQuery string `bson:"htmlQuery"`
+	HtmlQuery string `bson:"HtmlQuery"`
 }
 type Item struct {
 	Name         string `bson:"Name"`
-	TrackingList []*TrackingInfo `bson:"trackingList"`
+	TrackingList []*TrackingInfo `bson:"TrackingList"`
 }
 var Client *mongo.Client
 var Table *mongo.Collection
@@ -66,17 +66,48 @@ func GetItem(itemName string) Item {
 	}
 	return res
 }
-/*
-func removeItem(itemName string) item {
 
+func RemoveItem(itemName string)  *mongo.DeleteResult{
+	filter := bson.M{"Name": itemName}
+	results, err := Table.DeleteOne(context.TODO(), filter)
+	if err != nil{
+		panic(err)
+	}
+	return results
 }
-func addTrackingInfo(itemName string, uri string) item {
 
-}
-func removeTrackingInfo(itemName string, uri string) item {
+func AddTrackingInfo(itemName string, uri string, querySelector string) Item{
+	filter := bson.M{"Name": itemName}
+	t := TrackingInfo{
+		URI:       uri,
+		HtmlQuery: querySelector,
+	}
+	update := bson.M{"$push": bson.M{
+		"TrackingList": t,
+	}} 
+	var result Item
+	err := Table.FindOneAndUpdate(context.TODO(), filter, update).Decode(&result)
+	if err != nil{
+		panic(err)
+	}
+	return result
+} 
 
+func RemoveTrackingInfo(itemName string, uri string) Item {
+	filter := bson.M{
+		"Name": itemName, 
+	}
+
+	update := bson.M{"$pull": bson.M{"TrackingList": bson.M{"URI": uri}}}
+	
+	var result Item
+	err := Table.FindOneAndUpdate(context.TODO(), filter, update).Decode(&result)
+	if err != nil{
+		panic(err)
+	}
+	return result
 }
-*/
+
 
 func init() {
 	err := godotenv.Load()
@@ -100,6 +131,9 @@ func init() {
 	AddItem("hi", "hi", "htmlTag")
 	fmt.Println("did add item")
 	fmt.Println("get all items", GetAllItems())
+	fmt.Println("get hi", GetItem("hi"))
+	fmt.Println(AddTrackingInfo("hi", "second URI", "second Query"))
+	fmt.Println(RemoveTrackingInfo("hi", "hi"))
 	fmt.Println("get hi", GetItem("hi"))
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 }

@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"os"
+	"priceTracker/bot"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -41,7 +43,7 @@ func AddItem(itemName string, uri string, query string) *mongo.InsertOneResult{
 	PriceArr := []*Price{}
 	p := Price{
 		Date: time.Now(),
-		Price: 0,
+		Price: math.MaxInt,
 		Url: "",
 	}
 	i := Item{
@@ -58,7 +60,7 @@ func AddItem(itemName string, uri string, query string) *mongo.InsertOneResult{
 	return result
 }
 
-func addNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.Time) (Item, error){
+func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.Time) (Item, error){
 	Price := Price{
 		Price: newPrice,
 		Url: uri,
@@ -100,6 +102,7 @@ func UpdateLowestPrice(Name string, newLow Price) (Item, error){
 	if err != nil{
 		return res, err
 	}
+	bot.LowestPriceAlert(bot.Discord, Name, newLow.Price, newLow.Url)
 	return res, err
 }
 func GetAllItems() []Item {

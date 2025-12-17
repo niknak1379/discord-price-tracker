@@ -42,7 +42,7 @@ func AddItem(itemName string, uri string, query string) *mongo.InsertOneResult{
 	PriceArr := []*Price{}
 	p := Price{
 		Date: time.Now(),
-		Price: math.MaxInt,
+		Price: math.MaxInt32,
 		Url: "",
 	}
 	i := Item{
@@ -83,14 +83,14 @@ func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.
 }
 func GetLowestPrice(Name string) (Price, error){
 	filter := bson.M{"Name": Name}
-	opts := options.FindOne().SetProjection(bson.D{{"LowestPrice", 1}})
-	var res Price
+	opts := options.FindOne().SetProjection(bson.M{"LowestPrice": 1})
+	var res Item
 	err := Table.FindOne(context.TODO(), filter, opts).Decode(&res)
 	if err != nil{
-		return res, err
+		return res.LowestPrice, err
 	}
-	log.Printf("getting lowest price of %d for %s", res.Price, Name)
-	return res, err
+	log.Printf("getting lowest price of %d for %s", res.LowestPrice.Price, res.LowestPrice.Url)
+	return res.LowestPrice, err
 }
 func UpdateLowestPrice(Name string, newLow Price) (Item, error){
 	filter := bson.M{"Name" : Name}

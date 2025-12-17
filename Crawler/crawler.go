@@ -91,7 +91,7 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow int, date tim
 	}
 	database.AddNewPrice(Name, URI, newPrice, oldLow, date)
 	if oldLow > newPrice {
-			bot.LowestPriceAlert(bot.Discord, Name, oldLow, URI)
+			bot.LowestPriceAlert(bot.Discord, Name, newPrice, oldLow, URI)
 	}
 }
 func getPrice(uri string, querySelector string) (int, error) {

@@ -33,6 +33,7 @@ type Item struct {
 
 var Client *mongo.Client
 var Table *mongo.Collection
+var ctx context.Context
 func AddItem(itemName string, uri string, query string) *mongo.InsertOneResult{
 	t := TrackingInfo{
 		URI: uri,
@@ -51,7 +52,7 @@ func AddItem(itemName string, uri string, query string) *mongo.InsertOneResult{
 		TrackingList: arr,
 		PriceHistory: PriceArr,			// init empty price arr
 	}
-	result, err := Table.InsertOne(context.TODO(), i)
+	result, err := Table.InsertOne(ctx, i)
 	if err != nil{
 		panic(err)
 	}
@@ -74,7 +75,7 @@ func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.
 	}} 
 	var result Item
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}})
-	err := Table.FindOneAndUpdate(context.TODO(), filter, update, opts).Decode(&result)
+	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil{
 		return result, err
 	}
@@ -85,7 +86,7 @@ func GetLowestPrice(Name string) (Price, error){
 	filter := bson.M{"Name": Name}
 	opts := options.FindOne().SetProjection(bson.M{"LowestPrice": 1})
 	var res Item
-	err := Table.FindOne(context.TODO(), filter, opts).Decode(&res)
+	err := Table.FindOne(ctx, filter, opts).Decode(&res)
 	if err != nil{
 		return res.LowestPrice, err
 	}
@@ -99,7 +100,7 @@ func UpdateLowestPrice(Name string, newLow Price) (Item, error){
 		"LowestPrice" : newLow,
 	}
 	var res Item
-	err := Table.FindOneAndUpdate(context.TODO(), filter, update, opts).Decode(&res)
+	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
 	if err != nil{
 		return res, err
 	}
@@ -108,13 +109,13 @@ func UpdateLowestPrice(Name string, newLow Price) (Item, error){
 }
 func GetAllItems() []*Item {
 	opts := options.Find().SetProjection(bson.D{{"PriceHistory", 0}})
-	cursor, err := Table.Find(context.TODO(), bson.M{}, opts)
+	cursor, err := Table.Find(ctx, bson.M{}, opts)
 	if err != nil{
 		panic(err)
 	}
 	var result []*Item
-	err = cursor.All(context.TODO(), &result)
-	defer cursor.Close(context.TODO())
+	err = cursor.All(ctx, &result)
+	defer cursor.Close(ctx)
 	if err != nil{
 		panic(err)
 	}
@@ -126,7 +127,7 @@ func GetItem(itemName string) (Item, error) {
 	var res Item
 	filter := bson.M{"Name": itemName}
 	opts := options.FindOne().SetProjection(bson.D{{"PriceHistory", 0}})
-	err := Table.FindOne(context.TODO(), filter, opts).Decode(&res)
+	err := Table.FindOne(ctx, filter, opts).Decode(&res)
 	if err != nil{
 		return res, err
 	}
@@ -135,7 +136,7 @@ func GetItem(itemName string) (Item, error) {
 
 func RemoveItem(itemName string)  *mongo.DeleteResult{
 	filter := bson.M{"Name": itemName}
-	results, err := Table.DeleteOne(context.TODO(), filter)
+	results, err := Table.DeleteOne(ctx, filter)
 	if err != nil{
 		panic(err)
 	}
@@ -153,7 +154,7 @@ func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, e
 	}} 
 	var result Item
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}})
-	err := Table.FindOneAndUpdate(context.TODO(), filter, update, opts).Decode(&result)
+	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil{
 		return result, err
 	}
@@ -169,7 +170,7 @@ func RemoveTrackingInfo(itemName string, uri string) (Item, error) {
 	
 	var result Item
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}})
-	err := Table.FindOneAndUpdate(context.TODO(), filter, update, opts).Decode(&result)
+	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil{
 		return result, err
 	}
@@ -177,7 +178,7 @@ func RemoveTrackingInfo(itemName string, uri string) (Item, error) {
 }
 
 
-func init() {
+func InitDB(ctx context.Context, cancel context.CancelFunc) {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("error loading .env file")
@@ -192,7 +193,7 @@ func init() {
 	}
 	
 	// Send a ping to confirm a successful connection
-	if err := Client.Ping(context.TODO(), readpref.Primary()); err != nil {
+	if err := Client.Ping(ctx, readpref.Primary()); err != nil {
 		panic(err)
 	}
 	Table = Client.Database("tracker").Collection("Items")

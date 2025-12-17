@@ -17,11 +17,14 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	bot.BotToken = os.Getenv("PUBLIC_KEY")
-	go crawler.InitCrawler()
+	ctx, cancel := context.WithCancel(context.Background())
+	database.InitDB(ctx, cancel)
+	go crawler.InitCrawler(ctx, cancel)
 	bot.Run() // call the run function of bot/bot.go
 	defer func() {
 		if err = database.Client.Disconnect(context.TODO()); err != nil {
 			panic(err)
 		}
+		cancel()
 	}()
 }

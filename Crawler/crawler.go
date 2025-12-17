@@ -15,10 +15,10 @@ import (
 )
 var Colly *colly.Collector
 
-func InitCrawler(){
+func InitCrawler(ctx context.Context, cancel context.CancelFunc){
 	log.Println("initalizing crawler")
 	// --------------------------- initiaize scrapper headers and settings ------- //
-	ctx, cancel := context.WithCancel(context.Background())
+	
 	Colly = colly.NewCollector(
 		colly.MaxDepth(1),
         colly.AllowURLRevisit(),

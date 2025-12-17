@@ -51,11 +51,11 @@ func AddItem(itemName string, uri string, query string) *mongo.InsertOneResult{
 		TrackingList: arr,
 		PriceHistory: PriceArr,			// init empty price arr
 	}
-	fmt.Println("table", Table)
 	result, err := Table.InsertOne(context.TODO(), i)
 	if err != nil{
 		panic(err)
 	}
+	log.Println("adding new item", itemName)
 	return result
 }
 
@@ -78,6 +78,7 @@ func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.
 	if err != nil{
 		return result, err
 	}
+	log.Printf("adding new price for %s with price %d for url %s", Name, newPrice, uri)
 	return result, err
 }
 func GetLowestPrice(Name string) (Price, error){
@@ -88,6 +89,7 @@ func GetLowestPrice(Name string) (Price, error){
 	if err != nil{
 		return res, err
 	}
+	log.Printf("getting lowest price of %d for %s", res.Price, Name)
 	return res, err
 }
 func UpdateLowestPrice(Name string, newLow Price) (Item, error){
@@ -101,20 +103,22 @@ func UpdateLowestPrice(Name string, newLow Price) (Item, error){
 	if err != nil{
 		return res, err
 	}
+	log.Printf("updating lowest price of %d for %s", newLow.Price, Name)
 	return res, err
 }
-func GetAllItems() []Item {
+func GetAllItems() []*Item {
 	opts := options.Find().SetProjection(bson.D{{"PriceHistory", 0}})
 	cursor, err := Table.Find(context.TODO(), bson.M{}, opts)
 	if err != nil{
 		panic(err)
 	}
-	var result []Item
+	var result []*Item
 	err = cursor.All(context.TODO(), &result)
 	defer cursor.Close(context.TODO())
 	if err != nil{
 		panic(err)
 	}
+	log.Println("getting all items")
 	return result
 }
 

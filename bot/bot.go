@@ -333,5 +333,7 @@ func LowestPriceAlert(discord *discordgo.Session, itemName string, price int, UR
 func CrawlErrorAlert(discord *discordgo.Session, itemName string, URL string, err error){
 	content := fmt.Sprintf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
 	itemName, URL, err.Error())
+	log.Printf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
+	itemName, URL, err.Error())
 	discord.ChannelMessageSend("803818389755265075", content)
 }

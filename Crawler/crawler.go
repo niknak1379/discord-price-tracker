@@ -15,8 +15,8 @@ import (
 )
 var Colly *colly.Collector
 
-func init(){
-
+func InitCrawler(){
+	log.Println("initalizing crawler")
 	// --------------------------- initiaize scrapper headers and settings ------- //
 	ctx, cancel := context.WithCancel(context.Background())
 	Colly = colly.NewCollector(
@@ -48,8 +48,10 @@ func init(){
     })
 
 	// -------------------- set timer for daily scrapping -------------//
+	updateAllPrices()
 	go func() {
 		ticker := time.NewTicker(24 * time.Hour)
+		log.Println("setting ticker in crawler")
 		defer ticker.Stop()
 		for {
 			select{
@@ -83,7 +85,7 @@ func updateAllPrices(){
 func updatePrice(Name string, URI string, HtmlQuery string, oldLow int, date time.Time){
 	newPrice, err := getPrice(URI, HtmlQuery)
 	if err != nil {
-		log.Print(err)
+		log.Print("error getting price in updatePrice", err)
 		bot.CrawlErrorAlert(bot.Discord, Name, URI, err)
 		return
 	}
@@ -94,10 +96,17 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow int, date tim
 }
 func getPrice(uri string, querySelector string) (int, error) {
 	var err error
-	Colly.Visit(uri)
-	var res int
+	res := 0
 	Colly.OnHTML(querySelector, func(h *colly.HTMLElement) {
 		res, err = strconv.Atoi(h.Text)
+		log.Println("onhtml", h.Name)
 	})
+	err = Colly.Visit(uri)
+	
+	Colly.Wait()
+	if err != nil{
+		log.Println("error in getting price in crawler", err)
+		return res, err
+	}
 	return res, err
 }

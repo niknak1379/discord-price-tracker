@@ -326,8 +326,8 @@ func ready(discord *discordgo.Session, ready *discordgo.Ready) {
 }
 
 func LowestPriceAlert(discord *discordgo.Session, itemName string, newPrice int,oldPrice int, URL string){
-	content := fmt.Sprintf("New Price Alert!!!!\nItem %s has hit its lowest price of %d 
-							from previous lowest of %d with the following url \n%s",
+	content := fmt.Sprintf("New Price Alert!!!!\nItem %s has hit its lowest price of %d " +
+						   "from previous lowest of %d with the following url \n%s",
 	itemName, newPrice, oldPrice, URL)
 	discord.ChannelMessageSend("803818389755265075", content)
 }

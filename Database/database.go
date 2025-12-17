@@ -6,7 +6,6 @@ import (
 	"log"
 	"math"
 	"os"
-	"priceTracker/bot"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -102,7 +101,6 @@ func UpdateLowestPrice(Name string, newLow Price) (Item, error){
 	if err != nil{
 		return res, err
 	}
-	bot.LowestPriceAlert(bot.Discord, Name, newLow.Price, newLow.Url)
 	return res, err
 }
 func GetAllItems() []Item {

@@ -18,7 +18,7 @@ func main() {
 	bot.BotToken = os.Getenv("PUBLIC_KEY")
 	
 	
-	bot.Run() // call the run function of bot/bot.go
+	go bot.Run() // call the run function of bot/bot.go
 	defer func() {
 		if err = database.Client.Disconnect(context.TODO()); err != nil {
 			panic(err)

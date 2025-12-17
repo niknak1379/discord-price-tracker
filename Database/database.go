@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -14,13 +15,21 @@ import (
 )
 
 type TrackingInfo struct {
-	URI       string `bson:"URI"`
-	HtmlQuery string `bson:"HtmlQuery"`
+	URI       string 	`bson:"URI"`
+	HtmlQuery string 	`bson:"HtmlQuery"`
+}
+type Price struct{
+	Date time.Time      `bson:"Date"`
+	Price int 			`bson:"Price"`
+	Url string			`bson:"Url"`
 }
 type Item struct {
 	Name         string `bson:"Name"`
 	TrackingList []*TrackingInfo `bson:"TrackingList"`
+	LowestPrice Price `bson:"LowestPrice"`
+	PriceHistory []*Price `bson:"PriceHistory"`
 }
+
 var Client *mongo.Client
 var Table *mongo.Collection
 func AddItem(itemName string, uri string, query string) *mongo.InsertOneResult{
@@ -29,9 +38,17 @@ func AddItem(itemName string, uri string, query string) *mongo.InsertOneResult{
 		HtmlQuery: query,
 	}
 	arr := []*TrackingInfo{&t}
+	PriceArr := []*Price{}
+	p := Price{
+		Date: time.Now(),
+		Price: 0,
+		Url: "",
+	}
 	i := Item{
 		Name: itemName,
+		LowestPrice: p,					// init 0 as default price
 		TrackingList: arr,
+		PriceHistory: PriceArr,			// init empty price arr
 	}
 	fmt.Println("table", Table)
 	result, err := Table.InsertOne(context.TODO(), i)
@@ -41,10 +58,53 @@ func AddItem(itemName string, uri string, query string) *mongo.InsertOneResult{
 	return result
 }
 
-
-
+func addNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.Time) (Item, error){
+	Price := Price{
+		Price: newPrice,
+		Url: uri,
+		Date: date,
+	}
+	if (newPrice <= oldPrice) {
+		UpdateLowestPrice(Name, Price)
+	}
+	filter := bson.M{"Name": Name}
+	update := bson.M{"$push": bson.M{
+		"PriceHistory": Price,
+	}} 
+	var result Item
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}})
+	err := Table.FindOneAndUpdate(context.TODO(), filter, update, opts).Decode(&result)
+	if err != nil{
+		return result, err
+	}
+	return result, err
+}
+func GetLowestPrice(Name string) (Price, error){
+	filter := bson.M{"Name": Name}
+	opts := options.FindOne().SetProjection(bson.D{{"LowestPrice", 1}})
+	var res Price
+	err := Table.FindOne(context.TODO(), filter, opts).Decode(&res)
+	if err != nil{
+		return res, err
+	}
+	return res, err
+}
+func UpdateLowestPrice(Name string, newLow Price) (Item, error){
+	filter := bson.M{"Name" : Name}
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHisotry", 0}})
+	update := bson.M {
+		"LowestPrice" : newLow,
+	}
+	var res Item
+	err := Table.FindOneAndUpdate(context.TODO(), filter, update, opts).Decode(&res)
+	if err != nil{
+		return res, err
+	}
+	return res, err
+}
 func GetAllItems() []Item {
-	cursor, err := Table.Find(context.TODO(), bson.M{})
+	opts := options.Find().SetProjection(bson.D{{"PriceHistory", 0}})
+	cursor, err := Table.Find(context.TODO(), bson.M{}, opts)
 	if err != nil{
 		panic(err)
 	}
@@ -60,7 +120,8 @@ func GetAllItems() []Item {
 func GetItem(itemName string) (Item, error) {
 	var res Item
 	filter := bson.M{"Name": itemName}
-	err := Table.FindOne(context.TODO(), filter).Decode(&res)
+	opts := options.FindOne().SetProjection(bson.D{{"PriceHistory", 0}})
+	err := Table.FindOne(context.TODO(), filter, opts).Decode(&res)
 	if err != nil{
 		return res, err
 	}
@@ -86,7 +147,8 @@ func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, e
 		"TrackingList": t,
 	}} 
 	var result Item
-	err := Table.FindOneAndUpdate(context.TODO(), filter, update).Decode(&result)
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}})
+	err := Table.FindOneAndUpdate(context.TODO(), filter, update, opts).Decode(&result)
 	if err != nil{
 		return result, err
 	}
@@ -101,7 +163,8 @@ func RemoveTrackingInfo(itemName string, uri string) (Item, error) {
 	update := bson.M{"$pull": bson.M{"TrackingList": bson.M{"URI": uri}}}
 	
 	var result Item
-	err := Table.FindOneAndUpdate(context.TODO(), filter, update).Decode(&result)
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}})
+	err := Table.FindOneAndUpdate(context.TODO(), filter, update, opts).Decode(&result)
 	if err != nil{
 		return result, err
 	}

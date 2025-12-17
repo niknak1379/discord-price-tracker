@@ -323,3 +323,9 @@ func ready(discord *discordgo.Session, ready *discordgo.Ready) {
 	fmt.Println("Logged in")
 	discord.UpdateGameStatus(1, "stonks")
 }
+
+func LowestPriceAlert(discord *discordgo.Session, itemName string, price int, URL string){
+	content := fmt.Sprintf("New Price Alert!!!!\nItem %s has hit its lowest price of %d with the following url %s",
+	itemName, price, URL)
+	discord.ChannelMessageSend("803818389755265075", content)
+}

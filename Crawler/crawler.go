@@ -7,7 +7,7 @@ import (
 	database "priceTracker/Database"
 	"strconv"
 
-	"priceTracker/bot"
+	discord "priceTracker/discord"
 	"time"
 
 	"github.com/gocolly/colly/v2"
@@ -86,12 +86,12 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow int, date tim
 	newPrice, err := getPrice(URI, HtmlQuery)
 	if err != nil {
 		log.Print("error getting price in updatePrice", err)
-		bot.CrawlErrorAlert(bot.Discord, Name, URI, err)
+		discord.CrawlErrorAlert(discord.Discord, Name, URI, err)
 		return
 	}
 	database.AddNewPrice(Name, URI, newPrice, oldLow, date)
 	if oldLow > newPrice {
-			bot.LowestPriceAlert(bot.Discord, Name, newPrice, oldLow, URI)
+			discord.LowestPriceAlert(discord.Discord, Name, newPrice, oldLow, URI)
 	}
 }
 func getPrice(uri string, querySelector string) (int, error) {

@@ -30,7 +30,10 @@ type Item struct {
 	LowestPrice Price `bson:"LowestPrice"`
 	PriceHistory []*Price `bson:"PriceHistory"`
 }
-
+type aggregateResult struct {
+		Url string `bson:"_id"` //grouped by url so id is url string
+		Prices []*Price `bson:"prices"`
+}
 var Client *mongo.Client
 var Table *mongo.Collection
 var ctx context.Context
@@ -133,7 +136,36 @@ func GetItem(itemName string) (Item, error) {
 	}
 	return res, err
 }
-
+// returns the price
+func GetPriceHistory(Name string, date time.Time) (aggregateResult, error){
+	var res aggregateResult
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.M{"Name": Name}}},
+		bson.D{{Key: "$unwind", Value: "$PriceHistory"}},
+		bson.D{{Key: "$match", Value: bson.M{"PriceHistory.Date": bson.M{
+			"$gte" : date,
+		}}}},
+		bson.D{{Key: "$group", Value: bson.M{
+			"_id": "$PriceHistory.Url",
+			"prices" : bson.M{
+				"$push" : bson.M{
+					"Date":  "$PriceHistory.Date",
+                    "Price": "$PriceHistory.Price",
+                    "Url":   "$PriceHistory.Url",
+				},
+			},
+		}}},
+	}
+	cursor, err := Table.Aggregate(ctx, pipeline)
+	if err != nil{
+		return aggregateResult{}, err
+	}
+    if err = cursor.All(ctx, &res); err != nil {
+        return aggregateResult{}, err
+    }
+	defer cursor.Close(ctx)
+	return res, err
+}
 func RemoveItem(itemName string)  *mongo.DeleteResult{
 	filter := bson.M{"Name": itemName}
 	results, err := Table.DeleteOne(ctx, filter)

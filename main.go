@@ -6,7 +6,7 @@ import (
 	"os"
 	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
-	"priceTracker/bot"
+	"priceTracker/discord"
 
 	"github.com/joho/godotenv"
 )
@@ -16,11 +16,11 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	bot.BotToken = os.Getenv("PUBLIC_KEY")
+	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx, cancel)
 	go crawler.InitCrawler(ctx, cancel)
-	bot.Run() // call the run function of bot/bot.go
+	discord.Run() // call the run function of bot/bot.go
 	defer func() {
 		if err = database.Client.Disconnect(context.TODO()); err != nil {
 			panic(err)

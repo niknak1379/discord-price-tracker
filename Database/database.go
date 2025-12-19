@@ -31,8 +31,8 @@ type Item struct {
 	PriceHistory []*Price `bson:"PriceHistory"`
 }
 type aggregateResult struct {
-		Url string `bson:"_id"` //grouped by url so id is url string
-		Prices []*Price `bson:"prices"`
+	Url string `bson:"_id"` //grouped by url so id is url string
+	Prices []*Price `bson:"prices"`
 }
 var Client *mongo.Client
 var Table *mongo.Collection
@@ -137,8 +137,8 @@ func GetItem(itemName string) (Item, error) {
 	return res, err
 }
 // returns the price
-func GetPriceHistory(Name string, date time.Time) (aggregateResult, error){
-	var res aggregateResult
+func GetPriceHistory(Name string, date time.Time) ([]*aggregateResult, error){
+	var res []*aggregateResult
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: bson.M{"Name": Name}}},
 		bson.D{{Key: "$unwind", Value: "$PriceHistory"}},
@@ -158,10 +158,10 @@ func GetPriceHistory(Name string, date time.Time) (aggregateResult, error){
 	}
 	cursor, err := Table.Aggregate(ctx, pipeline)
 	if err != nil{
-		return aggregateResult{}, err
+		return res, err
 	}
     if err = cursor.All(ctx, &res); err != nil {
-        return aggregateResult{}, err
+        return res, err
     }
 	defer cursor.Close(ctx)
 	return res, err

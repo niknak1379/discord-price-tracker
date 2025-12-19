@@ -99,7 +99,6 @@ func getPrice(uri string, querySelector string) (int, error) {
 	res := 0
 	Colly.OnHTML(querySelector, func(h *colly.HTMLElement) {
 		res, err = strconv.Atoi(h.Text)
-		log.Println("onhtml", h.Name)
 	})
 	err = Colly.Visit(uri)
 	

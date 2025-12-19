@@ -69,7 +69,8 @@ func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.
 		Url: uri,
 		Date: date,
 	}
-	if (newPrice <= oldPrice) {
+	log.Printf("%d old price, %d new price bool: %b", oldPrice, newPrice, oldPrice > newPrice)
+	if (newPrice < oldPrice) {
 		UpdateLowestPrice(Name, Price)
 	}
 	filter := bson.M{"Name": Name}
@@ -100,11 +101,14 @@ func UpdateLowestPrice(Name string, newLow Price) (Item, error){
 	filter := bson.M{"Name" : Name}
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHisotry", 0}})
 	update := bson.M {
-		"LowestPrice" : newLow,
+		"$set" : bson.M{
+			"LowestPrice": newLow,
+		},
 	}
 	var res Item
 	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
 	if err != nil{
+		log.Printf("error in updating lowest price", err)
 		return res, err
 	}
 	log.Printf("updating lowest price of %d for %s", newLow.Price, Name)
@@ -147,12 +151,21 @@ func GetPriceHistory(Name string, date time.Time) ([]*Price, error){
 				bson.A{
 					"Name",
 					"_id",
-					"TrackingList",
 					"LowestPrice",
+					"TrackingList",
 				},
 			},
 		},
 		bson.D{{"$sort", bson.D{{"PriceHistory.Date", 1}}}},
+		bson.D{
+			{"$project",
+				bson.D{
+					{"Date", "$PriceHistory.Date"},
+					{"Price", "$PriceHistory.Price"},
+					{"Url", "$PriceHistory.Url"},
+				},
+			},
+		},
 	}
 	cursor, err := Table.Aggregate(ctx, pipeline)
 	if err != nil{

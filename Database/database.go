@@ -137,24 +137,22 @@ func GetItem(itemName string) (Item, error) {
 	return res, err
 }
 // returns the price
-func GetPriceHistory(Name string, date time.Time) ([]*aggregateResult, error){
-	var res []*aggregateResult
+func GetPriceHistory(Name string, date time.Time) ([]*Price, error){
+	var res []*Price
 	pipeline := mongo.Pipeline{
-		bson.D{{Key: "$match", Value: bson.M{"Name": Name}}},
-		bson.D{{Key: "$unwind", Value: "$PriceHistory"}},
-		bson.D{{Key: "$match", Value: bson.M{"PriceHistory.Date": bson.M{
-			"$gte" : date,
-		}}}},
-		bson.D{{Key: "$group", Value: bson.M{
-			"_id": "$PriceHistory.Url",
-			"prices" : bson.M{
-				"$push" : bson.M{
-					"Date":  "$PriceHistory.Date",
-                    "Price": "$PriceHistory.Price",
-                    "Url":   "$PriceHistory.Url",
+		bson.D{{"$match", bson.D{{"Name", "5070"}}}},
+		bson.D{{"$unwind", bson.D{{"path", "$PriceHistory"}}}},
+		bson.D{
+			{"$unset",
+				bson.A{
+					"Name",
+					"_id",
+					"TrackingList",
+					"LowestPrice",
 				},
 			},
-		}}},
+		},
+		bson.D{{"$sort", bson.D{{"PriceHistory.Date", 1}}}},
 	}
 	cursor, err := Table.Aggregate(ctx, pipeline)
 	if err != nil{

@@ -3,6 +3,8 @@ services:
     image: nikanostovan/price-tracker:latest
     container_name: price-tracker
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - APPLICATION_ID=${APPLICATION_ID}
       - PUBLIC_KEY=${PUBLIC_KEY}

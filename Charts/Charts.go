@@ -99,8 +99,7 @@ func PriceHistoryChart(Name string, month int) error{
         ShowSymbol: opts.Bool(true),  // ← Show data point markers
     }),
 	)
-	render.MakeChartSnapshot(line.RenderContent(), "my-chart.png")
-	
+	err = render.MakeChartSnapshot(line.RenderContent(), "my-chart.png")
 	
     return err
 }

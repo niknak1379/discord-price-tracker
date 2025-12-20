@@ -144,7 +144,7 @@ func GetItem(itemName string) (Item, error) {
 func GetPriceHistory(Name string, date time.Time) ([]*Price, error){
 	var res []*Price
 	pipeline := mongo.Pipeline{
-		bson.D{{"$match", bson.D{{"Name", "5070"}}}},
+		bson.D{{"$match", bson.D{{"Name", Name}}}},
 		bson.D{{"$unwind", bson.D{{"path", "$PriceHistory"}}}},
 		bson.D{
 			{"$unset",

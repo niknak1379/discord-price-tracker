@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
+	charts "priceTracker/Charts"
 	database "priceTracker/Database"
 	"strings"
 
@@ -117,6 +119,24 @@ var commandList = []*discordgo.ApplicationCommand{
 			},
 		},
 	},
+	{
+		Name:        "graph_price",
+		Description: "graph price of item",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Name:        "name",
+				Description: "Add item name",
+				Type:        discordgo.ApplicationCommandOptionString,
+				Required:    true,
+			},
+			{
+				Name:        "months",
+				Description: "how long of the history to graph",
+				Type:        discordgo.ApplicationCommandOptionInteger,
+				Required:    true,
+			},
+		},
+	},
 }
 var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.InteractionCreate){
 	"add_item": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -225,6 +245,36 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			},
 		})
 	},
+	"graph_price": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		
+		// set up response to discord client
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		})
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+		logger.Info("options", slog.Any("optoin", options))
+		err := charts.PriceHistoryChart(options[0].StringValue(), int(options[1].IntValue()))
+		if (err != nil) {
+			log.Print(err)
+		}
+		reader, err := os.Open("my-chart.png")
+		if err != nil{
+			log.Fatal(err)
+		}
+		File := discordgo.File{
+			Name: "chart.png",
+			ContentType: "Image",
+			Reader: reader,
+		}
+		_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			Files: []*discordgo.File{&File},
+		})
+		if err != nil {
+			fmt.Printf("Error sending follow-up message: %v\n", err)
+		}
+	},
 }
 
 func checkNilErr(e error) {
@@ -246,6 +296,7 @@ func Run() {
 
 	// open session
 	Discord.Open()
+	
 	Discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := commandHandler[i.ApplicationCommandData().Name]; ok {
 			h(s, i)
@@ -336,5 +387,15 @@ func CrawlErrorAlert(discord *discordgo.Session, itemName string, URL string, er
 	itemName, URL, err.Error())
 	log.Printf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
 	itemName, URL, err.Error())
-	discord.ChannelMessageSend("803818389755265075", content)
+	discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
+}
+func SendGraphPng(discord *discordgo.Session){
+	//content := fmt.Sprintf("Chart for Product named %s for the last %d months", productName, months)
+	reader, err := os.Open("my-chart.png")
+	if err != nil{
+		log.Fatal(err)
+	}
+	discord.ChannelFileSend(os.Getenv("CHANNEL_ID"), "my-chart.png", reader)
+	
+	
 }

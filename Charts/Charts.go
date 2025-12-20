@@ -11,23 +11,13 @@ import (
 	"github.com/go-echarts/snapshot-chromedp/render"
 )
 
-func PriceHistoryChart(Name string, date time.Time) error{
+func PriceHistoryChart(Name string, month int) error{
 	line := charts.NewLine()
-	time := time.Date(
-		2009,                 // Year
-		time.November,        // Month (use time.Month constants)
-		17,                   // Day
-		20,                   // Hour (24-hour format)
-		34,                   // Minute
-		58,                   // Second
-		651387237,            // Nanosecond
-		time.UTC,             // Location/Time Zone (use time.UTC or time.Local)
-	)
-	priceList, err := database.GetPriceHistory(Name, time)
+	priceList, err := database.GetPriceHistory(Name, time.Now().AddDate(0, -month, 0))
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	
 	if err != nil{
-		return line, err
+		return err
 	}
     line.SetGlobalOptions(
         charts.WithTitleOpts(opts.Title{
@@ -43,11 +33,14 @@ func PriceHistoryChart(Name string, date time.Time) error{
 			Show:   opts.Bool(true),
 			Bottom: "0%",  // ← Position at bottom
 		}),
-        charts.WithDataZoomOpts(opts.DataZoom{
+		charts.WithYAxisOpts(opts.YAxis{
+			Scale: opts.Bool(true),  // ← Add this
+		}),
+       /*  charts.WithDataZoomOpts(opts.DataZoom{
             Type:  "inside",
             Start: 0,
             End:   100,
-        }),
+        }), */
     )
 
     // Set series options to show data points
@@ -56,8 +49,10 @@ func PriceHistoryChart(Name string, date time.Time) error{
 			ShowSymbol: opts.Bool(true),
 			SymbolSize: 10,  // ← Make points bigger
 			Smooth:     opts.Bool(false),
+			ConnectNulls: opts.Bool(false),
 		}),
 	)
+	
 
 	var dates []string
     dateToIdx := make(map[string]int)

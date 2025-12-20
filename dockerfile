@@ -1,8 +1,16 @@
-FROM golang:1.25.5-alpine
+FROM golang:1.25.5-alpine AS builder
 
 WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY . .
+RUN go build -o priceTracker
 
-RUN go build -o pricetracker
+# Stage 2: Runtime
+FROM alpine:latest
 
-CMD ["./pricetracker"]
+COPY --from=builder /app/priceTracker /priceTracker
+
+CMD ["/priceTracker"]

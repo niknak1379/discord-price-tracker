@@ -7,7 +7,7 @@ import (
 	database "priceTracker/Database"
 	"strconv"
 
-	discord "priceTracker/discord"
+	discord "priceTracker/Discord"
 	"time"
 
 	"github.com/gocolly/colly/v2"

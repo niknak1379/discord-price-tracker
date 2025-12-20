@@ -26,7 +26,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/arm64/v8, linux/amd64
+          platforms: linux/arm64/v8
           push: true
           tags: |
             nikanostovan/price-tracker:latest
@@ -45,10 +45,10 @@ jobs:
           cp docker-compose.yml price-tracker/docker-compose.yml
           cd price-tracker
           cat > .env << EOL
-            APPLICATION_ID= ${{ secrets.APPLICATION_ID }}
-            PUBLIC_KEY= ${{ secrets.PUBLIC_KEY }}
-            MONGODB_URI= ${{ secrets.MONGODB_URI }}
-            CHANNEL_ID= ${{ secrets.CHANNEL_ID }}
+            APPLICATION_ID=${{ secrets.APPLICATION_ID }}
+            PUBLIC_KEY=${{ secrets.PUBLIC_KEY }}
+            MONGODB_URI=${{ secrets.MONGODB_URI }}
+            CHANNEL_ID=${{ secrets.CHANNEL_ID }}
           EOL
           cd ..
           scp -r -o "StrictHostKeyChecking no" price-tracker ${{ secrets.RASPBERRYPI_USER }}@${{ secrets.RASPBERRYPI_TAILSCALE_IP }}:~/

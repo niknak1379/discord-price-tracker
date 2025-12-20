@@ -51,7 +51,7 @@ jobs:
             CHANNEL_ID=${{secrets.CHANNEL_ID}}
           EOL
           cd ..
-          scp -r -o "StrictHostKeyChecking no" TRMNL_EXTENSIONS ${{ secrets.RASPBERRYPI_USER }}@${{ secrets.RASPBERRYPI_TAILSCALE_IP }}:~/
+          scp -r -o "StrictHostKeyChecking no" price-tracker ${{ secrets.RASPBERRYPI_USER }}@${{ secrets.RASPBERRYPI_TAILSCALE_IP }}:~/
       - name: Docker Compose Pull
         run: |
           ssh -o "StrictHostKeyChecking no" ${{ secrets.RASPBERRYPI_USER }}@${{ secrets.RASPBERRYPI_TAILSCALE_IP }} << 'EOF'

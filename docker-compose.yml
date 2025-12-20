@@ -1,7 +1,7 @@
 services:
   backend:
-    image: nikanostovan/priceTracker:latest
-    container_name: priceTracker
+    image: nikanostovan/price-tracker:latest
+    container_name: price-tracker
     restart: unless-stopped
     environment:
       - APPLICATION_ID=${APPLICATION_ID}

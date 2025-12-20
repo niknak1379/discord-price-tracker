@@ -29,9 +29,9 @@ jobs:
           platforms: linux/arm64/v8, linux/amd64
           push: true
           tags: |
-            nikanostovan/priceTracker:latest
-            nikanostovan/priceTracker:${{ github.sha }}
-          cache-from: type=registry,ref=nikanostovan/priceTracker:latest
+            nikanostovan/price-tracker:latest
+            nikanostovan/price-tracker:${{ github.sha }}
+          cache-from: type=registry,ref=nikanostovan/price-tracker:latest
           cache-to: type=inline
       - name: Tailscale
         uses: tailscale/github-action@v4
@@ -41,9 +41,9 @@ jobs:
           tags: tag:master
       - name: copy compose.yml and .env
         run: |
-          mkdir -p priceTracker
-          cp docker-compose.yml priceTracker/docker-compose.yml
-          cd priceTracker
+          mkdir -p price-tracker
+          cp docker-compose.yml price-tracker/docker-compose.yml
+          cd price-tracker
           cat > .env << EOL
             APPLICATION_ID=${{secrets.APPLICATION_ID}}
             PUBLIC_KEY=${{secrets.PUBLIC_KEY}}
@@ -55,7 +55,7 @@ jobs:
       - name: Docker Compose Pull
         run: |
           ssh -o "StrictHostKeyChecking no" ${{ secrets.RASPBERRYPI_USER }}@${{ secrets.RASPBERRYPI_TAILSCALE_IP }} << 'EOF'
-              cd priceTracker
+              cd price-tracker
               sudo docker compose pull
               sudo docker compose down
               sudo docker compose up -d

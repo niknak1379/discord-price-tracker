@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
 	discord "priceTracker/Discord"
 
@@ -19,7 +20,8 @@ func main() {
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx, cancel)
-	// go crawler.InitCrawler(ctx, cancel)
+	
+	go crawler.InitCrawler(ctx, cancel)
 	// charts.PriceHistoryChart("5070", 3)
 	discord.Run() // call the run function of bot/bot.go
 	defer func() {

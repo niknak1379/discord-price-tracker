@@ -8,10 +8,8 @@ RUN go mod download
 COPY . .
 RUN go build -o priceTracker
 
-# Stage 2: Runtime
 FROM alpine:latest AS runtime
 
-# Install chromium for charts
 RUN apk add --no-cache chromium
 
 ENV CHROME_BIN=/usr/bin/chromium-browser

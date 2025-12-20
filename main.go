@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	database "priceTracker/Database"
-	"priceTracker/discord"
+	discord "priceTracker/Discord"
 
 	"github.com/joho/godotenv"
 )

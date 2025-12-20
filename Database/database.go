@@ -222,10 +222,8 @@ func RemoveTrackingInfo(itemName string, uri string) (Item, error) {
 
 
 func InitDB(ctx context.Context, cancel context.CancelFunc) {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("error loading .env file")
-	}
+	godotenv.Load()
+	var err error
 	// Use the SetServerAPIOptions() method to set the version of the Stable API on the client
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.Client().ApplyURI(os.Getenv("MONGODB_URI")).SetServerAPIOptions(serverAPI)
@@ -240,12 +238,5 @@ func InitDB(ctx context.Context, cancel context.CancelFunc) {
 		panic(err)
 	}
 	Table = Client.Database("tracker").Collection("Items")
-	/* AddItem("hi", "hi", "htmlTag")
-	fmt.Println("did add item")
-	fmt.Println("get all items", GetAllItems())
-	fmt.Println("get hi", GetItem("hi"))
-	fmt.Println(AddTrackingInfo("hi", "second URI", "second Query"))
-	fmt.Println(RemoveTrackingInfo("hi", "hi"))
-	fmt.Println("get hi", GetItem("hi")) */
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 }

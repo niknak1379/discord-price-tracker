@@ -1,7 +1,6 @@
 package discord
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"log/slog"
@@ -165,19 +164,34 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 
 		// add tracker to database
 		getRes, err := database.GetItem(options[0].StringValue())
+		var embedArr []*discordgo.MessageEmbed
 		if (err != nil){
 			content = err.Error()
-		} else{
-			returnstr, _ := json.Marshal(getRes)
-			content = string(returnstr)
+		}else{
+			var fields []*discordgo.MessageEmbedField
+			for _,tracker := range getRes.TrackingList{
+				field := discordgo.MessageEmbedField{
+					Name: tracker.URI,
+					Value: tracker.HtmlQuery,
+					Inline: true,
+				}
+				fields = append(fields, &field)
+			}
+			em := discordgo.MessageEmbed{
+				Title: getRes.Name,
+				Fields: fields,
+				Type: discordgo.EmbedTypeRich,
+			}
+			embedArr = append(embedArr, &em)
 		}
+		
 
 		// set up response to discord client
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				// three options for the three that were required by the command definition
 				Content: content,
+				Embeds: embedArr,
 			},
 		})
 	},

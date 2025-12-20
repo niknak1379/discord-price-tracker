@@ -6,16 +6,16 @@ import (
 	"os"
 	database "priceTracker/Database"
 	discord "priceTracker/Discord"
-
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load()
+	
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	if err != nil {
+	// comment for docker deployment
+	// err := godotenv.Load()
+	/* if err != nil {
 		log.Fatal("Error loading .env file")
-	}
+	} */
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx, cancel)

@@ -1,0 +1,10 @@
+services:
+  backend:
+    image: nikanostovan/priceTracker:latest
+    container_name: priceTracker
+    restart: unless-stopped
+    environment:
+      - APPLICATION_ID=${APPLICATION_ID}
+      - PUBLIC_KEY=${PUBLIC_KEY}
+      - MONGODB_URI=${MONGODB_URI}
+      - CHANNEL_ID=${CHANNEL_ID}

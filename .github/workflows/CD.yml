@@ -1,0 +1,67 @@
+name: upload docker image on Push and deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: .env
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.9.0
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_ACCESSTOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64/v8, linux/amd64
+          push: true
+          tags: |
+            nikanostovan/priceTracker:latest
+            nikanostovan/priceTracker:${{ github.sha }}
+          cache-from: type=registry,ref=nikanostovan/priceTracker:latest
+          cache-to: type=inline
+      - name: Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:master
+      - name: copy compose.yml and .env
+        run: |
+          mkdir -p priceTracker
+          cp docker-compose.yml priceTracker/docker-compose.yml
+          cd priceTracker
+          cat > .env << EOL
+            APPLICATION_ID=${{secrets.APPLICATION_ID}}
+            PUBLIC_KEY=${{secrets.PUBLIC_KEY}}
+            MONGODB_URI=${{secrets.MONGODB_URI}}
+            CHANNEL_ID=${{secrets.CHANNEL_ID}}
+          EOL
+          cd ..
+          scp -r -o "StrictHostKeyChecking no" TRMNL_EXTENSIONS ${{ secrets.RASPBERRYPI_USER }}@${{ secrets.RASPBERRYPI_TAILSCALE_IP }}:~/
+      - name: Docker Compose Pull
+        run: |
+          ssh -o "StrictHostKeyChecking no" ${{ secrets.RASPBERRYPI_USER }}@${{ secrets.RASPBERRYPI_TAILSCALE_IP }} << 'EOF'
+              cd priceTracker
+              sudo docker compose pull
+              sudo docker compose down
+              sudo docker compose up -d
+              echo "Running containers:"
+              sudo docker compose ps
+              echo "Container logs:"
+              sudo docker compose logs --tail=50
+              sudo docker image prune -f
+          EOF

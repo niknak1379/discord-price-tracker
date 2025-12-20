@@ -11,4 +11,4 @@ COPY --from=builder /app/priceTracker .
 
 ENV CHROME_LOG_FILE=/dev/null
 
-CMD ["./priceTracker"]
+CMD ["sh", "-c", "./priceTracker 2>&1 | grep -v 'DevTools\\|WARNING:sandbox'"]

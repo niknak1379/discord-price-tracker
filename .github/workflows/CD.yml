@@ -31,8 +31,10 @@ jobs:
           tags: |
             nikanostovan/price-tracker:latest
             nikanostovan/price-tracker:${{ github.sha }}
-          cache-from: type=registry,ref=nikanostovan/price-tracker:latest
-          cache-to: type=inline
+          cache-from: |
+            type=gha
+            type=registry,ref=nikanostovan/price-tracker:latest
+          cache-to: type=gha,mode=max
       - name: Tailscale
         uses: tailscale/github-action@v4
         with:

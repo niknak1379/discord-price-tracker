@@ -184,13 +184,31 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"get_all_items": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// add tracker to database
 		getRes := database.GetAllItems()
-		returnstr, _ := json.Marshal(getRes)
+		//returnstr, _ := json.Marshal(getRes)
+		var embedArr []*discordgo.MessageEmbed
+		for _, Item := range getRes{
+			var fields []*discordgo.MessageEmbedField
+			for _,tracker := range Item.TrackingList{
+				field := discordgo.MessageEmbedField{
+					Name: tracker.URI,
+					Value: tracker.HtmlQuery,
+					Inline: true,
+				}
+				fields = append(fields, &field)
+			}
+			em := discordgo.MessageEmbed{
+				Title: Item.Name,
+				Fields: fields,
+				Type: discordgo.EmbedTypeRich,
+			}
+			embedArr = append(embedArr, &em)
+		}
+		
 		// set up response to discord client
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				// three options for the three that were required by the command definition
-				Content: string(returnstr),
+				Embeds: embedArr,
 			},
 		})
 	},

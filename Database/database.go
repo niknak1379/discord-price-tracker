@@ -69,7 +69,7 @@ func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.
 		Url: uri,
 		Date: date,
 	}
-	log.Printf("%d old price, %d new price bool: %b", oldPrice, newPrice, oldPrice > newPrice)
+	log.Printf("%d old price, %d new price", oldPrice, newPrice)
 	if (newPrice < oldPrice) {
 		UpdateLowestPrice(Name, Price)
 	}

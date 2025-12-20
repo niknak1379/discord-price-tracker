@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	charts "priceTracker/Charts"
 	database "priceTracker/Database"
+	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -235,8 +236,12 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		switch options[0].Name {
 		case "add_additional_tracking":
 			htmlQuery := options[0].Options[2].StringValue()
-			res, err := database.AddTrackingInfo(name, uri, htmlQuery)
+			res, p, err := database.AddTrackingInfo(name, uri, htmlQuery)
+			priceField := setPriceField(p, "Recently Added")
+
+			// add price tracking info
 			em := setEmbed(res)
+			em.Fields = append(em.Fields, priceField...)
 			if (err != nil){
 				content = err.Error()
 			}else{
@@ -413,21 +418,27 @@ func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
 	}
 
 	// set up current price information
-	priceField := discordgo.MessageEmbedField{
-		Name: "Current Price",
-		Value: string(Item.CurrentLowestPrice.Price),
-		Inline: true,
-	}
-	urlField := discordgo.MessageEmbedField{
-		Name: "Price Source",
-		Value: Item.CurrentLowestPrice.Url,
-		Inline: true,
-	}
-	fields = append(fields, &priceField, &urlField)
+	priceFields := setPriceField(Item.CurrentLowestPrice, "Lowest")
+	fields = append(fields, priceFields...)
 	em := discordgo.MessageEmbed{
 		Title: Item.Name,
 		Fields: fields,
 		Type: discordgo.EmbedTypeRich,
 	}
 	return &em
+}
+func setPriceField(p database.Price, message string)([]*discordgo.MessageEmbedField){
+	priceField := discordgo.MessageEmbedField{
+		Name: fmt.Sprintf("Current %s Price:", message),
+		Value: strconv.Itoa(p.Price),
+		Inline: true,
+	}
+	urlField := discordgo.MessageEmbedField{
+		Name: "From Price Source:",
+		Value: p.Url,
+		Inline: true,
+	}
+	var fields []*discordgo.MessageEmbedField
+	fields = append(fields, &priceField, &urlField)
+	return fields
 }

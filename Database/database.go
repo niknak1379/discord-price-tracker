@@ -209,10 +209,10 @@ func RemoveItem(itemName string)  *mongo.DeleteResult{
 	return results
 }
 
-func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, error){
+func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, Price, error){
 	p, t, err := validateURI(uri, querySelector)
 	if err != nil{
-		return Item{}, err
+		return Item{}, p, err
 	}
 	filter := bson.M{"Name": itemName}
 	
@@ -224,9 +224,9 @@ func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, e
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}})
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil{
-		return result, err
+		return result, p, err
 	}
-	return result, err
+	return result, p, err
 } 
 
 func RemoveTrackingInfo(itemName string, uri string) (Item, error) {

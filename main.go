@@ -4,9 +4,9 @@ import (
 	"context"
 	"log"
 	"os"
-	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
 	discord "priceTracker/Discord"
+	scheduler "priceTracker/Scheduler"
 
 	"github.com/joho/godotenv"
 )
@@ -14,16 +14,16 @@ import (
 func main() {
 	
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	// comment for docker deployment
+	
 	godotenv.Load()
 	
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx, cancel)
 	
-	go crawler.InitCrawler(ctx, cancel)
-	// charts.PriceHistoryChart("5070", 3)
-	discord.Run() // call the run function of bot/bot.go
+	go scheduler.InitScheduler(ctx, cancel)
+	
+	discord.Run() 
 	defer func() {
 		if err := database.Client.Disconnect(context.TODO()); err != nil {
 			panic(err)

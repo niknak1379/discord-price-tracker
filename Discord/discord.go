@@ -142,15 +142,22 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
 		// 0 is item name, 1 is uri, 2 is htmlqueryselector
-
+		content := ""
+		var em *discordgo.MessageEmbed
 		// add tracker to database
-		addRes := database.AddItem(options[0].StringValue(), options[1].StringValue(), options[2].StringValue())
-		em := setEmbed(addRes)
+		addRes, err := database.AddItem(options[0].StringValue(), options[1].StringValue(), options[2].StringValue())
+		if err != nil{
+			content = fmt.Sprint(err)
+		}else{
+			em = setEmbed(addRes)
+		}
+		
 		// set up response to discord client
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				// three options for the three that were required by the command definition
+				Content: content,
 				Embeds: []*discordgo.MessageEmbed{em},
 			},
 		})

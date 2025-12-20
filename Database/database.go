@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math"
+	"net/url"
 	"os"
+	crawler "priceTracker/Crawler"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -30,25 +31,17 @@ type Item struct {
 	LowestPrice Price `bson:"LowestPrice"`
 	PriceHistory []*Price `bson:"PriceHistory"`
 }
-type aggregateResult struct {
-	Url string `bson:"_id"` //grouped by url so id is url string
-	Prices []*Price `bson:"prices"`
-}
 var Client *mongo.Client
 var Table *mongo.Collection
 var ctx context.Context
-func AddItem(itemName string, uri string, query string) Item{
-	t := TrackingInfo{
-		URI: uri,
-		HtmlQuery: query,
+func AddItem(itemName string, uri string, query string) (Item, error){
+	p, t, err := validateURI(uri, query)
+	if err != nil{
+		log.Print("invalid url", err)
+		return Item{}, err
 	}
 	arr := []*TrackingInfo{&t}
 	PriceArr := []*Price{}
-	p := Price{
-		Date: time.Now(),
-		Price: math.MaxInt32,
-		Url: "",
-	}
 	i := Item{
 		Name: itemName,
 		LowestPrice: p,					// init 0 as default price
@@ -57,10 +50,10 @@ func AddItem(itemName string, uri string, query string) Item{
 	}
 	result, err := Table.InsertOne(ctx, i)
 	if err != nil{
-		panic(err)
+		log.Print(err)
 	}
 	log.Println("added new item with mongodb logs:", result)
-	return i
+	return i, err
 }
 
 func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.Time) (Item, error){
@@ -187,17 +180,19 @@ func RemoveItem(itemName string)  *mongo.DeleteResult{
 }
 
 func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, error){
-	filter := bson.M{"Name": itemName}
-	t := TrackingInfo{
-		URI:       uri,
-		HtmlQuery: querySelector,
+	p, t, err := validateURI(uri, querySelector)
+	if err != nil{
+		return Item{}, err
 	}
+	filter := bson.M{"Name": itemName}
+	
 	update := bson.M{"$push": bson.M{
 		"TrackingList": t,
+		"PriceHistory": p,
 	}} 
 	var result Item
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}})
-	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
+	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil{
 		return result, err
 	}
@@ -239,4 +234,26 @@ func InitDB(ctx context.Context, cancel context.CancelFunc) {
 	}
 	Table = Client.Database("tracker").Collection("Items")
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
+}
+func validateURI(uri string, querySelector string) (Price, TrackingInfo, error){
+	_, err := url.ParseRequestURI(uri)
+	if err != nil{
+		log.Print("invalid url", err)
+		return Price{}, TrackingInfo{}, err
+	}
+	pr, err := crawler.GetPrice(uri, querySelector)
+	if err != nil{
+		log.Print("invalid url", err)
+		return Price{}, TrackingInfo{}, err
+	}
+	tracking := TrackingInfo{
+		URI: uri,
+		HtmlQuery: querySelector,
+	}
+	price := Price{
+		Date: time.Now(),
+		Price: pr,
+		Url: uri,
+	}
+	return price, tracking, err
 }

@@ -2,16 +2,17 @@ FROM golang:1.25.5-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
-
 COPY . .
-RUN go build -ldflags="-s -w" -o priceTracker
+RUN go build -o priceTracker
 
-FROM alpine:latest
-RUN apk add --no-cache chromium
+FROM chromedp/headless-shell:latest
 
-ENV CHROME_BIN=/usr/bin/chromium-browser
+# Install CA certificates
+USER root
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=builder /app/priceTracker .
 
+ENTRYPOINT []
 CMD ["./priceTracker"]

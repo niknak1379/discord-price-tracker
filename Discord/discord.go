@@ -145,13 +145,13 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 
 		// add tracker to database
 		addRes := database.AddItem(options[0].StringValue(), options[1].StringValue(), options[2].StringValue())
-
+		em := setEmbed(addRes)
 		// set up response to discord client
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				// three options for the three that were required by the command definition
-				Content: fmt.Sprint(addRes),
+				Embeds: []*discordgo.MessageEmbed{em},
 			},
 		})
 	},
@@ -168,21 +168,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		if (err != nil){
 			content = err.Error()
 		}else{
-			var fields []*discordgo.MessageEmbedField
-			for _,tracker := range getRes.TrackingList{
-				field := discordgo.MessageEmbedField{
-					Name: tracker.URI,
-					Value: tracker.HtmlQuery,
-					Inline: true,
-				}
-				fields = append(fields, &field)
-			}
-			em := discordgo.MessageEmbed{
-				Title: getRes.Name,
-				Fields: fields,
-				Type: discordgo.EmbedTypeRich,
-			}
-			embedArr = append(embedArr, &em)
+			em := setEmbed(getRes)
+			embedArr = append(embedArr, em)
 		}
 		
 
@@ -201,21 +188,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		//returnstr, _ := json.Marshal(getRes)
 		var embedArr []*discordgo.MessageEmbed
 		for _, Item := range getRes{
-			var fields []*discordgo.MessageEmbedField
-			for _,tracker := range Item.TrackingList{
-				field := discordgo.MessageEmbedField{
-					Name: tracker.URI,
-					Value: tracker.HtmlQuery,
-					Inline: true,
-				}
-				fields = append(fields, &field)
-			}
-			em := discordgo.MessageEmbed{
-				Title: Item.Name,
-				Fields: fields,
-				Type: discordgo.EmbedTypeRich,
-			}
-			embedArr = append(embedArr, &em)
+			em := setEmbed(*Item)
+			embedArr = append(embedArr, em)
 		}
 		
 		// set up response to discord client
@@ -244,7 +218,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"edit_tracker": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
 		content := ""
-
+		var embeds = []*discordgo.MessageEmbed{}
 		// get option values
 		name := options[0].Options[0].StringValue()
 		uri := options[0].Options[1].StringValue()
@@ -255,18 +229,20 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case "add_additional_tracking":
 			htmlQuery := options[0].Options[2].StringValue()
 			res, err := database.AddTrackingInfo(name, uri, htmlQuery)
+			em := setEmbed(res)
 			if (err != nil){
 				content = err.Error()
 			}else{
-				content = fmt.Sprint(res)
+				embeds = append(embeds, em)
 			}
 			
 		case "remove_existing_tracking_option":
 			res, err := database.RemoveTrackingInfo(name, uri)
+			em := setEmbed(res)
 			if (err != nil){
 				content = err.Error()
 			}else{
-				content = fmt.Sprint(res)
+				embeds = append(embeds, em)
 			}
 		}
 
@@ -274,6 +250,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: content,
+				Embeds: embeds,
 			},
 		})
 	},
@@ -345,12 +322,7 @@ func Run() {
 	}
 
 	defer Discord.Close()
-	// this makes a chanel, channels are how routeines talk to each other
-	// Notify, intercepts the signal and sends it to chanel c -> then you can
-	// implement what to do with it, here it just processes the signal and lets
-	// the function execution end
-
-	// this runs after the interupt signal
+	
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -359,14 +331,6 @@ func Run() {
 	fmt.Println("recieved signal, shutting down")
 	if true {
 		log.Println("Removing commands...")
-		// // We need to fetch the commands, since deleting requires the command ID.
-		// // We are doing this from the returned commands on line 375, because using
-		// // this will delete all the commands, which might not be desirable, so we
-		// // are deleting only the commands that we added.
-		// registeredCommands, err := s.ApplicationCommands(s.State.User.ID, *GuildID)
-		// if err != nil {
-		// 	log.Fatalf("Could not fetch registered commands: %v", err)
-		// }
 
 		for _, v := range registeredCommands {
 			err := Discord.ApplicationCommandDelete(Discord.State.User.ID, "", v.ID)
@@ -428,6 +392,21 @@ func SendGraphPng(discord *discordgo.Session){
 		log.Fatal(err)
 	}
 	discord.ChannelFileSend(os.Getenv("CHANNEL_ID"), "my-chart.png", reader)
-	
-	
+}
+func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
+	var fields []*discordgo.MessageEmbedField
+	for _,tracker := range Item.TrackingList{
+		field := discordgo.MessageEmbedField{
+			Name: tracker.URI,
+			Value: tracker.HtmlQuery,
+			Inline: true,
+		}
+		fields = append(fields, &field)
+	}
+	em := discordgo.MessageEmbed{
+		Title: Item.Name,
+		Fields: fields,
+		Type: discordgo.EmbedTypeRich,
+	}
+	return &em
 }

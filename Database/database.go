@@ -37,7 +37,7 @@ type aggregateResult struct {
 var Client *mongo.Client
 var Table *mongo.Collection
 var ctx context.Context
-func AddItem(itemName string, uri string, query string) *mongo.InsertOneResult{
+func AddItem(itemName string, uri string, query string) Item{
 	t := TrackingInfo{
 		URI: uri,
 		HtmlQuery: query,
@@ -59,8 +59,8 @@ func AddItem(itemName string, uri string, query string) *mongo.InsertOneResult{
 	if err != nil{
 		panic(err)
 	}
-	log.Println("adding new item", itemName)
-	return result
+	log.Println("added new item with mongodb logs:", result)
+	return i
 }
 
 func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.Time) (Item, error){

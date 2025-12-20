@@ -45,10 +45,10 @@ jobs:
           cp docker-compose.yml price-tracker/docker-compose.yml
           cd price-tracker
           cat > .env << EOL
-            APPLICATION_ID=${{ secrets.APPLICATION_ID }}
-            PUBLIC_KEY=${{ secrets.PUBLIC_KEY }}
-            MONGODB_URI=${{ secrets.MONGODB_URI }}
-            CHANNEL_ID=${{ secrets.CHANNEL_ID }}
+          APPLICATION_ID=${{ secrets.APPLICATION_ID }}
+          PUBLIC_KEY=${{ secrets.PUBLIC_KEY }}
+          MONGODB_URI=${{ secrets.MONGODB_URI }}
+          CHANNEL_ID=${{ secrets.CHANNEL_ID }}
           EOL
           cd ..
           scp -r -o "StrictHostKeyChecking no" price-tracker ${{ secrets.RASPBERRYPI_USER }}@${{ secrets.RASPBERRYPI_TAILSCALE_IP }}:~/

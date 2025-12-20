@@ -30,6 +30,7 @@ type Item struct {
 	TrackingList []*TrackingInfo `bson:"TrackingList"`
 	LowestPrice Price `bson:"LowestPrice"`
 	PriceHistory []*Price `bson:"PriceHistory"`
+	CurrentLowestPrice Price `bson:"CurrentLowestPrice"`
 }
 var Client *mongo.Client
 var Table *mongo.Collection
@@ -56,7 +57,7 @@ func AddItem(itemName string, uri string, query string) (Item, error){
 	return i, err
 }
 
-func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.Time) (Item, error){
+func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.Time) (Price, error){
 	Price := Price{
 		Price: newPrice,
 		Url: uri,
@@ -64,7 +65,7 @@ func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.
 	}
 	log.Printf("%d old price, %d new price", oldPrice, newPrice)
 	if (newPrice < oldPrice) {
-		UpdateLowestPrice(Name, Price)
+		UpdateLowestHistoricalPrice(Name, Price)
 	}
 	filter := bson.M{"Name": Name}
 	update := bson.M{"$push": bson.M{
@@ -74,12 +75,13 @@ func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}})
 	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil{
-		return result, err
+		log.Print("error in addingnewprice", err)
+		return Price, err
 	}
 	log.Printf("adding new price for %s with price %d for url %s", Name, newPrice, uri)
-	return result, err
+	return Price, err
 }
-func GetLowestPrice(Name string) (Price, error){
+func GetLowestHistoricalPrice(Name string) (Price, error){
 	filter := bson.M{"Name": Name}
 	opts := options.FindOne().SetProjection(bson.M{"LowestPrice": 1})
 	var res Item
@@ -90,7 +92,7 @@ func GetLowestPrice(Name string) (Price, error){
 	log.Printf("getting lowest price of %d for %s", res.LowestPrice.Price, res.LowestPrice.Url)
 	return res.LowestPrice, err
 }
-func UpdateLowestPrice(Name string, newLow Price) (Item, error){
+func UpdateLowestHistoricalPrice(Name string, newLow Price) (Item, error){
 	filter := bson.M{"Name" : Name}
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHisotry", 0}})
 	update := bson.M {
@@ -102,6 +104,34 @@ func UpdateLowestPrice(Name string, newLow Price) (Item, error){
 	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
 	if err != nil{
 		log.Printf("error in updating lowest price", err)
+		return res, err
+	}
+	log.Printf("updating lowest price of %d for %s", newLow.Price, Name)
+	return res, err
+}
+func GetLowestPrice(Name string) (Price, error){
+	filter := bson.M{"Name": Name}
+	opts := options.FindOne().SetProjection(bson.M{"CurrentLowestPrice": 1})
+	var res Item
+	err := Table.FindOne(ctx, filter, opts).Decode(&res)
+	if err != nil{
+		return res.LowestPrice, err
+	}
+	log.Printf("getting lowest current price of %d for %s", res.LowestPrice.Price, res.LowestPrice.Url)
+	return res.LowestPrice, err
+}
+func UpdateLowestPrice(Name string, newLow Price) (Item, error){
+	filter := bson.M{"Name" : Name}
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHisotry", 0}})
+	update := bson.M {
+		"$set" : bson.M{
+			"CurrentLowestPrice": newLow,
+		},
+	}
+	var res Item
+	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
+	if err != nil{
+		log.Print("error in updating lowest price", err)
 		return res, err
 	}
 	log.Printf("updating lowest price of %d for %s", newLow.Price, Name)

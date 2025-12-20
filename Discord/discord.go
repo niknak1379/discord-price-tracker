@@ -402,14 +402,28 @@ func SendGraphPng(discord *discordgo.Session){
 }
 func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
 	var fields []*discordgo.MessageEmbedField
+	// set up trackerArr infromation
 	for _,tracker := range Item.TrackingList{
 		field := discordgo.MessageEmbedField{
 			Name: tracker.URI,
 			Value: tracker.HtmlQuery,
-			Inline: true,
+			Inline: false,
 		}
 		fields = append(fields, &field)
 	}
+
+	// set up current price information
+	priceField := discordgo.MessageEmbedField{
+		Name: "Current Price",
+		Value: string(Item.CurrentLowestPrice.Price),
+		Inline: true,
+	}
+	urlField := discordgo.MessageEmbedField{
+		Name: "Price Source",
+		Value: Item.CurrentLowestPrice.Url,
+		Inline: true,
+	}
+	fields = append(fields, &priceField, &urlField)
 	em := discordgo.MessageEmbed{
 		Title: Item.Name,
 		Fields: fields,

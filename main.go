@@ -16,12 +16,12 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	
 	godotenv.Load()
-	
+	// crawler.GetPrice("https://www.bhphotovideo.com/c/product/1752177-REG/fractal_design_fd_c_nor1c_02_north_mid_tower_atx_case.html", ".price__9gLfjPSjp")
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx, cancel)
-	
 	go scheduler.InitScheduler(ctx, cancel)
+
 	
 	discord.Run() 
 	defer func() {

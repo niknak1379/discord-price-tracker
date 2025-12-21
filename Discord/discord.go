@@ -411,14 +411,14 @@ func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
 	field := discordgo.MessageEmbedField{
 			Name: "Tracking URL",
 			Value: "Tracking CSS Selector",
-			Inline: true,
+			Inline: false,
 		}
 	fields = append(fields, &field)
 	for _,tracker := range Item.TrackingList{
 		field := discordgo.MessageEmbedField{
 			Name: tracker.URI,
 			Value: tracker.HtmlQuery,
-			Inline: true,
+			Inline: false,
 		}
 		fields = append(fields, &field)
 	}

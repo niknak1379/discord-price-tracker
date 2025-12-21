@@ -49,10 +49,12 @@ func init(){
 func GetPrice(uri string, querySelector string) (int, error) {
 	var err error
 	res := 0
+	log.Println("logging url", uri)
 	Colly.OnHTML(querySelector, func(h *colly.HTMLElement) {
 		ret := strings.ReplaceAll(h.Text, "$", "")
 		ret = strings.Split(ret, ".")[0]
 		res, err = strconv.Atoi(ret)
+		log.Println("got price from:", h.Text, ret)
 	})
 	err = Colly.Visit(uri)
 	

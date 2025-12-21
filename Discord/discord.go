@@ -409,8 +409,8 @@ func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
 	var fields []*discordgo.MessageEmbedField
 	// set up trackerArr infromation
 	field := discordgo.MessageEmbedField{
-			Name: "Tracking URL",
-			Value: "Tracking CSS Selector",
+			Name: "<-------------Tracking URL-------------->",
+			Value: "<---------Tracking CSS Selector--------->",
 			Inline: false,
 		}
 	fields = append(fields, &field)
@@ -420,7 +420,12 @@ func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
 			Value: tracker.HtmlQuery,
 			Inline: false,
 		}
-		fields = append(fields, &field)
+		separatorField := discordgo.MessageEmbedField{
+			Name: "<--------------------------------------->",
+			Value: "",
+			Inline: false,
+		}
+		fields = append(fields, &field, &separatorField)
 	}
 
 	// set up current price information
@@ -436,6 +441,11 @@ func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
 	return &em
 }
 func setPriceField(p database.Price, message string)([]*discordgo.MessageEmbedField){
+	separatorField := discordgo.MessageEmbedField{
+		Name: "<--------------------------------------->",
+		Value: "",
+		Inline: false,
+	}
 	priceField := discordgo.MessageEmbedField{
 		Name: fmt.Sprintf("%s Price:", message),
 		Value: strconv.Itoa(p.Price),
@@ -444,9 +454,9 @@ func setPriceField(p database.Price, message string)([]*discordgo.MessageEmbedFi
 	urlField := discordgo.MessageEmbedField{
 		Name: "From Price Source:",
 		Value: p.Url,
-		Inline: true,
+		Inline: false,
 	}
 	var fields []*discordgo.MessageEmbedField
-	fields = append(fields, &priceField, &urlField)
+	fields = append(fields, &separatorField, &priceField, &urlField)
 	return fields
 }

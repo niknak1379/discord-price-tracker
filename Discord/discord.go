@@ -240,7 +240,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case "add_additional_tracking":
 			htmlQuery := options[0].Options[2].StringValue()
 			res, p, err := database.AddTrackingInfo(name, uri, htmlQuery)
-			priceField := setPriceField(p, "Recently Added")
+			priceField := setPriceField(p, "Newly Added Tracker")
 
 			// add price tracking info
 			em := setEmbed(res)
@@ -424,8 +424,10 @@ func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
 	}
 
 	// set up current price information
-	priceFields := setPriceField(Item.CurrentLowestPrice, "Lowest")
+	priceFields := setPriceField(Item.CurrentLowestPrice, "Current")
+	lowestPriceField := setPriceField(Item.LowestPrice, "Historically Lowest")
 	fields = append(fields, priceFields...)
+	fields = append(fields, lowestPriceField...)
 	em := discordgo.MessageEmbed{
 		Title: Item.Name,
 		Fields: fields,
@@ -435,7 +437,7 @@ func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
 }
 func setPriceField(p database.Price, message string)([]*discordgo.MessageEmbedField){
 	priceField := discordgo.MessageEmbedField{
-		Name: fmt.Sprintf("Current %s Price:", message),
+		Name: fmt.Sprintf("%s Price:", message),
 		Value: strconv.Itoa(p.Price),
 		Inline: true,
 	}

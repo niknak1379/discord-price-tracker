@@ -45,15 +45,16 @@ func AddItem(itemName string, uri string, query string) (Item, error){
 	PriceArr := []*Price{&p}
 	i := Item{
 		Name: itemName,
-		LowestPrice: p,					// init 0 as default price
+		LowestPrice: p,					
 		TrackingList: arr,
-		PriceHistory: PriceArr,			// init empty price arr
+		PriceHistory: PriceArr,			
 	}
 	result, err := Table.InsertOne(ctx, i)
 	if err != nil{
 		log.Print(err)
 	}
 	log.Println("added new item with mongodb logs:", result)
+	log.Println("lowest price being passed on", i.LowestPrice.Price, i.LowestPrice.Url)
 	return i, err
 }
 
@@ -272,6 +273,7 @@ func validateURI(uri string, querySelector string) (Price, TrackingInfo, error){
 		return Price{}, TrackingInfo{}, err
 	}
 	pr, err := crawler.GetPrice(uri, querySelector)
+	log.Print("price of from validated int", pr)
 	if err != nil{
 		log.Print("invalid url", err)
 		return Price{}, TrackingInfo{}, err

@@ -448,7 +448,7 @@ func setPriceField(p database.Price, message string)([]*discordgo.MessageEmbedFi
 	} */
 	priceField := discordgo.MessageEmbedField{
 		Name: fmt.Sprintf("<------------------%s Price---------------->", message),
-		Value: strconv.Itoa(p.Price),
+		Value: "$" + strconv.Itoa(p.Price + 1),
 		Inline: true,
 	}
 	urlField := discordgo.MessageEmbedField{

@@ -42,7 +42,7 @@ func AddItem(itemName string, uri string, query string) (Item, error){
 		return Item{}, err
 	}
 	arr := []*TrackingInfo{&t}
-	PriceArr := []*Price{}
+	PriceArr := []*Price{&p}
 	i := Item{
 		Name: itemName,
 		LowestPrice: p,					// init 0 as default price

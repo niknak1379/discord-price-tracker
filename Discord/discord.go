@@ -140,6 +140,10 @@ var commandList = []*discordgo.ApplicationCommand{
 }
 var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.InteractionCreate){
 	"add_item": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		})
+		
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
 		// 0 is item name, 1 is uri, 2 is htmlqueryselector
@@ -154,13 +158,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		}
 		
 		// set up response to discord client
-		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				// three options for the three that were required by the command definition
-				Content: content,
-				Embeds: []*discordgo.MessageEmbed{em},
-			},
+		discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			Content: content,
+			Embeds: []*discordgo.MessageEmbed{em},
 		})
 	},
 	
@@ -224,6 +224,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		})
 	},
 	"edit_tracker": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		})
 		options := i.ApplicationCommandData().Options
 		content := ""
 		var embeds = []*discordgo.MessageEmbed{}
@@ -240,7 +243,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			priceField := setPriceField(p, "Recently Added")
 
 			// add price tracking info
-			em := setEmbed(res)
+			em = setEmbed(res)
 			em.Fields = append(em.Fields, priceField...)
 			if (err != nil){
 				content = err.Error()
@@ -250,7 +253,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			
 		case "remove_existing_tracking_option":
 			res, err := database.RemoveTrackingInfo(name, uri)
-			em := setEmbed(res)
+			em = setEmbed(res)
 			if (err != nil){
 				content = err.Error()
 			}else{
@@ -258,12 +261,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 		}
 
-		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: content,
-				Embeds: embeds,
-			},
+		discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			Content: content,
+			Embeds: []*discordgo.MessageEmbed{embeds[]},
 		})
 	},
 	"graph_price": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -408,11 +408,17 @@ func SendGraphPng(discord *discordgo.Session){
 func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
 	var fields []*discordgo.MessageEmbedField
 	// set up trackerArr infromation
+	field := discordgo.MessageEmbedField{
+			Name: "Tracking URL",
+			Value: "Tracking CSS Selector",
+			Inline: true,
+		}
+	fields = append(fields, &field)
 	for _,tracker := range Item.TrackingList{
 		field := discordgo.MessageEmbedField{
 			Name: tracker.URI,
 			Value: tracker.HtmlQuery,
-			Inline: false,
+			Inline: true,
 		}
 		fields = append(fields, &field)
 	}

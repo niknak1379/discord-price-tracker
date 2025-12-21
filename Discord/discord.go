@@ -243,7 +243,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			priceField := setPriceField(p, "Recently Added")
 
 			// add price tracking info
-			em = setEmbed(res)
+			em := setEmbed(res)
 			em.Fields = append(em.Fields, priceField...)
 			if (err != nil){
 				content = err.Error()
@@ -253,7 +253,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			
 		case "remove_existing_tracking_option":
 			res, err := database.RemoveTrackingInfo(name, uri)
-			em = setEmbed(res)
+			em := setEmbed(res)
 			if (err != nil){
 				content = err.Error()
 			}else{
@@ -263,7 +263,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 
 		discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 			Content: content,
-			Embeds: []*discordgo.MessageEmbed{embeds[]},
+			Embeds: embeds,
 		})
 	},
 	"graph_price": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {

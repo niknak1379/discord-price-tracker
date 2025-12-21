@@ -74,7 +74,7 @@ func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.
 		"PriceHistory": Price,
 	}} 
 	var result Item
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}})
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}}).SetReturnDocument(options.After)
 	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil{
 		log.Print("error in addingnewprice", err)
@@ -96,7 +96,7 @@ func GetLowestHistoricalPrice(Name string) (Price, error){
 }
 func UpdateLowestHistoricalPrice(Name string, newLow Price) (Item, error){
 	filter := bson.M{"Name" : Name}
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHisotry", 0}})
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHisotry", 0}}).SetReturnDocument(options.After)
 	update := bson.M {
 		"$set" : bson.M{
 			"LowestPrice": newLow,
@@ -124,7 +124,7 @@ func GetLowestPrice(Name string) (Price, error){
 }
 func UpdateLowestPrice(Name string, newLow Price) (Item, error){
 	filter := bson.M{"Name" : Name}
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHisotry", 0}})
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHisotry", 0}}).SetReturnDocument(options.After)
 	update := bson.M {
 		"$set" : bson.M{
 			"CurrentLowestPrice": newLow,
@@ -223,7 +223,7 @@ func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, P
 		"PriceHistory": p,
 	}} 
 	var result Item
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}})
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}}).SetReturnDocument(options.After)
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil{
 		return result, p, err
@@ -239,7 +239,7 @@ func RemoveTrackingInfo(itemName string, uri string) (Item, error) {
 	update := bson.M{"$pull": bson.M{"TrackingList": bson.M{"URI": uri}}}
 	
 	var result Item
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}})
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}}).SetReturnDocument(options.After)
 	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil{
 		return result, err

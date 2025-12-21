@@ -33,11 +33,6 @@ func updateAllPrices(){
 	itemsArr := database.GetAllItems()
 	for _,v := range itemsArr{
 		date := time.Now()
-		oldLow, err := database.GetLowestHistoricalPrice(v.Name)
-		if err != nil{
-			log.Print(err)
-			continue
-		}
 		currLow := database.Price{
 			Price: math.MaxInt,
 		}
@@ -49,6 +44,11 @@ func updateAllPrices(){
 
 			// updates the price from the price source in the pricearr list of 
 			// the document
+			oldLow, err := database.GetLowestHistoricalPrice(v.Name)
+			if err != nil{
+				log.Print(err)
+				continue
+			}
 			np, _ = updatePrice(v.Name, t.URI, t.HtmlQuery, oldLow.Price, date)
 			if currLow.Price > np.Price{
 				currLow = np
@@ -69,7 +69,7 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow int, date tim
 
 	// notify discord if a new historical low has been achieved
 	if oldLow > newPrice {
-			discord.LowestPriceAlert(discord.Discord, Name, newPrice, oldLow, URI)
+		discord.LowestPriceAlert(discord.Discord, Name, newPrice, oldLow, URI)
 	}
 	return p, err
 }

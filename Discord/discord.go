@@ -409,8 +409,8 @@ func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
 	var fields []*discordgo.MessageEmbedField
 	// set up trackerArr infromation
 	field := discordgo.MessageEmbedField{
-			Name: embedSeparatorFormatter("Tracking URL", 45),
-			Value: embedSeparatorFormatter("Tracking CSS Selecto", 45),
+			Name: embedSeparatorFormatter("Tracking URL", 43),
+			Value: embedSeparatorFormatter("CSS Selector", 44),
 			Inline: false,
 		}
 	fields = append(fields, &field)
@@ -421,7 +421,7 @@ func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
 			Inline: false,
 		}
 		separatorField := discordgo.MessageEmbedField{
-			Name: embedSeparatorFormatter("", 45),
+			Name: embedSeparatorFormatter("", 44),
 			Value: "",
 			Inline: false,
 		}
@@ -447,7 +447,7 @@ func setPriceField(p database.Price, message string)([]*discordgo.MessageEmbedFi
 		Inline: false,
 	} */
 	priceField := discordgo.MessageEmbedField{
-		Name: embedSeparatorFormatter(fmt.Sprintf("%s Price", message), 45),
+		Name: embedSeparatorFormatter(fmt.Sprintf("%s Price", message), 44),
 		Value: "$" + strconv.Itoa(p.Price + 1),
 		Inline: true,
 	}
@@ -463,12 +463,14 @@ func setPriceField(p database.Price, message string)([]*discordgo.MessageEmbedFi
 // <-------- s --------->
 // formats strings like above and total output string length of l
 func embedSeparatorFormatter(s string, l int)(string){
-	if len(s) > l {return s}
 	flip := false;
-	for i:= 0 ; i < (len(s) - l) ; i++{
-		if i == 0 {
+	initLen := len(s)
+	if initLen > l {return s}
+	
+	for i := 0 ; i < (l - initLen) ; i++{
+		if i == l - initLen - 2 {
 			s = "<" + s
-		} else if i == len(s) - l{
+		}else if i == l - initLen - 1{
 			s = s + ">"
 		}else if flip {s = "-" + s} else{s = s + "-"}
 		flip = !flip

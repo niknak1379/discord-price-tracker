@@ -47,7 +47,8 @@ func AddItem(itemName string, uri string, query string) (Item, error){
 		Name: itemName,
 		LowestPrice: p,					
 		TrackingList: arr,
-		PriceHistory: PriceArr,			
+		PriceHistory: PriceArr,	
+		CurrentLowestPrice: p,		
 	}
 	result, err := Table.InsertOne(ctx, i)
 	if err != nil{

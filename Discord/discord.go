@@ -9,7 +9,6 @@ import (
 	charts "priceTracker/Charts"
 	database "priceTracker/Database"
 	"strconv"
-	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -312,8 +311,7 @@ func Run() {
 	checkNilErr(err)
 
 	Discord.AddHandler(ready)
-	// add a event handler
-	Discord.AddHandler(newMessage)
+	
 
 	// open session
 	Discord.Open()
@@ -343,9 +341,12 @@ func Run() {
 	fmt.Println("recieved signal, shutting down")
 	if true {
 		log.Println("Removing commands...")
-
+		registeredCommands, err = Discord.ApplicationCommands(Discord.State.User.ID, "")
+		if err != nil {
+			log.Panicf("Cannot get application registered command list")
+		}
 		for _, v := range registeredCommands {
-			err := Discord.ApplicationCommandDelete(Discord.State.User.ID, "", v.ID)
+			err = Discord.ApplicationCommandDelete(Discord.State.User.ID, "", v.ID)
 			if err != nil {
 				log.Panicf("Cannot delete '%v' command: %v", v.Name, err)
 			}
@@ -353,29 +354,6 @@ func Run() {
 	}
 
 	log.Println("Gracefully shutting down.")
-
-}
-
-func newMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
-
-	/* prevent bot responding to its own message
-	this is achived by looking into the message author id
-	if message.author.id is same as bot.author.id then just return
-	*/
-	if message.Author.ID == discord.State.User.ID {
-		return
-	}
-	fmt.Println("logging message", message.Content)
-	fmt.Println("ID", message.ChannelID)
-
-	// respond to user message if it contains `!help` or `!bye`
-	switch {
-	case strings.Contains(message.Content, "!help"):
-		discord.ChannelMessageSend(message.ChannelID, "Hello World😃")
-	case strings.Contains(message.Content, "!bye"):
-		discord.ChannelMessageSend(message.ChannelID, "Good Bye👋")
-		// add more cases if required
-	}
 
 }
 

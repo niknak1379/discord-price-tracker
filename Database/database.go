@@ -123,7 +123,7 @@ func GetLowestPrice(Name string) (Price, error){
 	return res.LowestPrice, err
 }
 func UpdateLowestPrice(Name string, newLow Price) (Item, error){
-	filter := bson.M{"Name" : Name}
+	filter := bson.M{"Name" : bson.M{"$regex": "^" + Name + "$", "$options": "i"}}
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHisotry", 0}}).SetReturnDocument(options.After)
 	update := bson.M {
 		"$set" : bson.M{
@@ -157,7 +157,7 @@ func GetAllItems() []*Item {
 
 func GetItem(itemName string) (Item, error) {
 	var res Item
-	filter := bson.M{"Name": itemName}
+	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
 	opts := options.FindOne().SetProjection(bson.D{{"PriceHistory", 0}})
 	err := Table.FindOne(ctx, filter, opts).Decode(&res)
 	if err != nil{
@@ -203,7 +203,7 @@ func GetPriceHistory(Name string, date time.Time) ([]*Price, error){
 	return res, err
 }
 func RemoveItem(itemName string)  *mongo.DeleteResult{
-	filter := bson.M{"Name": itemName}
+	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
 	results, err := Table.DeleteOne(ctx, filter)
 	if err != nil{
 		panic(err)
@@ -216,7 +216,7 @@ func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, P
 	if err != nil{
 		return Item{}, p, err
 	}
-	filter := bson.M{"Name": itemName}
+	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
 	
 	update := bson.M{"$push": bson.M{
 		"TrackingList": t,
@@ -233,7 +233,7 @@ func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, P
 
 func RemoveTrackingInfo(itemName string, uri string) (Item, error) {
 	filter := bson.M{
-		"Name": itemName, 
+		"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}, 
 	}
 
 	update := bson.M{"$pull": bson.M{"TrackingList": bson.M{"URI": uri}}}

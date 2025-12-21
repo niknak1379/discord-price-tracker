@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -31,7 +32,6 @@ func init(){
 	Colly.OnRequest(func(r *colly.Request) {
         r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
         r.Headers.Set("Accept-Language", "en-US,en;q=0.9")
-        r.Headers.Set("Accept-Encoding", "gzip, deflate, br")
         r.Headers.Set("DNT", "1")
         r.Headers.Set("Connection", "keep-alive")
         r.Headers.Set("Upgrade-Insecure-Requests", "1")
@@ -39,7 +39,18 @@ func init(){
         r.Headers.Set("Sec-Fetch-Mode", "navigate")
         r.Headers.Set("Sec-Fetch-Site", "cross-site")
         r.Headers.Set("Referer", "https://www.google.com/")
+		r.Headers.Set("Accept-Encoding", "gzip, deflate")
     })
+	Colly.WithTransport(&http.Transport{
+		DisableCompression: false,
+	})
+
+	Colly.OnResponse(func(r *colly.Response) {
+		log.Printf("Content-Encoding: %s", r.Headers.Get("Content-Encoding"))
+		log.Printf("Status Code: %d", r.StatusCode)
+		log.Printf("Content-Type: %s", r.Headers.Get("Content-Type"))
+		log.Printf("Body length: %d", len(r.Body))
+	})
 	Colly.OnError(func(r *colly.Response, err error) {
         log.Printf("Error scraping %s: %v", r.Request.URL, err)
     })
@@ -49,13 +60,14 @@ func init(){
 func GetPrice(uri string, querySelector string) (int, error) {
 	var err error
 	res := 0
-	log.Println("logging url", uri)
+	log.Println("logging url", uri, querySelector)
+	
 	Colly.OnHTML(querySelector, func(h *colly.HTMLElement) {
+		log.Println(querySelector, h.Text)
 		ret := strings.ReplaceAll(h.Text, "$", "")
 		ret = strings.TrimSpace(ret)
 		ret = strings.Split(ret, ".")[0]
 		res, err = strconv.Atoi(ret)
-		log.Println("got price from:", h.Text)
 		log.Println("price", res, ret, err)
 	})
 	err = Colly.Visit(uri)

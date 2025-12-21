@@ -409,8 +409,8 @@ func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
 	var fields []*discordgo.MessageEmbedField
 	// set up trackerArr infromation
 	field := discordgo.MessageEmbedField{
-			Name: embedSeparatorFormatter("Tracking URL", 43),
-			Value: embedSeparatorFormatter("CSS Selector", 44),
+			Name: embedSeparatorFormatter("Tracking URL", 44),
+			Value: embedSeparatorFormatter("CSS Selector", 45),
 			Inline: false,
 		}
 	fields = append(fields, &field)
@@ -421,7 +421,7 @@ func setEmbed(Item database.Item)(*discordgo.MessageEmbed){
 			Inline: false,
 		}
 		separatorField := discordgo.MessageEmbedField{
-			Name: embedSeparatorFormatter("", 44),
+			Name: embedSeparatorFormatter("", 45),
 			Value: "",
 			Inline: false,
 		}

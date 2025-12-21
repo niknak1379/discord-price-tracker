@@ -3,6 +3,7 @@ package crawler
 import (
 	"log"
 	"strconv"
+	"strings"
 
 	"time"
 
@@ -49,7 +50,9 @@ func GetPrice(uri string, querySelector string) (int, error) {
 	var err error
 	res := 0
 	Colly.OnHTML(querySelector, func(h *colly.HTMLElement) {
-		res, err = strconv.Atoi(h.Text)
+		ret := strings.ReplaceAll(h.Text, "$", "")
+		ret = strings.Split(ret, ".")[0]
+		res, err = strconv.Atoi(ret)
 	})
 	err = Colly.Visit(uri)
 	

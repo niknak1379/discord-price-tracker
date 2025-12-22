@@ -58,30 +58,80 @@ func AddItem(itemName string, uri string, query string) (Item, error){
 	log.Println("lowest price being passed on", i.LowestPrice.Price, i.LowestPrice.Url)
 	return i, err
 }
-
-func AddNewPrice(Name string, uri string, newPrice int, oldPrice int, date time.Time) (Price, error){
-	Price := Price{
-		Price: newPrice,
-		Url: uri,
-		Date: date,
-	}
-	log.Printf("%d old price, %d new price", oldPrice, newPrice)
-	if (newPrice < oldPrice) {
-		UpdateLowestHistoricalPrice(Name, Price)
-	}
-	filter := bson.M{"Name": Name}
-	update := bson.M{"$push": bson.M{
-		"PriceHistory": Price,
-	}} 
-	var result Item
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}}).SetReturnDocument(options.After)
-	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
-	if err != nil{
-		log.Print("error in addingnewprice", err)
-		return Price, err
-	}
-	log.Printf("adding new price for %s with price %d for url %s", Name, newPrice, uri)
-	return Price, err
+func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date time.Time) (Price, error){
+    
+    price := Price{
+        Price: newPrice,
+        Url: uri,
+        Date: date,
+    }
+    
+    startOfDay := date.Truncate(24 * time.Hour)
+    
+    pipeline := mongo.Pipeline{
+        bson.D{{Key: "$match", Value: bson.M{"Name": Name}}},
+        bson.D{{Key: "$project", Value: bson.M{
+            "PriceHistory": bson.M{
+                "$filter": bson.M{
+                    "input": "$PriceHistory",
+                    "as":    "price",
+                    "cond": bson.M{
+                        "$and": []bson.M{
+                            {"$gte": []interface{}{"$$price.Date", startOfDay}},
+                            {"$eq": []interface{}{"$$price.Url", uri}},
+                        },
+                    },
+                },
+            },
+        }}},
+    }
+    
+    cursor, err := Table.Aggregate(context.TODO(), pipeline)
+    if err != nil{
+        return Price{}, err
+    }
+    defer cursor.Close(context.TODO())
+    
+    type Result struct {
+        PriceHistory []*Price `bson:"PriceHistory"`
+    }
+    
+    var results []Result
+    if err = cursor.All(context.TODO(), &results); err != nil{
+        return Price{}, err
+    }
+    
+    // Check if price unchanged today
+    if len(results) > 0 && len(results[0].PriceHistory) > 0 {
+        for _, p := range results[0].PriceHistory {
+            if p.Price == newPrice {
+                log.Println("price for todays crawl has not changed, skipping db update")
+                return price, nil
+            }
+        }
+    }
+    
+    // Check for lowest historical price
+    log.Printf("%d old price, %d new price", historicalLow, newPrice)
+    if newPrice < historicalLow {
+        UpdateLowestHistoricalPrice(Name, price)
+    }
+    
+    filter := bson.M{"Name": Name}
+    update := bson.M{"$push": bson.M{
+        "PriceHistory": price,
+    }} 
+    
+    var result Item
+    opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}}).SetReturnDocument(options.After)
+    err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
+    if err != nil{
+        log.Print("error in addingnewprice", err)
+        return price, err
+    }
+    
+    log.Printf("adding new price for %s with price %d for url %s", Name, newPrice, uri)
+    return price, nil
 }
 func GetLowestHistoricalPrice(Name string) (Price, error){
 	filter := bson.M{"Name": Name}
@@ -290,3 +340,4 @@ func validateURI(uri string, querySelector string) (Price, TrackingInfo, error){
 	}
 	return price, tracking, err
 }
+

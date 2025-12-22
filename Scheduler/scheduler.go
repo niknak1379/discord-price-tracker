@@ -50,19 +50,22 @@ func updateAllPrices(){
 				log.Print(err)
 				continue
 			}
-			np, _ = updatePrice(v.Name, t.URI, t.HtmlQuery, oldLow.Price, date)
-			if currLow.Price > np.Price{
+			np, err = updatePrice(v.Name, t.URI, t.HtmlQuery, oldLow.Price, date)
+			if currLow.Price > np.Price || err != nil{
 				currLow = np
 			}
 		}
-		// keeps track of current lowest price
-		database.UpdateLowestPrice(v.Name, currLow)
+		// keeps track of current lowest price, if a new price has been found
+		// and no errors encountered
+		if currLow.Price != math.MaxInt32{
+			database.UpdateLowestPrice(v.Name, currLow)
+		}
 	}
 }
 func updatePrice(Name string, URI string, HtmlQuery string, oldLow int, date time.Time)(database.Price, error){
 	newPrice, err := crawler.GetPrice(URI, HtmlQuery)
-	if err != nil {
-		log.Print("error getting price in updatePrice", err)
+	if err != nil || newPrice == 0{
+		log.Print("error getting price in updatePrice", err, newPrice)
 		discord.CrawlErrorAlert(discord.Discord, Name, URI, err)
 		return database.Price{}, err
 	}

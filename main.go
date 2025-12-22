@@ -7,12 +7,13 @@ import (
 	database "priceTracker/Database"
 	discord "priceTracker/Discord"
 	scheduler "priceTracker/Scheduler"
+	"time"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	
+	time.Local, _ = time.LoadLocation("America/Los_Angeles")
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	
 	godotenv.Load()

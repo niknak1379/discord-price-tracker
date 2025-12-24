@@ -15,7 +15,7 @@ func InitScheduler(ctx context.Context, cancel context.CancelFunc){
 	// -------------------- set timer for daily scrapping -------------//
 	updateAllPrices()
 	go func() {
-		ticker := time.NewTicker(12 * time.Hour)
+		ticker := time.NewTicker(8 * time.Hour)
 		log.Println("setting ticker in crawler")
 		defer ticker.Stop()
 		for {

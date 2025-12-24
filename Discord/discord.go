@@ -17,7 +17,7 @@ var BotToken string
 var Discord *discordgo.Session
 var commandList = []*discordgo.ApplicationCommand{
 	{
-		Name:        "add_item",
+		Name:        "add",
 		Description: "Add new Price Tracker",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
@@ -41,7 +41,7 @@ var commandList = []*discordgo.ApplicationCommand{
 		},
 	},
 	{
-		Name:        "get_item",
+		Name:        "get",
 		Description: "Add all links for the item",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
@@ -53,11 +53,11 @@ var commandList = []*discordgo.ApplicationCommand{
 		},
 	},
 	{
-		Name:        "get_all_items",
+		Name:        "list",
 		Description: "get all items",
 	},
 	{
-		Name:        "remove_item",
+		Name:        "remove",
 		Description: "remove item completely",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
@@ -69,11 +69,11 @@ var commandList = []*discordgo.ApplicationCommand{
 		},
 	},
 	{
-		Name:        "edit_tracker",
+		Name:        "edit",
 		Description: "Edit a currently Existing Tracker",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
-				Name:        "add_additional_tracking",
+				Name:        "add",
 				Description: "add new pair of tracking URI and HTML",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 				Options: []*discordgo.ApplicationCommandOption{
@@ -98,7 +98,7 @@ var commandList = []*discordgo.ApplicationCommand{
 				},
 			},
 			{
-				Name:        "remove_existing_tracking_option",
+				Name:        "remove",
 				Description: "remove pair of tracking URI and HTML",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 				Options: []*discordgo.ApplicationCommandOption{
@@ -119,7 +119,7 @@ var commandList = []*discordgo.ApplicationCommand{
 		},
 	},
 	{
-		Name:        "graph_price",
+		Name:        "graph",
 		Description: "graph price of item",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
@@ -138,7 +138,7 @@ var commandList = []*discordgo.ApplicationCommand{
 	},
 }
 var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.InteractionCreate){
-	"add_item": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 		})
@@ -163,7 +163,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		})
 	},
 	
-	"get_item": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"get": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
 		// 0 is item name, 1 is uri, 2 is htmlqueryselector
@@ -189,7 +189,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			},
 		})
 	},
-	"get_all_items": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"list": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// add tracker to database
 		getRes := database.GetAllItems()
 		//returnstr, _ := json.Marshal(getRes)
@@ -207,7 +207,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			},
 		})
 	},
-	"remove_item": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"remove": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
 
@@ -222,7 +222,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			},
 		})
 	},
-	"edit_tracker": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"edit": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 		})
@@ -236,7 +236,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		// As you can see, names of subcommands (nested, top-level)
 		// and subcommand groups are provided through the arguments.
 		switch options[0].Name {
-		case "add_additional_tracking":
+		case "add":
 			htmlQuery := options[0].Options[2].StringValue()
 			res, p, err := database.AddTrackingInfo(name, uri, htmlQuery)
 			priceField := setPriceField(p, "Newly Added Tracker")
@@ -250,7 +250,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				embeds = append(embeds, em)
 			}
 			
-		case "remove_existing_tracking_option":
+		case "remove":
 			res, err := database.RemoveTrackingInfo(name, uri)
 			em := setEmbed(res)
 			if (err != nil){
@@ -265,7 +265,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			Embeds: embeds,
 		})
 	},
-	"graph_price": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"graph": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		
 		// set up response to discord client
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{

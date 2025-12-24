@@ -426,7 +426,8 @@ func setPriceField(p database.Price, message string)([]*discordgo.MessageEmbedFi
 	} */
 	priceField := discordgo.MessageEmbedField{
 		Name: embedSeparatorFormatter(fmt.Sprintf("%s Price", message), 44),
-		Value: "$" + strconv.Itoa(p.Price + 1),
+		Value: func()string{if p.Price == 0 {return "Item Unavailable"}else{
+			return "$" + strconv.Itoa(p.Price + 1)}}(),
 		Inline: true,
 	}
 	urlField := discordgo.MessageEmbedField{

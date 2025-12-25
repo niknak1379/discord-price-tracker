@@ -328,6 +328,7 @@ func Run(ctx context.Context) {
 		}
 		registeredCommands[index] = cmd
 	}
+	log.Println("all commands added")
 	<-ctx.Done()
 	Discord.Close()
 	log.Println("Removing commands...")

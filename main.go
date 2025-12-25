@@ -10,7 +10,7 @@ import (
 	discord "priceTracker/Discord"
 	"sync"
 
-	// scheduler "priceTracker/Scheduler"
+	scheduler "priceTracker/Scheduler"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -25,10 +25,9 @@ func main() {
 	//crawler.GetPrice("https://www.newegg.com/fractal-design-atx-mid-tower-meshify-3-steel-pc-case-white-fd-c-mes3a-04/p/N82E16811352227", "li.price-current strong")
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
-	database.InitDB(ctx, cancel)
-	// go scheduler.InitScheduler(ctx, cancel)
+	database.InitDB(ctx)
+	go scheduler.InitScheduler(ctx)
 	wg.Go(func() {
-		defer wg.Done()
 		discord.Run(ctx)
 	})
 

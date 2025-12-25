@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func InitScheduler(ctx context.Context, cancel context.CancelFunc) {
+func InitScheduler(ctx context.Context) {
 	// -------------------- set timer for daily scrapping -------------//
 	updateAllPrices()
 	go func() {
@@ -25,13 +25,13 @@ func InitScheduler(ctx context.Context, cancel context.CancelFunc) {
 				return
 			case <-ticker.C:
 				updateAllPrices()
-
+				log.Println("ticking")
 			}
 		}
 	}()
-	defer cancel()
 }
 func updateAllPrices() {
+	log.Println("updateAllPrices being fired")
 	itemsArr := database.GetAllItems()
 	for _, v := range itemsArr {
 		date := time.Now()
@@ -79,4 +79,3 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow int, date tim
 	}
 	return p, err
 }
-

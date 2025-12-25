@@ -53,7 +53,7 @@ func updateAllPrices() {
 				continue
 			}
 			np, err = updatePrice(v.Name, t.URI, t.HtmlQuery, oldLow.Price, date)
-			if currLow.Price > np.Price || err != nil {
+			if currLow.Price > np.Price && err == nil {
 				currLow = np
 			}
 		}

@@ -25,18 +25,13 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx, cancel)
 	go scheduler.InitScheduler(ctx, cancel)
-
 	discord.Run(ctx)
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	log.Println("Press Ctrl+C to exit")
+
 	<-stop
 	fmt.Println("recieved signal, shutting down")
-
-	defer func() {
-		if err := database.Client.Disconnect(ctx); err != nil {
-			panic(err)
-		}
-		cancel()
-	}()
+	cancel()
 }

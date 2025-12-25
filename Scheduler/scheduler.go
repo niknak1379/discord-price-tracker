@@ -11,7 +11,8 @@ import (
 	discord "priceTracker/Discord"
 	"time"
 )
-func InitScheduler(ctx context.Context, cancel context.CancelFunc){
+
+func InitScheduler(ctx context.Context, cancel context.CancelFunc) {
 	// -------------------- set timer for daily scrapping -------------//
 	updateAllPrices()
 	go func() {
@@ -19,52 +20,53 @@ func InitScheduler(ctx context.Context, cancel context.CancelFunc){
 		log.Println("setting ticker in crawler")
 		defer ticker.Stop()
 		for {
-			select{
-			case <- ctx.Done():
+			select {
+			case <-ctx.Done():
 				return
-			case <- ticker.C:
+			case <-ticker.C:
 				updateAllPrices()
-				
+
 			}
 		}
 	}()
 	defer cancel()
 }
-func updateAllPrices(){
+func updateAllPrices() {
 	itemsArr := database.GetAllItems()
-	for _,v := range itemsArr{
+	for _, v := range itemsArr {
 		date := time.Now()
 		currLow := database.Price{
 			Price: math.MaxInt,
+			Url:   "Unavailable From All Sources",
 		}
 		var np = database.Price{}
-		for _,t := range v.TrackingList{
+		for _, t := range v.TrackingList {
 			r := rand.IntN(10)
 			timer := time.NewTimer(time.Duration(r) * time.Second)
-			<- timer.C
+			<-timer.C
 
-			// updates the price from the price source in the pricearr list of 
+			// updates the price from the price source in the pricearr list of
 			// the document
 			oldLow, err := database.GetLowestHistoricalPrice(v.Name)
-			if err != nil{
+			if err != nil {
 				log.Print(err)
 				continue
 			}
 			np, err = updatePrice(v.Name, t.URI, t.HtmlQuery, oldLow.Price, date)
-			if currLow.Price > np.Price || err != nil{
+			if currLow.Price > np.Price || err != nil {
 				currLow = np
 			}
 		}
 		// keeps track of current lowest price, if a new price has been found
 		// and no errors encountered
-		if currLow.Price != math.MaxInt32{
+		if currLow.Price != math.MaxInt32 {
 			database.UpdateLowestPrice(v.Name, currLow)
 		}
 	}
 }
-func updatePrice(Name string, URI string, HtmlQuery string, oldLow int, date time.Time)(database.Price, error){
+func updatePrice(Name string, URI string, HtmlQuery string, oldLow int, date time.Time) (database.Price, error) {
 	newPrice, err := crawler.GetPrice(URI, HtmlQuery)
-	if err != nil || newPrice == 0{
+	if err != nil || newPrice == 0 {
 		log.Print("error getting price in updatePrice", err, newPrice)
 		discord.CrawlErrorAlert(discord.Discord, Name, URI, err)
 		return database.Price{}, err
@@ -77,3 +79,4 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow int, date tim
 	}
 	return p, err
 }
+

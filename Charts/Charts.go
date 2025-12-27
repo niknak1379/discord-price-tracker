@@ -44,8 +44,8 @@ func PriceHistoryChart(Name string, month int) error {
 		charts.WithGridOpts(opts.Grid{
 			Show:         opts.Bool(true),
 			ContainLabel: opts.Bool(true),
-			Top:          "20px",
-			Bottom:       "20px",
+			Top:          "100px",
+			Bottom:       "100px",
 		}),
 		charts.WithLegendOpts(
 			opts.Legend{

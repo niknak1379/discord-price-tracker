@@ -13,130 +13,133 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var BotToken string
-var Discord *discordgo.Session
-var commandList = []*discordgo.ApplicationCommand{
-	{
-		Name:        "add",
-		Description: "Add new Price Tracker",
-		Options: []*discordgo.ApplicationCommandOption{
-			{
-				Name:        "name",
-				Description: "Add item name",
-				Type:        discordgo.ApplicationCommandOptionString,
-				Required:    true,
-			},
-			{
-				Name:        "uri",
-				Description: "Add Scrapping URI",
-				Type:        discordgo.ApplicationCommandOptionString,
-				Required:    true,
-			},
-			{
-				Name:        "html_tag",
-				Description: "Add Scrapping HTML Tag",
-				Type:        discordgo.ApplicationCommandOptionString,
-				Required:    true,
-			},
-		},
-	},
-	{
-		Name:        "get",
-		Description: "Add all links for the item",
-		Options: []*discordgo.ApplicationCommandOption{
-			{
-				Name:        "name",
-				Description: "Add item name",
-				Type:        discordgo.ApplicationCommandOptionString,
-				Required:    true,
-			},
-		},
-	},
-	{
-		Name:        "list",
-		Description: "get all items",
-	},
-	{
-		Name:        "remove",
-		Description: "remove item completely",
-		Options: []*discordgo.ApplicationCommandOption{
-			{
-				Name:        "name",
-				Description: "Add item name",
-				Type:        discordgo.ApplicationCommandOptionString,
-				Required:    true,
-			},
-		},
-	},
-	{
-		Name:        "edit",
-		Description: "Edit a currently Existing Tracker",
-		Options: []*discordgo.ApplicationCommandOption{
-			{
-				Name:        "add",
-				Description: "add new pair of tracking URI and HTML",
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Options: []*discordgo.ApplicationCommandOption{
-					{
-						Name:        "name",
-						Description: "Add item name",
-						Type:        discordgo.ApplicationCommandOptionString,
-						Required:    true,
-					},
-					{
-						Name:        "uri",
-						Description: "Add Scrapping URI",
-						Type:        discordgo.ApplicationCommandOptionString,
-						Required:    true,
-					},
-					{
-						Name:        "html_tag",
-						Description: "Add Scrapping HTML Tag",
-						Type:        discordgo.ApplicationCommandOptionString,
-						Required:    true,
-					},
+var (
+	BotToken    string
+	Discord     *discordgo.Session
+	commandList = []*discordgo.ApplicationCommand{
+		{
+			Name:        "add",
+			Description: "Add new Price Tracker",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "name",
+					Description: "Add item name",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
 				},
-			},
-			{
-				Name:        "remove",
-				Description: "remove pair of tracking URI and HTML",
-				Type:        discordgo.ApplicationCommandOptionSubCommand,
-				Options: []*discordgo.ApplicationCommandOption{
-					{
-						Name:        "name",
-						Description: "Add item name",
-						Type:        discordgo.ApplicationCommandOptionString,
-						Required:    true,
-					},
-					{
-						Name:        "uri",
-						Description: "Add Scrapping URI",
-						Type:        discordgo.ApplicationCommandOptionString,
-						Required:    true,
-					},
+				{
+					Name:        "uri",
+					Description: "Add Scrapping URI",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
+				},
+				{
+					Name:        "html_tag",
+					Description: "Add Scrapping HTML Tag",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
 				},
 			},
 		},
-	},
-	{
-		Name:        "graph",
-		Description: "graph price of item",
-		Options: []*discordgo.ApplicationCommandOption{
-			{
-				Name:        "name",
-				Description: "Add item name",
-				Type:        discordgo.ApplicationCommandOptionString,
-				Required:    true,
-			},
-			{
-				Name:        "months",
-				Description: "how long of the history to graph",
-				Type:        discordgo.ApplicationCommandOptionInteger,
-				Required:    true,
+		{
+			Name:        "get",
+			Description: "Add all links for the item",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "name",
+					Description: "Add item name",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
+				},
 			},
 		},
-	},
-}
+		{
+			Name:        "list",
+			Description: "get all items",
+		},
+		{
+			Name:        "remove",
+			Description: "remove item completely",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "name",
+					Description: "Add item name",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "edit",
+			Description: "Edit a currently Existing Tracker",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "add",
+					Description: "add new pair of tracking URI and HTML",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Name:        "name",
+							Description: "Add item name",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Required:    true,
+						},
+						{
+							Name:        "uri",
+							Description: "Add Scrapping URI",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Required:    true,
+						},
+						{
+							Name:        "html_tag",
+							Description: "Add Scrapping HTML Tag",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Required:    true,
+						},
+					},
+				},
+				{
+					Name:        "remove",
+					Description: "remove pair of tracking URI and HTML",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Name:        "name",
+							Description: "Add item name",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Required:    true,
+						},
+						{
+							Name:        "uri",
+							Description: "Add Scrapping URI",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Required:    true,
+						},
+					},
+				},
+			},
+		},
+		{
+			Name:        "graph",
+			Description: "graph price of item",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "name",
+					Description: "Add item name",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
+				},
+				{
+					Name:        "months",
+					Description: "how long of the history to graph",
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Required:    true,
+				},
+			},
+		},
+	}
+)
+
 var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.InteractionCreate){
 	"add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -191,7 +194,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"list": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// add tracker to database
 		getRes := database.GetAllItems()
-		//returnstr, _ := json.Marshal(getRes)
+		// returnstr, _ := json.Marshal(getRes)
 		var embedArr []*discordgo.MessageEmbed
 		for _, Item := range getRes {
 			em := setEmbed(*Item)
@@ -227,7 +230,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		})
 		options := i.ApplicationCommandData().Options
 		content := ""
-		var embeds = []*discordgo.MessageEmbed{}
+		embeds := []*discordgo.MessageEmbed{}
 		// get option values
 		name := options[0].Options[0].StringValue()
 		uri := options[0].Options[1].StringValue()
@@ -265,7 +268,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		})
 	},
 	"graph": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
-
 		// set up response to discord client
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
@@ -277,21 +279,25 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		err := charts.PriceHistoryChart(options[0].StringValue(), int(options[1].IntValue()))
 		if err != nil {
 			log.Print(err)
-		}
-		reader, err := os.Open("my-chart.png")
-		if err != nil {
-			log.Fatal(err)
-		}
-		File := discordgo.File{
-			Name:        "chart.png",
-			ContentType: "Image",
-			Reader:      reader,
-		}
-		_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Files: []*discordgo.File{&File},
-		})
-		if err != nil {
-			fmt.Printf("Error sending follow-up message: %v\n", err)
+			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: fmt.Sprint(err),
+			})
+		} else {
+			reader, err := os.Open("my-chart.png")
+			if err != nil {
+				log.Fatal(err)
+			}
+			File := discordgo.File{
+				Name:        "chart.png",
+				ContentType: "Image",
+				Reader:      reader,
+			}
+			_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Files: []*discordgo.File{&File},
+			})
+			if err != nil {
+				fmt.Printf("Error sending follow-up message: %v\n", err)
+			}
 		}
 	},
 }
@@ -303,7 +309,6 @@ func checkNilErr(e error) {
 }
 
 func Run(ctx context.Context) {
-
 	// create a session
 	var err error
 	Discord, err = discordgo.New("Bot " + BotToken)
@@ -356,6 +361,7 @@ func LowestPriceAlert(discord *discordgo.Session, itemName string, newPrice int,
 		itemName, newPrice, oldPrice, URL)
 	discord.ChannelMessageSend("803818389755265075", content)
 }
+
 func CrawlErrorAlert(discord *discordgo.Session, itemName string, URL string, err error) {
 	content := fmt.Sprintf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
 		itemName, URL, err.Error())
@@ -363,14 +369,16 @@ func CrawlErrorAlert(discord *discordgo.Session, itemName string, URL string, er
 		itemName, URL, err.Error())
 	discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
 }
+
 func SendGraphPng(discord *discordgo.Session) {
-	//content := fmt.Sprintf("Chart for Product named %s for the last %d months", productName, months)
+	// content := fmt.Sprintf("Chart for Product named %s for the last %d months", productName, months)
 	reader, err := os.Open("my-chart.png")
 	if err != nil {
 		log.Fatal(err)
 	}
 	discord.ChannelFileSend(os.Getenv("CHANNEL_ID"), "my-chart.png", reader)
 }
+
 func setEmbed(Item database.Item) *discordgo.MessageEmbed {
 	var fields []*discordgo.MessageEmbedField
 	// set up trackerArr infromation
@@ -406,6 +414,7 @@ func setEmbed(Item database.Item) *discordgo.MessageEmbed {
 	}
 	return &em
 }
+
 func setPriceField(p database.Price, message string) []*discordgo.MessageEmbedField {
 	/* separatorField := discordgo.MessageEmbedField{
 		Name: "<------------------------------------------->",

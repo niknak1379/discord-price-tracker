@@ -34,13 +34,21 @@ func PriceHistoryChart(Name string, month int) error {
 				FontSize:   36,
 			},
 			TextAlign: "center",
+			Left:      "center",
 		}),
 		charts.WithInitializationOpts(opts.Initialization{
 			BackgroundColor: "white",
+			Width:           "1000px",
+			Height:          "600px",
 		}),
 		charts.WithLegendOpts(
 			opts.Legend{
+				Show:    opts.Bool(true),
+				Bottom:  "0%",
 				Padding: 10,
+				TextStyle: &opts.TextStyle{
+					Overflow: "truncate",
+				},
 			},
 		),
 		charts.WithTooltipOpts(opts.Tooltip{
@@ -48,10 +56,6 @@ func PriceHistoryChart(Name string, month int) error {
 			Trigger: "axis",
 		}),
 		charts.WithAnimation(false),
-		charts.WithLegendOpts(opts.Legend{
-			Show:   opts.Bool(true),
-			Bottom: "0%",
-		}),
 		charts.WithYAxisOpts(opts.YAxis{
 			Scale: opts.Bool(true),
 		}),

@@ -9,7 +9,6 @@ import (
 	database "priceTracker/Database"
 	discord "priceTracker/Discord"
 	"sync"
-	"time"
 
 	scheduler "priceTracker/Scheduler"
 
@@ -17,7 +16,6 @@ import (
 )
 
 func main() {
-	time.Local, _ = time.LoadLocation("America/Los_Angeles")
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	var wg sync.WaitGroup
 	godotenv.Load()

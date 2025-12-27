@@ -23,11 +23,26 @@ func PriceHistoryChart(Name string, month int) error {
 		}
 		return err
 	}
+
 	line.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{
-			Title:    "Price History by Store",
-			Subtitle: Name,
+			Subtitle: "Price History by Store",
+			Title:    Name,
+			TitleStyle: &opts.TextStyle{
+				Color:      "Black",
+				FontWeight: "bold",
+				FontSize:   36,
+			},
+			TextAlign: "center",
 		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			BackgroundColor: "white",
+		}),
+		charts.WithLegendOpts(
+			opts.Legend{
+				Padding: 10,
+			},
+		),
 		charts.WithTooltipOpts(opts.Tooltip{
 			Show:    opts.Bool(true),
 			Trigger: "axis",
@@ -35,23 +50,18 @@ func PriceHistoryChart(Name string, month int) error {
 		charts.WithAnimation(false),
 		charts.WithLegendOpts(opts.Legend{
 			Show:   opts.Bool(true),
-			Bottom: "0%", // ← Position at bottom
+			Bottom: "0%",
 		}),
 		charts.WithYAxisOpts(opts.YAxis{
-			Scale: opts.Bool(true), // ← Add this
+			Scale: opts.Bool(true),
 		}),
-		/*  charts.WithDataZoomOpts(opts.DataZoom{
-		    Type:  "inside",
-		    Start: 0,
-		    End:   100,
-		}), */
 	)
 
 	// Set series options to show data points
 	line.SetSeriesOptions(
 		charts.WithLineChartOpts(opts.LineChart{
 			ShowSymbol:   opts.Bool(true),
-			SymbolSize:   10, // ← Make points bigger
+			SymbolSize:   10,
 			Smooth:       opts.Bool(false),
 			ConnectNulls: opts.Bool(false),
 		}),

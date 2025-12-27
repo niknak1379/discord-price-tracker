@@ -38,8 +38,14 @@ func PriceHistoryChart(Name string, month int) error {
 		}),
 		charts.WithInitializationOpts(opts.Initialization{
 			BackgroundColor: "white",
-			Width:           "1000px",
-			Height:          "800px",
+			Width:           "1100px",
+			Height:          "600px",
+		}),
+		charts.WithGridOpts(opts.Grid{
+			Show:         opts.Bool(true),
+			ContainLabel: opts.Bool(true),
+			Top:          "20px",
+			Bottom:       "20px",
 		}),
 		charts.WithLegendOpts(
 			opts.Legend{

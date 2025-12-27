@@ -26,12 +26,12 @@ func PriceHistoryChart(Name string, month int) error {
 
 	line.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{
-			Subtitle: "Price History by Store",
-			Title:    Name,
+			Title: Name,
 			TitleStyle: &opts.TextStyle{
 				Color:      "Black",
 				FontWeight: "bold",
 				FontSize:   36,
+				Padding:    10,
 			},
 			TextAlign: "center",
 			Left:      "center",
@@ -39,12 +39,12 @@ func PriceHistoryChart(Name string, month int) error {
 		charts.WithInitializationOpts(opts.Initialization{
 			BackgroundColor: "white",
 			Width:           "1000px",
-			Height:          "600px",
+			Height:          "800px",
 		}),
 		charts.WithLegendOpts(
 			opts.Legend{
-				Show:    opts.Bool(true),
 				Bottom:  "0%",
+				Show:    opts.Bool(true),
 				Padding: 10,
 				TextStyle: &opts.TextStyle{
 					Overflow: "truncate",

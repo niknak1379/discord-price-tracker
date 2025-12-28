@@ -46,10 +46,11 @@ var (
 			Description: "Add all links for the item",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
-					Name:        "name",
-					Description: "Add item name",
-					Type:        discordgo.ApplicationCommandOptionString,
-					Required:    true,
+					Name:         "name",
+					Description:  "Add item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
 				},
 			},
 		},
@@ -62,10 +63,11 @@ var (
 			Description: "remove item completely",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
-					Name:        "name",
-					Description: "Add item name",
-					Type:        discordgo.ApplicationCommandOptionString,
-					Required:    true,
+					Name:         "name",
+					Description:  "Add item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
 				},
 			},
 		},
@@ -79,10 +81,11 @@ var (
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
-							Name:        "name",
-							Description: "Add item name",
-							Type:        discordgo.ApplicationCommandOptionString,
-							Required:    true,
+							Name:         "name",
+							Description:  "Add item name",
+							Type:         discordgo.ApplicationCommandOptionString,
+							Required:     true,
+							Autocomplete: true,
 						},
 						{
 							Name:        "uri",
@@ -104,10 +107,11 @@ var (
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
-							Name:        "name",
-							Description: "Add item name",
-							Type:        discordgo.ApplicationCommandOptionString,
-							Required:    true,
+							Name:         "name",
+							Description:  "Add item name",
+							Type:         discordgo.ApplicationCommandOptionString,
+							Required:     true,
+							Autocomplete: true,
 						},
 						{
 							Name:        "uri",
@@ -124,10 +128,11 @@ var (
 			Description: "graph price of item",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
-					Name:        "name",
-					Description: "Add item name",
-					Type:        discordgo.ApplicationCommandOptionString,
-					Required:    true,
+					Name:         "name",
+					Description:  "Add item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
 				},
 				{
 					Name:        "months",
@@ -171,25 +176,29 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		options := i.ApplicationCommandData().Options
 		// 0 is item name, 1 is uri, 2 is htmlqueryselector
 		content := ""
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoCompleteName(options[0].StringValue(), i, discord)
+		default:
+			// add tracker to database
+			getRes, err := database.GetItem(options[0].StringValue())
+			var embedArr []*discordgo.MessageEmbed
+			if err != nil {
+				content = err.Error()
+			} else {
+				em := setEmbed(getRes)
+				embedArr = append(embedArr, em)
+			}
 
-		// add tracker to database
-		getRes, err := database.GetItem(options[0].StringValue())
-		var embedArr []*discordgo.MessageEmbed
-		if err != nil {
-			content = err.Error()
-		} else {
-			em := setEmbed(getRes)
-			embedArr = append(embedArr, em)
+			// set up response to discord client
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: content,
+					Embeds:  embedArr,
+				},
+			})
 		}
-
-		// set up response to discord client
-		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: content,
-				Embeds:  embedArr,
-			},
-		})
 	},
 	"list": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// add tracker to database
@@ -210,93 +219,108 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		})
 	},
 	"remove": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
-		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoCompleteName(options[0].StringValue(), i, discord)
+		default:
+			// remove tracker to database
+			deleteRes := database.RemoveItem(options[0].StringValue())
 
-		// add tracker to database
-		deleteRes := database.RemoveItem(options[0].StringValue())
+			// set up response to discord client
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: fmt.Sprint(deleteRes),
+				},
+			})
 
-		// set up response to discord client
-		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprint(deleteRes),
-			},
-		})
+		}
 	},
 	"edit": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
-		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		})
 		options := i.ApplicationCommandData().Options
-		content := ""
-		embeds := []*discordgo.MessageEmbed{}
-		// get option values
-		name := options[0].Options[0].StringValue()
-		uri := options[0].Options[1].StringValue()
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoCompleteName(options[0].StringValue(), i, discord)
+		default:
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
+			content := ""
+			embeds := []*discordgo.MessageEmbed{}
+			// get option values
+			name := options[0].Options[0].StringValue()
+			uri := options[0].Options[1].StringValue()
 
-		// As you can see, names of subcommands (nested, top-level)
-		// and subcommand groups are provided through the arguments.
-		switch options[0].Name {
-		case "add":
-			htmlQuery := options[0].Options[2].StringValue()
-			res, p, err := database.AddTrackingInfo(name, uri, htmlQuery)
-			priceField := setPriceField(p, "Newly Added Tracker")
+			// As you can see, names of subcommands (nested, top-level)
+			// and subcommand groups are provided through the arguments.
+			switch options[0].Name {
+			case "add":
+				htmlQuery := options[0].Options[2].StringValue()
+				res, p, err := database.AddTrackingInfo(name, uri, htmlQuery)
+				priceField := setPriceField(p, "Newly Added Tracker")
 
-			// add price tracking info
-			em := setEmbed(res)
-			em.Fields = append(em.Fields, priceField...)
-			if err != nil {
-				content = err.Error()
-			} else {
-				embeds = append(embeds, em)
+				// add price tracking info
+				em := setEmbed(res)
+				em.Fields = append(em.Fields, priceField...)
+				if err != nil {
+					content = err.Error()
+				} else {
+					embeds = append(embeds, em)
+				}
+
+			case "remove":
+				res, err := database.RemoveTrackingInfo(name, uri)
+				em := setEmbed(res)
+				if err != nil {
+					content = err.Error()
+				} else {
+					embeds = append(embeds, em)
+				}
 			}
 
-		case "remove":
-			res, err := database.RemoveTrackingInfo(name, uri)
-			em := setEmbed(res)
-			if err != nil {
-				content = err.Error()
-			} else {
-				embeds = append(embeds, em)
-			}
+			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: content,
+				Embeds:  embeds,
+			})
+
 		}
-
-		discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: content,
-			Embeds:  embeds,
-		})
 	},
 	"graph": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
-		// set up response to discord client
-		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		})
-		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
-		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-		logger.Info("options", slog.Any("optoin", options))
-		err := charts.PriceHistoryChart(options[0].StringValue(), int(options[1].IntValue()))
-		if err != nil {
-			log.Print(err)
-			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Content: fmt.Sprint(err),
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoCompleteName(options[0].StringValue(), i, discord)
+		default:
+			// set up response to discord client
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
-		} else {
-			reader, err := os.Open("my-chart.png")
+			// get command inputs from discord
+			logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+			logger.Info("options", slog.Any("optoin", options))
+			err := charts.PriceHistoryChart(options[0].StringValue(), int(options[1].IntValue()))
 			if err != nil {
-				log.Fatal(err)
-			}
-			File := discordgo.File{
-				Name:        "chart.png",
-				ContentType: "Image",
-				Reader:      reader,
-			}
-			_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Files: []*discordgo.File{&File},
-			})
-			if err != nil {
-				fmt.Printf("Error sending follow-up message: %v\n", err)
+				log.Print(err)
+				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Content: fmt.Sprint(err),
+				})
+			} else {
+				reader, err := os.Open("my-chart.png")
+				if err != nil {
+					log.Fatal(err)
+				}
+				File := discordgo.File{
+					Name:        "chart.png",
+					ContentType: "Image",
+					Reader:      reader,
+				}
+				_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Files: []*discordgo.File{&File},
+				})
+				if err != nil {
+					fmt.Printf("Error sending follow-up message: %v\n", err)
+				}
 			}
 		}
 	},
@@ -344,7 +368,7 @@ func Run(ctx context.Context) {
 	for _, v := range registeredCommands {
 		err = Discord.ApplicationCommandDelete(Discord.State.User.ID, "", v.ID)
 		if err != nil {
-			log.Panicf("Cannot delete '%v' command: %v", v.Name, err)
+			log.Printf("Cannot delete '%v' command: %v", v.Name, err)
 		}
 	}
 	log.Println("Gracefully shutting down.")
@@ -464,4 +488,27 @@ func embedSeparatorFormatter(s string, l int) string {
 		flip = !flip
 	}
 	return s
+}
+
+func autoCompleteName(Name string, i *discordgo.InteractionCreate, discord *discordgo.Session) {
+	var choices []*discordgo.ApplicationCommandOptionChoice
+	fmt.Println("auto being run", Name)
+	items := database.FuzzyMatch(Name)
+	for _, item := range *items {
+		choise := discordgo.ApplicationCommandOptionChoice{
+			Name:  item,
+			Value: item,
+		}
+		log.Println("printing from auto complete", item)
+		choices = append(choices, &choise)
+	}
+	err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+		Data: &discordgo.InteractionResponseData{
+			Choices: choices,
+		},
+	})
+	if err != nil {
+		log.Println(err)
+	}
 }

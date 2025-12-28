@@ -35,6 +35,7 @@ func PriceHistoryChart(Name string, month int) error {
 			},
 			TextAlign: "center",
 			Left:      "center",
+			Top:       "20px",
 		}),
 		charts.WithInitializationOpts(opts.Initialization{
 			BackgroundColor: "white",

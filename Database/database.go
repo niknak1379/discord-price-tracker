@@ -185,7 +185,7 @@ func UpdateLowestPrice(Name string, newLow Price) (Item, error) {
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHisotry", 0}}).SetReturnDocument(options.After)
 	update := bson.M{
 		"$set": bson.M{
-			"CurrentLowestPrice": newLow,
+			"CurrentLowstPrice": newLow,
 		},
 	}
 	var res Item
@@ -359,7 +359,7 @@ func validateURI(uri string, querySelector string) (Price, TrackingInfo, error) 
 	return price, tracking, err
 }
 
-func FuzzyMatch(Name string) *[]string {
+func FuzzyMatchName(Name string) *[]string {
 	var searchStage bson.D
 	if Name == "" {
 		// empty query list all items
@@ -403,4 +403,26 @@ func FuzzyMatch(Name string) *[]string {
 	}
 
 	return &names
+}
+
+// not really critical functionality i feel like i dont really
+// need to propogate the errors for this and the other autocomplete
+func AutoCompelteURL(Name string) *[]string {
+	item, err := GetItem(Name)
+	res := []string{}
+	if err != nil {
+		return &res
+	}
+	for _, tracker := range item.TrackingList {
+		res = append(res, tracker.URI)
+	}
+	return &res
+}
+
+func AutoCompleteQuery() *[]string {
+	return &[]string{
+		"span[class^='price_']",
+		"#options-pricing2022",
+		"div.price-current>strong",
+	}
 }

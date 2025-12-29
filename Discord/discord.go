@@ -114,10 +114,11 @@ var (
 							Autocomplete: true,
 						},
 						{
-							Name:        "uri",
-							Description: "Add Scrapping URI",
-							Type:        discordgo.ApplicationCommandOptionString,
-							Required:    true,
+							Name:         "uri",
+							Description:  "Add Scrapping URI",
+							Type:         discordgo.ApplicationCommandOptionString,
+							Required:     true,
+							Autocomplete: true,
 						},
 					},
 				},
@@ -178,7 +179,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		content := ""
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
-			autoCompleteName(options[0].StringValue(), i, discord)
+			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
 			// add tracker to database
 			getRes, err := database.GetItem(options[0].StringValue())
@@ -222,7 +223,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		options := i.ApplicationCommandData().Options
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
-			autoCompleteName(options[0].StringValue(), i, discord)
+			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
 			// remove tracker to database
 			deleteRes := database.RemoveItem(options[0].StringValue())
@@ -237,11 +238,20 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 
 		}
 	},
+	// this is hella unreadable refractor to make it look better
 	"edit": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
+		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 		switch i.Type {
+
 		case discordgo.InteractionApplicationCommandAutocomplete:
-			autoCompleteName(options[0].StringValue(), i, discord)
+			logger.Info("auto complete interaction coming in", slog.Any("option", options))
+			switch {
+			case options[0].Options[0].Focused:
+				autoComplete(options[0].Options[0].StringValue(), 0, i, discord)
+			case options[0].Options[1].Focused:
+				autoComplete(options[0].Options[0].StringValue(), 1, i, discord)
+			}
 		default:
 			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
@@ -290,7 +300,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		options := i.ApplicationCommandData().Options
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
-			autoCompleteName(options[0].StringValue(), i, discord)
+			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
 			// set up response to discord client
 			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -490,25 +500,61 @@ func embedSeparatorFormatter(s string, l int) string {
 	return s
 }
 
-func autoCompleteName(Name string, i *discordgo.InteractionCreate, discord *discordgo.Session) {
+func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *discordgo.Session) {
 	var choices []*discordgo.ApplicationCommandOptionChoice
 	fmt.Println("auto being run", Name)
-	items := database.FuzzyMatch(Name)
-	for _, item := range *items {
-		choise := discordgo.ApplicationCommandOptionChoice{
-			Name:  item,
-			Value: item,
-		}
-		log.Println("printing from auto complete", item)
-		choices = append(choices, &choise)
+	var items *[]string
+	// t int value 0 maps to name type, 1 to url type, 2 to css
+	switch t {
+	case 0:
+		items = database.FuzzyMatchName(Name)
+	case 1:
+		items = database.AutoCompelteURL(Name)
+	case 2:
+		items = database.AutoCompelteURL(Name)
 	}
-	err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionApplicationCommandAutocompleteResult,
-		Data: &discordgo.InteractionResponseData{
-			Choices: choices,
-		},
-	})
-	if err != nil {
-		log.Println(err)
+	if len(*items) != 0 {
+		for _, item := range *items {
+			if len(item) > 100 {
+				choice := discordgo.ApplicationCommandOptionChoice{
+					Name:  "item too long" + item[8:20],
+					Value: "place holder",
+				}
+				log.Println("printing from auto complete", item)
+				choices = append(choices, &choice)
+				continue
+			}
+
+			choice := discordgo.ApplicationCommandOptionChoice{
+				Name:  item,
+				Value: item,
+			}
+			log.Println("printing from auto complete", item, len(item))
+			choices = append(choices, &choice)
+		}
+		err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+			Data: &discordgo.InteractionResponseData{
+				Choices: choices,
+			},
+		})
+		if err != nil {
+			log.Println(err)
+		}
+	} else {
+		err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+			Data: &discordgo.InteractionResponseData{
+				Choices: []*discordgo.ApplicationCommandOptionChoice{
+					{
+						Name:  "No Items Found",
+						Value: "No Items Found",
+					},
+				},
+			},
+		})
+		if err != nil {
+			log.Println(err)
+		}
 	}
 }

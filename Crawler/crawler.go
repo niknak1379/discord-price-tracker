@@ -160,16 +160,23 @@ func GetOpenGraphPic(url string) string {
 	visited := false
 	imgURL := ""
 	log.Println("logging url", url)
-	c.OnHTML("meta[property='og:image']", func(e *colly.HTMLElement) {
-		imgURL = e.Attr("content")
-		fmt.Println("OG Image:", imgURL)
-		visited = true
-	})
+	if strings.Contains(url, "amazon.com") {
+		c.OnHTML("img#landingImage", func(e *colly.HTMLElement) {
+			imgURL = e.Attr("src")
+			fmt.Println("OG Image:", imgURL)
+			visited = true
+		})
+	} else {
+		c.OnHTML("meta[property='og:image']", func(e *colly.HTMLElement) {
+			imgURL = e.Attr("content")
+			fmt.Println("OG Image:", imgURL)
+			visited = true
+		})
+	}
 	err := c.Visit(url)
 	if err != nil || !visited {
 		fmt.Println("could not get Open Graph picture", err, visited)
 		return ""
-
 	}
 	c.Wait()
 	return imgURL

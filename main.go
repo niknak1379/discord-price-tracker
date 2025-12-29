@@ -8,7 +8,8 @@ import (
 	"os/signal"
 	database "priceTracker/Database"
 	discord "priceTracker/Discord"
-	scheduler "priceTracker/Scheduler"
+
+	// scheduler "priceTracker/Scheduler"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -23,7 +24,7 @@ func main() {
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
-	go scheduler.InitScheduler(ctx)
+	// go scheduler.InitScheduler(ctx)
 	wg.Go(func() {
 		discord.Run(ctx)
 	})

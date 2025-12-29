@@ -242,7 +242,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: fmt.Sprintf("Delted %d Rows in the DB", (deleteRes)),
+					Content: fmt.Sprintf("Deleted Rows in the DB: %d", (deleteRes)),
 				},
 			})
 

@@ -407,7 +407,7 @@ func FuzzyMatchName(Name string) *[]string {
 
 // not really critical functionality i feel like i dont really
 // need to propogate the errors for this and the other autocomplete
-func AutoCompelteURL(Name string) *[]string {
+func AutoCompleteURL(Name string) *[]string {
 	item, err := GetItem(Name)
 	res := []string{}
 	if err != nil {
@@ -419,10 +419,12 @@ func AutoCompelteURL(Name string) *[]string {
 	return &res
 }
 
-func AutoCompleteQuery() *[]string {
-	return &[]string{
-		"span[class^='price_']",
-		"#options-pricing2022",
-		"div.price-current>strong",
+func AutoCompleteQuery() *map[string]string {
+	ret := map[string]string{
+		"Amazon":       "form#addToCart span.a-price-whole",
+		"NewEgg":       "div.price-current>strong",
+		"MicroCenter":  "#options-pricing2022",
+		"BHPhotoVideo": "span[class^='price_']",
 	}
+	return &ret
 }

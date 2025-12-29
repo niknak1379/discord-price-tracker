@@ -34,10 +34,11 @@ var (
 					Required:    true,
 				},
 				{
-					Name:        "html_tag",
-					Description: "Add Scrapping HTML Tag",
-					Type:        discordgo.ApplicationCommandOptionString,
-					Required:    true,
+					Name:         "html_tag",
+					Description:  "Add Scrapping HTML Tag",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
 				},
 			},
 		},
@@ -94,10 +95,11 @@ var (
 							Required:    true,
 						},
 						{
-							Name:        "html_tag",
-							Description: "Add Scrapping HTML Tag",
-							Type:        discordgo.ApplicationCommandOptionString,
-							Required:    true,
+							Name:         "html_tag",
+							Description:  "Add Scrapping HTML Tag",
+							Type:         discordgo.ApplicationCommandOptionString,
+							Required:     true,
+							Autocomplete: true,
 						},
 					},
 				},
@@ -148,28 +150,36 @@ var (
 
 var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.InteractionCreate){
 	"add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
-		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		})
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoCompleteQuerySelector(i, discord)
+		default:
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
 
-		// get command inputs from discord
-		options := i.ApplicationCommandData().Options
-		// 0 is item name, 1 is uri, 2 is htmlqueryselector
-		content := ""
-		var em *discordgo.MessageEmbed
-		// add tracker to database
-		addRes, err := database.AddItem(options[0].StringValue(), options[1].StringValue(), options[2].StringValue())
-		if err != nil {
-			content = fmt.Sprint(err)
-		} else {
-			em = setEmbed(addRes)
+			// get command inputs from discord
+			options := i.ApplicationCommandData().Options
+			// 0 is item name, 1 is uri, 2 is htmlqueryselector
+			content := ""
+			var em *discordgo.MessageEmbed
+			// add tracker to database
+			addRes, err := database.AddItem(options[0].StringValue(), options[1].StringValue(), options[2].StringValue())
+			if err != nil {
+				content = fmt.Sprint(err)
+				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Content: content,
+				})
+				return
+			} else {
+				em = setEmbed(addRes)
+			}
+			// set up response to discord client
+			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: content,
+				Embeds:  []*discordgo.MessageEmbed{em},
+			})
 		}
-
-		// set up response to discord client
-		discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: content,
-			Embeds:  []*discordgo.MessageEmbed{em},
-		})
 	},
 
 	"get": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -242,8 +252,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"edit": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
 		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-		switch i.Type {
 
+		// handle auto correct requests for the different fields
+		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			logger.Info("auto complete interaction coming in", slog.Any("option", options))
 			switch {
@@ -251,6 +262,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				autoComplete(options[0].Options[0].StringValue(), 0, i, discord)
 			case options[0].Options[1].Focused:
 				autoComplete(options[0].Options[0].StringValue(), 1, i, discord)
+			case options[0].Options[2].Focused:
+				autoCompleteQuerySelector(i, discord)
 			}
 		default:
 			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -262,11 +275,13 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			name := options[0].Options[0].StringValue()
 			uri := options[0].Options[1].StringValue()
 
-			// As you can see, names of subcommands (nested, top-level)
-			// and subcommand groups are provided through the arguments.
+			// handle add and remove subcommands
 			switch options[0].Name {
 			case "add":
 				htmlQuery := options[0].Options[2].StringValue()
+
+				// database reutrns a price struct, setpricefield formats the returned price
+				// and adds it to the message embeds
 				res, p, err := database.AddTrackingInfo(name, uri, htmlQuery)
 				priceField := setPriceField(p, "Newly Added Tracker")
 
@@ -298,6 +313,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	},
 	"graph": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
+
+		// handle autocomplete for name and normal request
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(options[0].StringValue(), 0, i, discord)
@@ -336,17 +353,13 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	},
 }
 
-func checkNilErr(e error) {
-	if e != nil {
-		log.Fatal("Error message", e)
-	}
-}
-
 func Run(ctx context.Context) {
 	// create a session
 	var err error
 	Discord, err = discordgo.New("Bot " + BotToken)
-	checkNilErr(err)
+	if err != nil {
+		log.Panic("could not connect to discord client", err)
+	}
 
 	Discord.AddHandler(ready)
 
@@ -368,8 +381,9 @@ func Run(ctx context.Context) {
 		registeredCommands[index] = cmd
 	}
 	log.Println("all commands added")
+
+	// keep the bot open until sigint is recieved from ctx in main
 	<-ctx.Done()
-	Discord.Close()
 	log.Println("Removing commands...")
 	registeredCommands, err = Discord.ApplicationCommands(Discord.State.User.ID, "")
 	if err != nil {
@@ -381,7 +395,8 @@ func Run(ctx context.Context) {
 			log.Printf("Cannot delete '%v' command: %v", v.Name, err)
 		}
 	}
-	log.Println("Gracefully shutting down.")
+	Discord.Close()
+	log.Println("shut down discord")
 }
 
 func ready(discord *discordgo.Session, ready *discordgo.Ready) {
@@ -393,7 +408,7 @@ func LowestPriceAlert(discord *discordgo.Session, itemName string, newPrice int,
 	content := fmt.Sprintf("New Price Alert!!!!\nItem %s has hit its lowest price of %d "+
 		"from previous lowest of %d with the following url \n%s",
 		itemName, newPrice, oldPrice, URL)
-	discord.ChannelMessageSend("803818389755265075", content)
+	discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
 }
 
 func CrawlErrorAlert(discord *discordgo.Session, itemName string, URL string, err error) {
@@ -509,10 +524,9 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 	case 0:
 		items = database.FuzzyMatchName(Name)
 	case 1:
-		items = database.AutoCompelteURL(Name)
-	case 2:
-		items = database.AutoCompelteURL(Name)
+		items = database.AutoCompleteURL(Name)
 	}
+
 	if len(*items) != 0 {
 		for _, item := range *items {
 			if len(item) > 100 {
@@ -556,5 +570,27 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 		if err != nil {
 			log.Println(err)
 		}
+	}
+}
+
+func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordgo.Session) {
+	items := database.AutoCompleteQuery()
+	var choices []*discordgo.ApplicationCommandOptionChoice
+	for name, query := range *items {
+		choice := discordgo.ApplicationCommandOptionChoice{
+			Name:  name,
+			Value: query,
+		}
+		log.Println("printing from auto complete query", name, query)
+		choices = append(choices, &choice)
+	}
+	err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+		Data: &discordgo.InteractionResponseData{
+			Choices: choices,
+		},
+	})
+	if err != nil {
+		log.Println(err)
 	}
 }

@@ -242,7 +242,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: fmt.Sprint(deleteRes),
+					Content: fmt.Sprintf("Delted %d Rows in the DB", (deleteRes)),
 				},
 			})
 
@@ -457,10 +457,14 @@ func setEmbed(Item database.Item) *discordgo.MessageEmbed {
 	fields = append(fields, priceFields...)
 	fields = append(fields, lowestPriceField...)
 	em := discordgo.MessageEmbed{
-		Title:  Item.Name,
+		Title: Item.Name,
+		Image: &discordgo.MessageEmbedImage{
+			URL: Item.ImgURL,
+		},
 		Fields: fields,
 		Type:   discordgo.EmbedTypeRich,
 	}
+	fmt.Println(Item.ImgURL)
 	return &em
 }
 

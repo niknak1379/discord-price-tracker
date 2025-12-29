@@ -26,11 +26,12 @@ type Price struct {
 	Url   string    `bson:"Url"`
 }
 type Item struct {
-	Name               string          `bson:"Name"`
-	TrackingList       []*TrackingInfo `bson:"TrackingList"`
-	LowestPrice        Price           `bson:"LowestPrice"`
-	PriceHistory       []*Price        `bson:"PriceHistory"`
-	CurrentLowestPrice Price           `bson:"CurrentLowestPrice"`
+	Name               string         `bson:"Name"`
+	TrackingList       []TrackingInfo `bson:"TrackingList"`
+	LowestPrice        Price          `bson:"LowestPrice"`
+	PriceHistory       []Price        `bson:"PriceHistory"`
+	CurrentLowestPrice Price          `bson:"CurrentLowestPrice"`
+	ImgURL             string         `bson:"ImgURL"`
 }
 
 var (
@@ -41,14 +42,16 @@ var (
 
 func AddItem(itemName string, uri string, query string) (Item, error) {
 	p, t, err := validateURI(uri, query)
+	imgURL := crawler.GetOpenGraphPic(uri)
 	if err != nil {
 		log.Print("invalid url", err)
 		return Item{}, err
 	}
-	arr := []*TrackingInfo{&t}
-	PriceArr := []*Price{&p}
+	arr := []TrackingInfo{t}
+	PriceArr := []Price{p}
 	i := Item{
 		Name:               itemName,
+		ImgURL:             imgURL,
 		LowestPrice:        p,
 		TrackingList:       arr,
 		PriceHistory:       PriceArr,
@@ -201,7 +204,7 @@ func UpdateLowestPrice(Name string, newLow Price) (Item, error) {
 }
 
 func GetAllItems() []*Item {
-	opts := options.Find().SetProjection(bson.D{{Key: "PriceHistory", Value:0}})
+	opts := options.Find().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
 	cursor, err := Table.Find(ctx, bson.M{}, opts)
 	if err != nil {
 		panic(err)
@@ -272,13 +275,13 @@ func GetPriceHistory(Name string, date time.Time) ([]*Price, error) {
 	return res, err
 }
 
-func RemoveItem(itemName string) *mongo.DeleteResult {
+func RemoveItem(itemName string) int64 {
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
 	results, err := Table.DeleteOne(ctx, filter)
 	if err != nil {
-		panic(err)
+		log.Print("err in remove item", err)
 	}
-	return results
+	return results.DeletedCount
 }
 
 func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, Price, error) {
@@ -360,4 +363,3 @@ func validateURI(uri string, querySelector string) (Price, TrackingInfo, error) 
 	}
 	return price, tracking, err
 }
-

@@ -29,7 +29,7 @@ func main() {
 		discord.Run(ctx)
 	})
 
-	// make the program run unless sigINT is recieved
+	// make the program run unless sigINT is recieved 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	log.Println("graceful shutdown setup")

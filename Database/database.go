@@ -63,6 +63,7 @@ func AddItem(itemName string, uri string, query string) (Item, error) {
 	return i, err
 }
 
+// method itself checks if the price is a duplicate and if so does not add it
 func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date time.Time) (Price, error) {
 	price := Price{
 		Price: newPrice,
@@ -72,6 +73,7 @@ func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date 
 
 	startOfDay := date.Truncate(24 * time.Hour)
 
+	// pipeline to see if price is duplicate
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: bson.M{"Name": Name}}},
 		bson.D{{Key: "$project", Value: bson.M{
@@ -90,18 +92,18 @@ func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date 
 		}}},
 	}
 
-	cursor, err := Table.Aggregate(context.TODO(), pipeline)
+	cursor, err := Table.Aggregate(ctx, pipeline)
 	if err != nil {
 		return Price{}, err
 	}
-	defer cursor.Close(context.TODO())
+	defer cursor.Close(ctx)
 
 	type Result struct {
 		PriceHistory []*Price `bson:"PriceHistory"`
 	}
 
 	var results []Result
-	if err = cursor.All(context.TODO(), &results); err != nil {
+	if err = cursor.All(ctx, &results); err != nil {
 		return Price{}, err
 	}
 
@@ -127,7 +129,7 @@ func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date 
 	}}
 
 	var result Item
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}}).SetReturnDocument(options.After)
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil {
 		log.Print("error in addingnewprice", err)
@@ -152,7 +154,7 @@ func GetLowestHistoricalPrice(Name string) (Price, error) {
 
 func UpdateLowestHistoricalPrice(Name string, newLow Price) (Item, error) {
 	filter := bson.M{"Name": Name}
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHisotry", 0}}).SetReturnDocument(options.After)
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHisotry", Value: 0}}).SetReturnDocument(options.After)
 	update := bson.M{
 		"$set": bson.M{
 			"LowestPrice": newLow,
@@ -161,7 +163,7 @@ func UpdateLowestHistoricalPrice(Name string, newLow Price) (Item, error) {
 	var res Item
 	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
 	if err != nil {
-		log.Printf("error in updating lowest price", err)
+		log.Print("error in updating lowest price", err)
 		return res, err
 	}
 	log.Printf("updating lowest price of %d for %s", newLow.Price, Name)
@@ -182,7 +184,7 @@ func GetLowestPrice(Name string) (Price, error) {
 
 func UpdateLowestPrice(Name string, newLow Price) (Item, error) {
 	filter := bson.M{"Name": bson.M{"$regex": "^" + Name + "$", "$options": "i"}}
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHisotry", 0}}).SetReturnDocument(options.After)
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHisotry", Value: 0}}).SetReturnDocument(options.After)
 	update := bson.M{
 		"$set": bson.M{
 			"CurrentLowstPrice": newLow,
@@ -199,7 +201,7 @@ func UpdateLowestPrice(Name string, newLow Price) (Item, error) {
 }
 
 func GetAllItems() []*Item {
-	opts := options.Find().SetProjection(bson.D{{"PriceHistory", 0}})
+	opts := options.Find().SetProjection(bson.D{{Key: "PriceHistory", Value:0}})
 	cursor, err := Table.Find(ctx, bson.M{}, opts)
 	if err != nil {
 		panic(err)
@@ -217,7 +219,7 @@ func GetAllItems() []*Item {
 func GetItem(itemName string) (Item, error) {
 	var res Item
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
-	opts := options.FindOne().SetProjection(bson.D{{"PriceHistory", 0}})
+	opts := options.FindOne().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
 	err := Table.FindOne(ctx, filter, opts).Decode(&res)
 	if err != nil {
 		return res, err
@@ -229,17 +231,17 @@ func GetItem(itemName string) (Item, error) {
 func GetPriceHistory(Name string, date time.Time) ([]*Price, error) {
 	var res []*Price
 	pipeline := mongo.Pipeline{
-		bson.D{{"$match", bson.D{
-			{"Name", bson.D{
-				{"$regex", "^" + Name + "$"},
-				{"$options", "i"},
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "Name", Value: bson.D{
+				{Key: "$regex", Value: "^" + Name + "$"},
+				{Key: "$options", Value: "i"},
 			}},
 		}}}, // Fixed: Added proper closing braces
-		bson.D{{"$unwind", bson.D{{"path", "$PriceHistory"}}}},
+		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$PriceHistory"}}}},
 		bson.D{
 			{
-				"$unset",
-				bson.A{
+				Key: "$unset",
+				Value: bson.A{
 					"Name",
 					"_id",
 					"LowestPrice",
@@ -247,14 +249,14 @@ func GetPriceHistory(Name string, date time.Time) ([]*Price, error) {
 				},
 			},
 		},
-		bson.D{{"$sort", bson.D{{"PriceHistory.Date", 1}}}},
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "PriceHistory.Date", Value: 1}}}},
 		bson.D{
 			{
-				"$project",
-				bson.D{
-					{"Date", "$PriceHistory.Date"},
-					{"Price", "$PriceHistory.Price"},
-					{"Url", "$PriceHistory.Url"},
+				Key: "$project",
+				Value: bson.D{
+					{Key: "Date", Value: "$PriceHistory.Date"},
+					{Key: "Price", Value: "$PriceHistory.Price"},
+					{Key: "Url", Value: "$PriceHistory.Url"},
 				},
 			},
 		},
@@ -291,7 +293,7 @@ func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, P
 		"PriceHistory": p,
 	}}
 	var result Item
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}}).SetReturnDocument(options.After)
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil {
 		return result, p, err
@@ -307,7 +309,7 @@ func RemoveTrackingInfo(itemName string, uri string) (Item, error) {
 	update := bson.M{"$pull": bson.M{"TrackingList": bson.M{"URI": uri}}}
 
 	var result Item
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{"PriceHistory", 0}}).SetReturnDocument(options.After)
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
 	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil {
 		return result, err
@@ -359,72 +361,3 @@ func validateURI(uri string, querySelector string) (Price, TrackingInfo, error) 
 	return price, tracking, err
 }
 
-func FuzzyMatchName(Name string) *[]string {
-	var searchStage bson.D
-	if Name == "" {
-		// empty query list all items
-		searchStage = bson.D{{"$match", bson.D{}}} // Match everything
-	} else {
-		// Autocomplete search
-		searchStage = bson.D{{"$search", bson.D{
-			{"autocomplete", bson.D{
-				{"path", "Name"},
-				{"query", Name},
-				{"fuzzy", bson.D{
-					{"maxEdits", 2},
-					{"prefixLength", 1},
-				}},
-			}},
-		}}}
-	}
-	projectStage := bson.D{{"$project", bson.D{{"Name", 1}}}}
-	// Runs the pipeline
-	cursor, err := Table.Aggregate(ctx, mongo.Pipeline{searchStage, projectStage})
-	if err != nil {
-		log.Println(err)
-	}
-
-	names := make([]string, 0)
-
-	for cursor.Next(ctx) {
-		var result bson.M
-		if err := cursor.Decode(&result); err != nil {
-			log.Println(err)
-			continue
-		}
-
-		if name, ok := result["Name"].(string); ok {
-			names = append(names, name)
-		}
-	}
-
-	if err := cursor.Err(); err != nil {
-		log.Println(err)
-	}
-
-	return &names
-}
-
-// not really critical functionality i feel like i dont really
-// need to propogate the errors for this and the other autocomplete
-func AutoCompleteURL(Name string) *[]string {
-	item, err := GetItem(Name)
-	res := []string{}
-	if err != nil {
-		return &res
-	}
-	for _, tracker := range item.TrackingList {
-		res = append(res, tracker.URI)
-	}
-	return &res
-}
-
-func AutoCompleteQuery() *map[string]string {
-	ret := map[string]string{
-		"Amazon":       "form#addToCart span.a-price-whole",
-		"NewEgg":       "div.price-current>strong",
-		"MicroCenter":  "#options-pricing2022",
-		"BHPhotoVideo": "span[class^='price_']",
-	}
-	return &ret
-}

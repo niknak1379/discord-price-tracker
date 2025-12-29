@@ -459,7 +459,9 @@ func setEmbed(Item database.Item) *discordgo.MessageEmbed {
 	em := discordgo.MessageEmbed{
 		Title: Item.Name,
 		Image: &discordgo.MessageEmbedImage{
-			URL: Item.ImgURL,
+			URL:    Item.ImgURL,
+			Height: 300,
+			Width:  300,
 		},
 		Fields: fields,
 		Type:   discordgo.EmbedTypeRich,

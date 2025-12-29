@@ -1,14 +1,17 @@
 package main
 
 import (
+	// "context"
 	"context"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	database "priceTracker/Database"
-	discord "priceTracker/Discord"
 	"sync"
+
+	database "priceTracker/Database"
+	// crawler "priceTracker/Crawler"
+	discord "priceTracker/Discord"
 
 	scheduler "priceTracker/Scheduler"
 
@@ -28,8 +31,13 @@ func main() {
 	wg.Go(func() {
 		discord.Run(ctx)
 	})
+	//
+	//
+	// url := crawler.ConstructEbaySearchURL("fractal meshify c", 120)
+	// log.Println(url)
+	// crawler.GetEbayListings(url, "fractal meshify c")
 
-	// make the program run unless sigINT is recieved 
+	// make the program run unless sigINT is recieved
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	log.Println("graceful shutdown setup")

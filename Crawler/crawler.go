@@ -70,12 +70,7 @@ func GetPrice(uri string, querySelector string) (int, error) {
 	c.OnHTML(querySelector, func(h *colly.HTMLElement) {
 		log.Println(querySelector, h.Text)
 		crawled = true
-		ret := strings.ReplaceAll(h.Text, "$", "")
-		ret = strings.ReplaceAll(ret, ",", "")
-		ret = strings.TrimSpace(ret)
-		ret = strings.Split(ret, ".")[0]
-		res, err = strconv.Atoi(ret)
-		// runs on all matched queries, i just want the first one
+		res, err = formatPrice(h.Text) // runs on all matched queries, i just want the first one
 		c.OnHTMLDetach(querySelector)
 	})
 	err = c.Visit(uri)
@@ -180,5 +175,14 @@ func GetOpenGraphPic(url string) string {
 	}
 	c.Wait()
 	return imgURL
+}
+
+func formatPrice(priceStr string) (int, error) {
+	ret := strings.ReplaceAll(priceStr, "$", "")
+	ret = strings.ReplaceAll(ret, ",", "")
+	ret = strings.TrimSpace(ret)
+	ret = strings.Split(ret, ".")[0]
+	res, err := strconv.Atoi(ret)
+	return res, err
 }
 

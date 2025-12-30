@@ -9,11 +9,13 @@ import (
 	"os/signal"
 	"sync"
 
+	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
+
 	// crawler "priceTracker/Crawler"
 	discord "priceTracker/Discord"
 
-	scheduler "priceTracker/Scheduler"
+	// scheduler "priceTracker/Scheduler"
 
 	"github.com/joho/godotenv"
 )
@@ -27,10 +29,13 @@ func main() {
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
-	go scheduler.InitScheduler(ctx)
-	wg.Go(func() {
-		discord.Run(ctx)
-	})
+	url := crawler.FacebookUrlGenerator("fractal meshify", 120)
+	fmt.Println(url)
+	crawler.MarketPlaceCrawl(url)
+	// go scheduler.InitScheduler(ctx)
+	// wg.Go(func() {
+	// discord.Run(ctx)
+	// })
 	//
 	//
 	// url := crawler.ConstructEbaySearchURL("fractal meshify c", 120)

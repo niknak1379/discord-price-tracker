@@ -1,8 +1,11 @@
 package crawler
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"os"
+	"time"
 
 	// "log/slog"
 	"net/url"
@@ -11,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/chromedp/chromedp"
 	"github.com/gocolly/colly/v2"
 )
 
@@ -134,4 +138,42 @@ func getCanonicalURL(c *colly.Collector, url string) string {
 		return retURL
 	}
 	return retURL
+}
+
+func FacebookUrlGenerator(Name string, Price int) string {
+	baseURL := "https://www.facebook.com/marketplace/107711145919004/search"
+	priceQuery := fmt.Sprintf("?maxPrice=%d", Price)
+	query := "&query=" + url.PathEscape(Name) + "&exact=false"
+	return baseURL + priceQuery + query
+}
+
+func MarketPlaceCrawl(url string) {
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+		chromedp.Flag("disable-blink-features", "AutomationControlled"),
+		chromedp.Flag("log-level", "3"),
+	)
+
+	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer allocCancel()
+
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+
+	ctx, timeoutCancel := context.WithTimeout(ctx, 60*time.Second) // Increased timeout
+	defer timeoutCancel()
+	var screenshotBuf []byte
+	// Split into separate runs to debug where it fails
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(url),
+		chromedp.Sleep(10*time.Second),
+		chromedp.WaitReady("body", chromedp.ByQuery),
+		chromedp.FullScreenshot(&screenshotBuf, 90), // 90 = JPEG quality
+		chromedp.Click("div.x5yr21d.x4l50q0"),
+	)
+	os.WriteFile("debug-screenshot.png", screenshotBuf, 0644)
+
+	if err != nil {
+		fmt.Println(err)
+	}
 }

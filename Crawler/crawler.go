@@ -112,17 +112,17 @@ func ChromeDPFailover(url, selector string) (int, error) {
 	defer timeoutCancel()
 
 	var priceText string
-	var htmlContent string
+	var htmlContent []byte
 
 	// Split into separate runs to debug where it fails
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
 		chromedp.Sleep(10*time.Second),
 		chromedp.WaitReady("body", chromedp.ByQuery),
-		chromedp.OuterHTML("html", &htmlContent, chromedp.ByQuery),
+		chromedp.FullScreenshot(&htmlContent, 90),
 	)
-
-	os.WriteFile("debug-page.html", []byte(htmlContent), 0644)
+	os.WriteFile("failoverSS.png", htmlContent, 0644)
+	
 	log.Printf("Saved debug-page.html (%d bytes)", len(htmlContent))
 
 	if err != nil {

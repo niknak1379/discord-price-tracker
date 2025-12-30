@@ -55,6 +55,9 @@ func setEmbed(Item database.Item) *discordgo.MessageEmbed {
 
 func setSecondHandField(ebayArr []types.EbayListing) []*discordgo.MessageEmbedField {
 	var res []*discordgo.MessageEmbedField
+	if len(ebayArr) == 0 {
+		return res
+	}
 	HeaderField := discordgo.MessageEmbedField{
 		Name: embedSeparatorFormatter("Ebay Listings", 44),
 	}

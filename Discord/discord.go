@@ -639,7 +639,7 @@ func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int) {
 }
 
 func NewEbayListingAlert(newListing types.EbayListing) {
-	content := fmt.Sprintf("New Price Alert!!!!\nItem %s has hit its lowest price of $%d "+"New %s Listing for %s with the price of %d with the following url \n%s",
+	content := fmt.Sprintf("New %s Listing for %s with the price of %d with the following url \n%s",
 		newListing.Condition, newListing.Title, newListing.Price, newListing.URL)
 	Discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
 }

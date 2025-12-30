@@ -22,7 +22,7 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 }
 
 // returns a map of urls and prices + shipping cost
-func GetEbayListings(url string, Name string, desiredPrice int) []types.EbayListing {
+func GetEbayListings(url string, Name string, desiredPrice int) ([]types.EbayListing, error) {
 	// logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	log.Println("visiting ebay url ", url)
 	var listingArr []types.EbayListing
@@ -85,9 +85,9 @@ func GetEbayListings(url string, Name string, desiredPrice int) []types.EbayList
 	c.Wait()
 	if err != nil || !visited {
 		log.Println("error in getting ebay listings", err, visited)
-		return listingArr
+		return listingArr, err
 	}
-	return listingArr
+	return listingArr, err
 }
 
 // checks the title to make sure the name is in the title and

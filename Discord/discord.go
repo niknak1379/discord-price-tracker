@@ -8,6 +8,7 @@ import (
 	"os"
 	charts "priceTracker/Charts"
 	database "priceTracker/Database"
+	"syscall"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -72,7 +73,26 @@ var (
 			},
 		},
 		{
-			Name:        "edit",
+			Name:        "edit_name",
+			Description: "Edit Item Name(Used for Ebay queries",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "old_name",
+					Description:  "name of item to be changed",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:        "new_name",
+					Description: "name of item to be changed",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "edit_tracking",
 			Description: "Edit a currently Existing Tracker",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
@@ -144,6 +164,10 @@ var (
 				},
 			},
 		},
+		{
+			Name:        "shutdown",
+			Description: "Saves Progress and Stops the Bot",
+		},
 	}
 )
 
@@ -210,6 +234,35 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			})
 		}
 	},
+	"edit_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+
+		content := ""
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoComplete(options[0].StringValue(), 0, i, discord)
+		default:
+			// add tracker to database
+			getRes, err := database.EditName(options[0].StringValue(), options[1].StringValue())
+			var embedArr []*discordgo.MessageEmbed
+			if err != nil {
+				content = err.Error()
+			} else {
+				em := setEmbed(getRes)
+				embedArr = append(embedArr, em)
+			}
+
+			// set up response to discord client
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: content,
+					Embeds:  embedArr,
+				},
+			})
+		}
+	},
 	"list": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// add tracker to database
 		getRes := database.GetAllItems()
@@ -248,7 +301,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		}
 	},
 	// this is hella unreadable refractor to make it look better
-	"edit": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"edit_tracking": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
 		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
@@ -349,6 +402,16 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				}
 			}
 		}
+	},
+	"shutdown": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "shutting down",
+			},
+		})
+
+		syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 	},
 }
 

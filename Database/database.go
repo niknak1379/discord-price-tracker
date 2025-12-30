@@ -50,7 +50,7 @@ func AddItem(itemName string, uri string, query string) (Item, error) {
 		log.Print("invalid url", err)
 		return Item{}, err
 	}
-	ebayListings := crawler.GetEbayListings(crawler.ConstructEbaySearchURL(itemName, p.Price), itemName, p.Price)
+	ebayListings, _ := crawler.GetEbayListings(crawler.ConstructEbaySearchURL(itemName, p.Price), itemName, p.Price)
 	arr := []TrackingInfo{t}
 	PriceArr := []Price{p}
 	i := Item{
@@ -69,6 +69,19 @@ func AddItem(itemName string, uri string, query string) (Item, error) {
 	log.Println("added new item with mongodb logs:", result)
 	log.Println("lowest price being passed on", i.LowestPrice.Price, i.LowestPrice.Url)
 	return i, err
+}
+
+func EditName(oldName string, newName string) (Item, error) {
+	var res Item
+	filter := bson.M{"Name": oldName}
+	update := bson.M{"$set": bson.M{"Name": newName}}
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
+	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
+	if err != nil {
+		fmt.Println("error changing name of item, ", oldName)
+		return Item{}, err
+	}
+	return res, err
 }
 
 // method itself checks if the price is a duplicate and if so does not add it

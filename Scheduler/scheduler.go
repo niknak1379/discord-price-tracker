@@ -85,7 +85,11 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow int, date tim
 }
 
 func handleEbayListingsUpdate(Name string, Price int) {
-	ebayListings := crawler.GetEbayListings(crawler.ConstructEbaySearchURL(Name, Price), Name, Price)
+	ebayListings, err := crawler.GetEbayListings(crawler.ConstructEbaySearchURL(Name, Price), Name, Price)
+	if err != nil {
+		discord.CrawlErrorAlert(Name, "ebay.com", err)
+		return
+	}
 	oldEbayListings, _ := database.GetEbayListings(Name)
 	ListingsMap := map[string]int{} // maps titles to price for checking if price exists or was updated
 	for _, Listing := range oldEbayListings {
@@ -103,7 +107,7 @@ func handleEbayListingsUpdate(Name string, Price int) {
 			}
 		}
 	}
-	err := database.UpdateEbayListings(Name, ebayListings)
+	err = database.UpdateEbayListings(Name, ebayListings)
 	if err != nil {
 		log.Print("error updaing DB in ebay listing", err, Name)
 		discord.CrawlErrorAlert(Name, "www.ebay.com/DBError", err)

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	crawler "priceTracker/Crawler"
+	types "priceTracker/Types"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -25,13 +26,15 @@ type Price struct {
 	Price int       `bson:"Price"`
 	Url   string    `bson:"Url"`
 }
+
 type Item struct {
-	Name               string         `bson:"Name"`
-	TrackingList       []TrackingInfo `bson:"TrackingList"`
-	LowestPrice        Price          `bson:"LowestPrice"`
-	PriceHistory       []Price        `bson:"PriceHistory"`
-	CurrentLowestPrice Price          `bson:"CurrentLowestPrice"`
-	ImgURL             string         `bson:"ImgURL"`
+	Name               string              `bson:"Name"`
+	TrackingList       []TrackingInfo      `bson:"TrackingList"`
+	LowestPrice        Price               `bson:"LowestPrice"`
+	PriceHistory       []Price             `bson:"PriceHistory"`
+	CurrentLowestPrice Price               `bson:"CurrentLowestPrice"`
+	ImgURL             string              `bson:"ImgURL"`
+	EbayListings       []types.EbayListing `bson:"EbayListings"`
 }
 
 var (
@@ -42,6 +45,7 @@ var (
 
 func AddItem(itemName string, uri string, query string) (Item, error) {
 	p, t, err := validateURI(uri, query)
+	ebayListings := crawler.GetEbayListings(crawler.ConstructEbaySearchURL(itemName, p.Price), itemName, p.Price)
 	imgURL := crawler.GetOpenGraphPic(uri)
 	if err != nil {
 		log.Print("invalid url", err)
@@ -56,6 +60,7 @@ func AddItem(itemName string, uri string, query string) (Item, error) {
 		TrackingList:       arr,
 		PriceHistory:       PriceArr,
 		CurrentLowestPrice: p,
+		EbayListings:       ebayListings,
 	}
 	result, err := Table.InsertOne(ctx, i)
 	if err != nil {
@@ -217,6 +222,31 @@ func GetAllItems() []*Item {
 	}
 	log.Println("getting all items")
 	return result
+}
+
+func GetEbayListings(itemName string) ([]types.EbayListing, error) {
+	var res Item
+	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
+	opts := options.FindOne().SetProjection(bson.D{{Key: "EbayListings", Value: 1}})
+	err := Table.FindOne(ctx, filter, opts).Decode(&res)
+	if err != nil {
+		return res.EbayListings, err
+	}
+	return res.EbayListings, err
+}
+
+func UpdateEbayListings(itemName string, listingsArr []types.EbayListing) error {
+	filter := bson.M{"Name": itemName}
+	update := bson.M{"$push": bson.M{
+		"EbayListings": listingsArr,
+	}}
+	var result Item
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
+	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
+	if err != nil {
+		return err
+	}
+	return err
 }
 
 func GetItem(itemName string) (Item, error) {

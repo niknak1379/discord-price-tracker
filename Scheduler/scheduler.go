@@ -7,9 +7,9 @@ import (
 	"math/rand/v2"
 	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
+	"time"
 
 	discord "priceTracker/Discord"
-	"time"
 )
 
 func InitScheduler(ctx context.Context) {
@@ -30,6 +30,7 @@ func InitScheduler(ctx context.Context) {
 		}
 	}()
 }
+
 func updateAllPrices() {
 	log.Println("updateAllPrices being fired")
 	itemsArr := database.GetAllItems()
@@ -39,7 +40,7 @@ func updateAllPrices() {
 			Price: math.MaxInt,
 			Url:   "Unavailable From All Sources",
 		}
-		var np = database.Price{}
+		np := database.Price{}
 		for _, t := range v.TrackingList {
 			r := rand.IntN(10)
 			timer := time.NewTimer(time.Duration(r) * time.Second)
@@ -62,20 +63,49 @@ func updateAllPrices() {
 		if currLow.Price != math.MaxInt32 {
 			database.UpdateLowestPrice(v.Name, currLow)
 		}
+		handleEbayListingsUpdate(v.Name, currLow.Price)
 	}
 }
+
 func updatePrice(Name string, URI string, HtmlQuery string, oldLow int, date time.Time) (database.Price, error) {
 	newPrice, err := crawler.GetPrice(URI, HtmlQuery)
 	if err != nil || newPrice == 0 {
 		log.Print("error getting price in updatePrice", err, newPrice)
-		discord.CrawlErrorAlert(discord.Discord, Name, URI, err)
+		discord.CrawlErrorAlert(Name, URI, err)
 		return database.Price{}, err
 	}
 	p, _ := database.AddNewPrice(Name, URI, newPrice, oldLow, date)
 
 	// notify discord if a new historical low has been achieved
 	if oldLow > newPrice {
-		discord.LowestPriceAlert(discord.Discord, Name, newPrice, oldLow, URI)
+		discord.LowestPriceAlert(Name, newPrice, oldLow, URI)
 	}
 	return p, err
+}
+
+func handleEbayListingsUpdate(Name string, Price int) {
+	ebayListings := crawler.GetEbayListings(crawler.ConstructEbaySearchURL(Name, Price), Name, Price)
+	oldEbayListings, _ := database.GetEbayListings(Name)
+	ListingsMap := map[string]int{} // maps titles to price for checking if price exists or was updated
+	for _, Listing := range oldEbayListings {
+		ListingsMap[Listing.Title] = Listing.Price
+	}
+	for _, newListing := range ebayListings {
+		oldPrice, ok := ListingsMap[newListing.Title]
+		// if listing not found in the old list, or if price changed
+		// ping discord
+		if !ok || oldPrice != newListing.Price {
+			if newListing.Price != oldPrice {
+				discord.EbayListingPriceChangeAlert(newListing, oldPrice)
+			} else {
+				discord.NewEbayListingAlert(newListing)
+			}
+		}
+	}
+	err := database.UpdateEbayListings(Name, ebayListings)
+	if err != nil {
+		log.Print("error updaing DB in ebay listing", err, Name)
+		discord.CrawlErrorAlert(Name, "www.ebay.com/DBError", err)
+		return
+	}
 }

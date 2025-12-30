@@ -8,6 +8,7 @@ import (
 	"os"
 	charts "priceTracker/Charts"
 	database "priceTracker/Database"
+	types "priceTracker/Types"
 	"strconv"
 
 	"github.com/bwmarrin/discordgo"
@@ -404,19 +405,19 @@ func ready(discord *discordgo.Session, ready *discordgo.Ready) {
 	discord.UpdateGameStatus(1, "stonks")
 }
 
-func LowestPriceAlert(discord *discordgo.Session, itemName string, newPrice int, oldPrice int, URL string) {
+func LowestPriceAlert(itemName string, newPrice int, oldPrice int, URL string) {
 	content := fmt.Sprintf("New Price Alert!!!!\nItem %s has hit its lowest price of %d "+
 		"from previous lowest of %d with the following url \n%s",
 		itemName, newPrice, oldPrice, URL)
-	discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
+	Discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
 }
 
-func CrawlErrorAlert(discord *discordgo.Session, itemName string, URL string, err error) {
+func CrawlErrorAlert(itemName string, URL string, err error) {
 	content := fmt.Sprintf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
 		itemName, URL, err.Error())
 	log.Printf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
 		itemName, URL, err.Error())
-	discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
+	Discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
 }
 
 func SendGraphPng(discord *discordgo.Session) {
@@ -599,4 +600,16 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 	if err != nil {
 		log.Println(err)
 	}
+}
+
+func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int) {
+	content := fmt.Sprintf("Price update for %s Listing for %s with the price of $%d from the old price of $%d with the following url \n%s",
+		newListing.Condition, newListing.Title, newListing.Price, oldPrice, newListing.URL)
+	Discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
+}
+
+func NewEbayListingAlert(newListing types.EbayListing) {
+	content := fmt.Sprintf("New Price Alert!!!!\nItem %s has hit its lowest price of $%d "+"New %s Listing for %s with the price of %d with the following url \n%s",
+		newListing.Condition, newListing.Title, newListing.Price, newListing.URL)
+	Discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
 }

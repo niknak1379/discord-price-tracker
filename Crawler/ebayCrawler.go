@@ -3,9 +3,11 @@ package crawler
 import (
 	"fmt"
 	"log"
-	"log/slog"
+
+	// "log/slog"
 	"net/url"
-	"os"
+	// "os"
+	types "priceTracker/Types"
 	"regexp"
 	"strings"
 
@@ -19,18 +21,11 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 	return baseURL + url.PathEscape(Name) + usedQuery + priceQuery
 }
 
-type EbayListing struct {
-	Price     int
-	URL       string
-	Title     string
-	Condition string
-}
-
 // returns a map of urls and prices + shipping cost
-func GetEbayListings(url string, Name string) []EbayListing {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+func GetEbayListings(url string, Name string, desiredPrice int) []types.EbayListing {
+	// logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	log.Println("visiting ebay url ", url)
-	var listingArr []EbayListing
+	var listingArr []types.EbayListing
 	visited := false
 	c := initCrawler()
 	c.OnHTML("ul.srp-results > li", func(e *colly.HTMLElement) {
@@ -71,18 +66,19 @@ func GetEbayListings(url string, Name string) []EbayListing {
 			return true
 		})
 		// skip item if any errors are met
-		if basePrice == 0 || err != nil {
-			log.Print("price 0 something is wrong for", err, basePrice, link)
+		if basePrice == 0 || err != nil || basePrice+shippingCost >= desiredPrice {
+			log.Print("price 0 something is wrong for", err, basePrice+shippingCost, link)
 			return
 		}
 
-		listing := EbayListing{
+		listing := types.EbayListing{
 			Price:     shippingCost + basePrice,
 			URL:       link,
 			Title:     title,
 			Condition: condition,
 		}
-		logger.Info("listing", slog.Any("Listing Values", listing))
+		// logger.Info("listing", slog.Any("Listing Values", listing))
+		listingArr = append(listingArr, listing)
 	})
 	err := c.Visit(url)
 	c.Wait()

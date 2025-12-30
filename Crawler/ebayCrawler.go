@@ -114,7 +114,8 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 	// exludes titles that have for parts
 	hasParts, _ := regexp.MatchString(`\bfor\s+parts\b`, listingTitle)
 	hasBroken, _ := regexp.MatchString(`\bbroken\b`, listingTitle)
-	return matched && !hasParts && !hasBroken
+	hasAccessories, _ := regexp.MatchString(`\baccessories\b`, listingTitle)
+	return matched && !hasParts && !hasBroken && !hasAccessories
 }
 
 func getCanonicalURL(c *colly.Collector, url string) string {

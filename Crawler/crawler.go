@@ -87,7 +87,7 @@ func GetPrice(uri string, querySelector string) (int, error) {
 	}
 	if err != nil {
 		log.Println("error in getting price in crawler, triggering Chrome failover", err)
-		res, err := chromeDPFailover(uri, querySelector)
+		res, err := ChromeDPFailover(uri, querySelector)
 		log.Println("price", res, err)
 		return res, err
 	}
@@ -95,7 +95,7 @@ func GetPrice(uri string, querySelector string) (int, error) {
 	return res, err
 }
 
-func chromeDPFailover(url, selector string) (int, error) {
+func ChromeDPFailover(url, selector string) (int, error) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
@@ -117,12 +117,11 @@ func chromeDPFailover(url, selector string) (int, error) {
 	// Split into separate runs to debug where it fails
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
-		chromedp.Sleep(3*time.Second),
+		chromedp.Sleep(10*time.Second),
 		chromedp.WaitReady("body", chromedp.ByQuery),
 		chromedp.OuterHTML("html", &htmlContent, chromedp.ByQuery),
 	)
 
-	// Save HTML even if there's an error later
 	os.WriteFile("debug-page.html", []byte(htmlContent), 0644)
 	log.Printf("Saved debug-page.html (%d bytes)", len(htmlContent))
 
@@ -130,11 +129,12 @@ func chromeDPFailover(url, selector string) (int, error) {
 		return 0, fmt.Errorf("page load failed: %w", err)
 	}
 
-	// Now try to get price
 	err = chromedp.Run(ctx,
 		chromedp.Sleep(2*time.Second),
 		chromedp.Text(selector, &priceText, chromedp.ByQuery),
 	)
+
+	fmt.Println("hi")
 	if err != nil {
 		return 0, fmt.Errorf("selector '%s' not found: %w", selector, err)
 	}

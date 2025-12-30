@@ -43,6 +43,7 @@ func updateAllPrices() {
 		np := database.Price{}
 		for _, t := range v.TrackingList {
 			r := rand.IntN(120)
+			r += r + 60
 			timer := time.NewTimer(time.Duration(r) * time.Second)
 			<-timer.C
 

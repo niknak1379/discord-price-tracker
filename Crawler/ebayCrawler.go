@@ -3,7 +3,6 @@ package crawler
 import (
 	"fmt"
 	"log"
-	"time"
 
 	// "log/slog"
 	"net/url"
@@ -72,7 +71,7 @@ func GetEbayListings(url string, Name string, desiredPrice int) []types.EbayList
 			return
 		}
 
-		link = getCanonicalURL(link)
+		link = getCanonicalURL(c, link)
 		listing := types.EbayListing{
 			Price:     shippingCost + basePrice,
 			URL:       link,
@@ -118,14 +117,8 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 	return matched && !hasParts && !hasBroken
 }
 
-func getCanonicalURL(url string) string {
-	c := initCrawler()
+func getCanonicalURL(c *colly.Collector, url string) string {
 	retURL := url
-	c.Limit(&colly.LimitRule{
-		DomainGlob:  "*ebay.*",
-		Delay:       1 * time.Minute,
-		RandomDelay: 3 * time.Minute, // Random 2-5 seconds
-	})
 	parsed := false
 	fmt.Println("getting canonical url for", url)
 	c.OnHTML("link[rel='canonical']", func(e *colly.HTMLElement) {

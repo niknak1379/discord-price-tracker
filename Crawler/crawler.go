@@ -24,6 +24,12 @@ func initCrawler() *colly.Collector {
 		colly.MaxDepth(1),
 		colly.AllowURLRevisit(),
 	)
+	c.Limit(&colly.LimitRule{
+		DomainGlob:  "*ebay.*",
+		Delay:       1 * time.Minute,
+		RandomDelay: 3 * time.Minute, // Random 2-5 seconds
+	})
+
 	c.SetRequestTimeout(30 * time.Second)
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
@@ -185,4 +191,3 @@ func formatPrice(priceStr string) (int, error) {
 	res, err := strconv.Atoi(ret)
 	return res, err
 }
-

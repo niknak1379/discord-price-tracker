@@ -36,7 +36,6 @@ func GetEbayListings(url string, Name string, desiredPrice int) []types.EbayList
 		if !titleCorrectnessCheck(title, Name) {
 			return
 		}
-		link := e.ChildAttr("a.s-card__link", "href")
 		condition := e.ChildText("div.s-card__subtitle")
 
 		// first one is price, second one is wether its bid or normal "or best offer" GetEbayListings
@@ -65,12 +64,14 @@ func GetEbayListings(url string, Name string, desiredPrice int) []types.EbayList
 			}
 			return true
 		})
+		link := e.ChildAttr("a.s-card__link", "href")
 		// skip item if any errors are met
 		if basePrice == 0 || err != nil || basePrice+shippingCost >= desiredPrice {
 			log.Print("price 0 something is wrong for", err, basePrice+shippingCost, link)
 			return
 		}
 
+		link = getCanonicalURL(link)
 		listing := types.EbayListing{
 			Price:     shippingCost + basePrice,
 			URL:       link,
@@ -95,12 +96,42 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 	words := strings.Fields(strings.ToLower(itemName))
 	listingTitle = strings.ToLower(listingTitle)
 
-	// regex query
-	pattern := strings.Join(words, ".*")
-	pattern = ".*" + pattern
-	matched, _ := regexp.MatchString(pattern, listingTitle)
-	hasParts, _ := regexp.MatchString(`for\s+parts`, listingTitle)
+	// short designators like x, xt or numbers get lost, so add spaces
+	// around them
+	var patterns []string
+	for _, word := range words {
+		if len(word) < 4 {
+			patterns = append(patterns, `\b`+regexp.QuoteMeta(word)+`\b`)
+		} else {
+			patterns = append(patterns, regexp.QuoteMeta(word))
+		}
+	}
 
-	log.Println("printing from regex", listingTitle, itemName, matched)
-	return matched && !hasParts
+	pattern := strings.Join(patterns, ".*")
+	pattern = ".*" + pattern
+
+	matched, _ := regexp.MatchString(pattern, listingTitle)
+	// exludes titles that have for parts
+	hasParts, _ := regexp.MatchString(`\bfor\s+parts\b`, listingTitle)
+	hasBroken, _ := regexp.MatchString(`\bbroken\b`, listingTitle)
+	return matched && !hasParts && !hasBroken
+}
+
+func getCanonicalURL(url string) string {
+	c := initCrawler()
+	retURL := url
+	parsed := false
+	fmt.Println("getting canonical url for", url)
+	c.OnHTML("link[rel='canonical']", func(e *colly.HTMLElement) {
+		retURL = e.Attr("href")
+		fmt.Println("got new link", retURL)
+		parsed = true
+	})
+	err := c.Visit(url)
+	if err != nil || !parsed {
+		// already have a url if it fails its fine
+		fmt.Println(err)
+		return retURL
+	}
+	return retURL
 }

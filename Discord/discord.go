@@ -453,8 +453,10 @@ func setEmbed(Item database.Item) *discordgo.MessageEmbed {
 	}
 
 	// set up current price information
+	ebayFields := setSecondHandField(Item.EbayListings)
 	priceFields := setPriceField(Item.CurrentLowestPrice, "Current")
 	lowestPriceField := setPriceField(Item.LowestPrice, "Historically Lowest")
+	fields = append(fields, ebayFields...)
 	fields = append(fields, priceFields...)
 	fields = append(fields, lowestPriceField...)
 	em := discordgo.MessageEmbed{
@@ -469,6 +471,34 @@ func setEmbed(Item database.Item) *discordgo.MessageEmbed {
 	}
 	fmt.Println(Item.ImgURL)
 	return &em
+}
+
+func setSecondHandField(ebayArr []types.EbayListing) []*discordgo.MessageEmbedField {
+	var res []*discordgo.MessageEmbedField
+	HeaderField := discordgo.MessageEmbedField{
+		Name: embedSeparatorFormatter("Ebay Listings", 44),
+	}
+	res = append(res, &HeaderField)
+	for _, Listing := range ebayArr {
+		priceField := discordgo.MessageEmbedField{
+			Name:  Listing.Title,
+			Value: "$" + strconv.Itoa(Listing.Price+1),
+		}
+		conditionField := discordgo.MessageEmbedField{
+			Name:  "Condition:",
+			Value: Listing.Condition,
+		}
+		urlField := discordgo.MessageEmbedField{
+			Name:  "From URL:",
+			Value: Listing.URL,
+		}
+		separatorField := discordgo.MessageEmbedField{
+			Name:  embedSeparatorFormatter("", 44),
+			Value: "",
+		}
+		res = append(res, &priceField, &conditionField, &urlField, &separatorField)
+	}
+	return res
 }
 
 func setPriceField(p database.Price, message string) []*discordgo.MessageEmbedField {

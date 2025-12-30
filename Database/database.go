@@ -45,12 +45,12 @@ var (
 
 func AddItem(itemName string, uri string, query string) (Item, error) {
 	p, t, err := validateURI(uri, query)
-	ebayListings := crawler.GetEbayListings(crawler.ConstructEbaySearchURL(itemName, p.Price), itemName, p.Price)
 	imgURL := crawler.GetOpenGraphPic(uri)
 	if err != nil {
 		log.Print("invalid url", err)
 		return Item{}, err
 	}
+	ebayListings := crawler.GetEbayListings(crawler.ConstructEbaySearchURL(itemName, p.Price), itemName, p.Price)
 	arr := []TrackingInfo{t}
 	PriceArr := []Price{p}
 	i := Item{
@@ -237,7 +237,7 @@ func GetEbayListings(itemName string) ([]types.EbayListing, error) {
 
 func UpdateEbayListings(itemName string, listingsArr []types.EbayListing) error {
 	filter := bson.M{"Name": itemName}
-	update := bson.M{"$push": bson.M{
+	update := bson.M{"$set": bson.M{
 		"EbayListings": listingsArr,
 	}}
 	var result Item

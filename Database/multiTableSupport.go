@@ -8,6 +8,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 var (
@@ -42,7 +43,30 @@ func createChannelItemTableIfMissing(ChannelID string) *mongo.Collection {
 	if err != nil {
 		log.Fatalf("Failed to create collection: %v", err)
 	}
-	return Client.Database("tracker").Collection(ChannelID)
+	Table := Client.Database("tracker").Collection(ChannelID)
+	// Sets the index name and type to "search"
+	const indexName = "default"
+	opts := options.SearchIndexes().SetName(indexName).SetType("search")
+	// Defines the index definition
+	searchIndexModel := mongo.SearchIndexModel{
+		Definition: bson.D{
+			{Key: "mappings", Value: bson.D{
+				{Key: "dynamic", Value: true},
+				{Key: "fields", Value: bson.D{
+					{Key: "Name", Value: bson.D{
+						{Key: "type", Value: "autocomplete"},
+					}},
+				}},
+			}},
+		},
+		Options: opts,
+	}
+	// Creates the index
+	_, err = Table.SearchIndexes().CreateOne(ctx, searchIndexModel)
+	if err != nil {
+		log.Fatalf("Failed to create the MongoDB Search index: %v", err)
+	}
+	return Table
 }
 
 func loadChannelTable(ChannelID string) *mongo.Collection {

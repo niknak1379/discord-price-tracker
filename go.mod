@@ -9,6 +9,7 @@ require (
 	github.com/go-echarts/snapshot-chromedp v0.0.5
 	github.com/gocolly/colly/v2 v2.3.0
 	github.com/joho/godotenv v1.5.1
+	go.mongodb.org/mongo-driver v1.17.6
 	go.mongodb.org/mongo-driver/v2 v2.4.1
 )
 

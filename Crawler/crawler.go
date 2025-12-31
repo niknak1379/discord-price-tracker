@@ -27,15 +27,15 @@ func initCrawler() *colly.Collector {
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*ebay.*",
 		Delay:       1 * time.Minute,
-		RandomDelay: 3 * time.Minute, // Random 2-5 seconds
+		RandomDelay: 3 * time.Minute,
 	})
 
 	c.SetRequestTimeout(30 * time.Second)
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
 		Parallelism: 2,
-		Delay:       2 * time.Second, // Wait 2 seconds between requests
-		RandomDelay: 1 * time.Second, // Add random delay (1-3 seconds total)
+		Delay:       2 * time.Second, 
+		RandomDelay: 1 * time.Second, 
 	})
 	extensions.RandomUserAgent(c)
 	c.OnRequest(func(r *colly.Request) {
@@ -76,7 +76,7 @@ func GetPrice(uri string, querySelector string) (int, error) {
 	c.OnHTML(querySelector, func(h *colly.HTMLElement) {
 		log.Println(querySelector, h.Text)
 		crawled = true
-		res, err = formatPrice(h.Text) // runs on all matched queries, i just want the first one
+		res, err = formatPrice(h.Text)
 		c.OnHTMLDetach(querySelector)
 	})
 	err = c.Visit(uri)

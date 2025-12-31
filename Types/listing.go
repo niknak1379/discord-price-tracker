@@ -1,7 +1,8 @@
 package types
+
 type EbayListing struct {
-	Price     int
-	URL       string
-	Title     string
-	Condition string
+	Price     int    `json:"Price"`
+	URL       string `json:"URL"`
+	Title     string `json:"Title"`
+	Condition string `json:"Condition"`
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -27,7 +28,6 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 
 // returns a map of urls and prices + shipping cost
 func GetEbayListings(url string, Name string, desiredPrice int) ([]types.EbayListing, error) {
-	// logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	log.Println("visiting ebay url ", url)
 	var listingArr []types.EbayListing
 	visited := false
@@ -140,14 +140,15 @@ func getCanonicalURL(c *colly.Collector, url string) string {
 	return retURL
 }
 
-func FacebookUrlGenerator(Name string, Price int) string {
+func FacebookURLGenerator(Name string, Price int) string {
 	baseURL := "https://www.facebook.com/marketplace/107711145919004/search"
 	priceQuery := fmt.Sprintf("?maxPrice=%d", Price)
 	query := "&query=" + url.PathEscape(Name) + "&exact=false"
 	return baseURL + priceQuery + query
 }
 
-func MarketPlaceCrawl(url string) {
+func MarketPlaceCrawl(url string) []types.EbayListing {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
@@ -162,18 +163,45 @@ func MarketPlaceCrawl(url string) {
 
 	ctx, timeoutCancel := context.WithTimeout(ctx, 60*time.Second) // Increased timeout
 	defer timeoutCancel()
-	var screenshotBuf []byte
-	// Split into separate runs to debug where it fails
+	var first []byte
+	var second []byte
+	var items []types.EbayListing
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
 		chromedp.Sleep(10*time.Second),
 		chromedp.WaitReady("body", chromedp.ByQuery),
-		chromedp.FullScreenshot(&screenshotBuf, 90), // 90 = JPEG quality
-		chromedp.Click("div.x5yr21d.x4l50q0"),
-	)
-	os.WriteFile("debug-screenshot.png", screenshotBuf, 0644)
+		chromedp.FullScreenshot(&first, 90), // 90 = JPEG quality
+		chromedp.Click("div.xdg88n9.x10l6tqk.x1tk7jg1.x1vjfegm"),
+		chromedp.Sleep(3*time.Second),
+		chromedp.FullScreenshot(&second, 90), // 90 = JPEG quality
+		chromedp.Evaluate(`
+		Array.from(document.querySelectorAll('div.x9f619.x78zum5.x1r8uery.xdt5ytf.x1iyjqo2.xs83m0k.x135b78x.x11lfxj5.x1iorvi4.xjkvuk6.xnpuxes.x1cjf5ee.x17dddeq')).map(e => ({
+				Title: e.querySelector('span.x1lliihq.x6ikm8r.x10wlt62.x1n2onr6')?.innerText || '',
+				URL: e.querySelector('a')?.href || '',
+				Price: ((el) => {
+						if (!el || !el.innerText) return 0;
+						const text = el.innerText.replaceAll('$', '').replaceAll(',', '');
+						return parseInt(text) || 0;
+				})(e.querySelector('span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.xlh3980.xvmahel.x1n0sxbx.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.x4zkp8e.x3x7a5m.x1lkfr7t.x1lbecb7.x1s688f.xzsf02u')),
+				Condition: e.querySelector('span.x1lliihq.x6ikm8r.x10wlt62.x1n2onr6.xlyipyv.xuxw1ft')?.innerText || '',
+		}))
+		`, &items),
 
+		// Price: parseInt((e.querySelector('span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.xlh3980.xvmahel.x1n0sxbx.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.x4zkp8e.x676frb.x1lkfr7t.x1lbecb7.x1s688f.xzsf02u')?.innerText || '0' ).replace('$', '').replaceAll(',', '')),
+		//                                        x193iq5w xeuugli x13faqbe x1vvkbs xlh3980 xvmahel x1n0sxbx x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x4zkp8e x3x7a5m x1lkfr7t x1lbecb7 x1s688f xzsf02u
+	)
+	logger.Info("listing", slog.Any("Listing Values", items))
+	os.WriteFile("first.png", first, 0644)
+	os.WriteFile("second.png", second, 0644)
 	if err != nil {
 		fmt.Println(err)
 	}
+	var retArr []types.EbayListing
+	// <------------------ sanitize the list ------------>
+	for _, item := range items {
+		if item.Title != "" && item.Price != 0 {
+			retArr = append(retArr, item)
+		}
+	}
+	return retArr
 }

@@ -29,7 +29,7 @@ func main() {
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
-	url := crawler.FacebookUrlGenerator("fractal meshify", 120)
+	url := crawler.FacebookURLGenerator("fractal north", 120)
 	fmt.Println(url)
 	crawler.MarketPlaceCrawl(url)
 	// go scheduler.InitScheduler(ctx)

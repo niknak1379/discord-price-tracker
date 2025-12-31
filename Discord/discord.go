@@ -423,6 +423,9 @@ func Run(ctx context.Context) {
 		log.Panic("could not connect to discord client", err)
 	}
 
+	Discord.SyncEvents = false
+
+	// sets bot label
 	Discord.AddHandler(ready)
 
 	// open session

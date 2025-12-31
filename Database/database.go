@@ -379,6 +379,7 @@ func InitDB(ctx context.Context) {
 	if err := Client.Ping(ctx, readpref.Primary()); err != nil {
 		panic(err)
 	}
+	loadDBTables()
 	Table = Client.Database("tracker").Collection("Items")
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 }

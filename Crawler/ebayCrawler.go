@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -126,7 +127,10 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 	err := c.Visit(url)
 	c.Wait()
 	if err != nil || !visited {
-		log.Println("error in getting ebay listings", err, visited)
+		log.Println("error in getting ebay listings, no items were visited or an err occured", err, visited)
+		if !visited && err == nil {
+			err = errors.New("no items were visited from ebay.com")
+		}
 		return listingArr, err
 	}
 	return listingArr, err
@@ -238,6 +242,8 @@ func MarketPlaceCrawl(Name string, desiredPrice int) ([]types.EbayListing, error
 	if err != nil {
 		fmt.Println(err)
 		return retArr, err
+	} else if len(items) == 0 {
+		return retArr, errors.New("no items returned from facebook, check screenshots for sanity check")
 	}
 	// <------------------ sanitize the list ------------>
 	for i := range items {
@@ -264,7 +270,7 @@ func GetSecondHandListings(Name string, Price int) ([]types.EbayListing, error) 
 	}
 	retArr := append(ebay, fb...)
 	logger.Info("listing", slog.Any("Listing Values", retArr))
-	return retArr, err
+	return retArr, errors.Join(err, err2)
 }
 
 func ValidateDistance(location string) (bool, string, error) {
@@ -367,7 +373,7 @@ func ValidateDistance(location string) (bool, string, error) {
 	Distance := d.Sources_to_targets[0][0].Distance
 	Time := int(d.Sources_to_targets[0][0].Time)
 	TimeMin := Time / 60
-	
+
 	if Distance < 30 {
 		// format time and distance format to be displayed in the discord message
 		retStr := fmt.Sprintf("%.1f miles, currently %d min ETA", Distance, TimeMin)

@@ -6,9 +6,11 @@ import (
 	"os"
 	database "priceTracker/Database"
 	types "priceTracker/Types"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
+
 func ready(discord *discordgo.Session, ready *discordgo.Ready) {
 	fmt.Println("Logged in")
 	discord.UpdateGameStatus(1, "stonks")
@@ -26,6 +28,19 @@ func CrawlErrorAlert(itemName string, URL string, err error) {
 		itemName, URL, err.Error())
 	log.Printf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
 		itemName, URL, err.Error())
+	if strings.Contains(err.Error(), "ebay") {
+		reader, err := os.Open("failoverSS.png")
+		if err != nil {
+			log.Println("could not send ebay picture", err)
+		}
+		Discord.ChannelFileSend(os.Getenv("CHANNEL_ID"), "my-chart.png", reader)
+	} else if strings.Contains(err.Error(), "facebook") {
+		reader, err := os.Open("second.png")
+		if err != nil {
+			log.Println("could not send face book image", err)
+		}
+		Discord.ChannelFileSend(os.Getenv("CHANNEL_ID"), "my-chart.png", reader)
+	}
 	Discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
 }
 

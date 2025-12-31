@@ -1,15 +1,21 @@
 package crawler
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"os"
+	"strconv"
 	"time"
 
 	// "log/slog"
+	"net/http"
 	"net/url"
+
 	// "os"
 	types "priceTracker/Types"
 	"regexp"
@@ -18,6 +24,24 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/gocolly/colly/v2"
 )
+
+type GeocodeResponse struct {
+	Results []Location `json:"results"`
+}
+
+type Location struct {
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
+}
+type Body struct {
+	Mode    string        `json:"mode"`
+	Sources []coordinates `json:"sources"`
+	Targets []coordinates `json:"targets"`
+	Units   string        `json:"units"`
+}
+type coordinates struct {
+	Location [2]float64 `json:"location"`
+}
 
 func ConstructEbaySearchURL(Name string, newPrice int) string {
 	baseURL := "https://www.ebay.com/sch/i.html?_nkw="
@@ -209,6 +233,10 @@ func MarketPlaceCrawl(Name string, desiredPrice int) ([]types.EbayListing, error
 	// <------------------ sanitize the list ------------>
 	for _, item := range items {
 		if titleCorrectnessCheck(item.Title, Name) && item.Price != 0 {
+			distance, err := ValidateDistance(item.Condition)
+			if err != nil || distance {
+				continue
+			}
 			retArr = append(retArr, item)
 		}
 	}
@@ -225,4 +253,94 @@ func GetSecondHandListings(Name string, Price int) ([]types.EbayListing, error) 
 	retArr := append(ebay, fb...)
 	logger.Info("listing", slog.Any("Listing Values", retArr))
 	return retArr, err
+}
+
+func ValidateDistance(location string) (bool, error) {
+	base := "https://api.geoapify.com/v1/geocode/search?text="
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	api := "&format=json&apiKey=" + os.Getenv("GEO_API_KEY")
+	query := url.PathEscape(location)
+	url := base + query + api
+	method := "GET"
+
+	// ------------ get lat and long from description -----------
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		fmt.Println("forming first request err", err)
+		return false, err
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println("faild first request", err)
+		return false, err
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println("reading first body", err)
+		return false, err
+	}
+
+	// fmt.Println(string(body))
+	var result GeocodeResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		fmt.Println("unmarshaling into result object for first request", err)
+		return false, err
+	}
+	// logger.Info("listing", slog.Any("Listing marshalled respone from first req", result))
+	if len(result.Results) == 0 {
+		fmt.Println("result is empty")
+		return false, fmt.Errorf("no results found")
+	}
+
+	target := result.Results[0]
+	// --------------- get distance from api------------------
+	url = "https://api.geoapify.com/v1/routematrix?" + api
+	method = "POST"
+
+	t := coordinates{
+		Location: [2]float64{target.Lon, target.Lat},
+	}
+	homeLong := os.Getenv("HOME_LONG")
+	homeLat := os.Getenv("HOME_LAT")
+	floatLong, _ := strconv.ParseFloat(homeLong, 64)
+	floatLat, _ := strconv.ParseFloat(homeLat, 64)
+	h := coordinates{
+		Location: [2]float64{floatLong, floatLat},
+	}
+	reqBody := Body{
+		Mode:    "drive",
+		Sources: []coordinates{t},
+		Targets: []coordinates{h},
+		Units:   "imperial",
+	}
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		fmt.Println("converting to json", err)
+		return false, err
+	}
+	req, err = http.NewRequest(method, url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		fmt.Println("forming second request", err)
+		return false, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	res, err = client.Do(req)
+	if err != nil {
+		fmt.Println("second request err", err)
+		return false, err
+	}
+	defer res.Body.Close()
+
+	body, err = io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println("reading second request err", err)
+		return false, err
+	}
+	logger.Info("req", slog.Any("req", string(jsonBody)))
+	fmt.Println("printing second body", string(body))
+	return true, err
 }

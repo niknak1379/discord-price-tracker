@@ -2,6 +2,7 @@ package main
 
 import (
 	// "context"
+
 	"context"
 	"fmt"
 	"log"
@@ -9,12 +10,12 @@ import (
 	"os/signal"
 	"sync"
 
+	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
+	scheduler "priceTracker/Scheduler"
 
 	// crawler "priceTracker/Crawler"
 	discord "priceTracker/Discord"
-
-	scheduler "priceTracker/Scheduler"
 
 	"github.com/joho/godotenv"
 )
@@ -33,6 +34,7 @@ func main() {
 		discord.Run(ctx)
 	})
 
+	crawler.GetSecondHandListings("Fractal North", 120)
 	// make the program run unless sigINT is recieved
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)

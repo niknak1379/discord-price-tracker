@@ -68,7 +68,7 @@ func setSecondHandField(ebayArr []types.EbayListing) []*discordgo.MessageEmbedFi
 			Value: "$" + strconv.Itoa(Listing.Price+1),
 		}
 		conditionField := discordgo.MessageEmbedField{
-			Name:  "Condition:",
+			Name:  "Condition/Location:",
 			Value: Listing.Condition,
 		}
 		urlField := discordgo.MessageEmbedField{

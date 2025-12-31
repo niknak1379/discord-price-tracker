@@ -240,15 +240,16 @@ func MarketPlaceCrawl(Name string, desiredPrice int) ([]types.EbayListing, error
 		return retArr, err
 	}
 	// <------------------ sanitize the list ------------>
-	for _, item := range items {
-		if titleCorrectnessCheck(item.Title, Name) && item.Price != 0 {
-			distance, err := ValidateDistance(item.Condition)
+	for i := range items {
+		if titleCorrectnessCheck(items[i].Title, Name) && items[i].Price != 0 {
+			distance, distStr, err := ValidateDistance(items[i].Condition)
 			if err != nil || !distance {
-				fmt.Println("skipping url distance too long", item.URL)
+				fmt.Println("skipping url distance too long", items[i].URL)
 				continue
 			}
-			fmt.Println("appending facebook listing for", item.Title, distance)
-			retArr = append(retArr, item)
+			items[i].Condition += " " + distStr
+			fmt.Println("appending facebook listing for", items[i].Title, items[i].Condition)
+			retArr = append(retArr, items[i])
 		}
 	}
 	return retArr, err
@@ -266,7 +267,7 @@ func GetSecondHandListings(Name string, Price int) ([]types.EbayListing, error) 
 	return retArr, err
 }
 
-func ValidateDistance(location string) (bool, error) {
+func ValidateDistance(location string) (bool, string, error) {
 	base := "https://api.geoapify.com/v1/geocode/search?text="
 	// logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	api := "&format=json&apiKey=" + os.Getenv("GEO_API_KEY")
@@ -279,31 +280,31 @@ func ValidateDistance(location string) (bool, error) {
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		fmt.Println("forming first request err", err)
-		return false, err
+		return false, "", err
 	}
 	res, err := client.Do(req)
 	if err != nil {
 		fmt.Println("faild first request", err)
-		return false, err
+		return false, "", err
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println("reading first body", err)
-		return false, err
+		return false, "", err
 	}
 
 	// fmt.Println(string(body))
 	var result GeocodeResponse
 	if err := json.Unmarshal(body, &result); err != nil {
 		fmt.Println("unmarshaling into result object for first request", err)
-		return false, err
+		return false, "", err
 	}
 	// logger.Info("listing", slog.Any("Listing marshalled respone from first req", result))
 	if len(result.Results) == 0 {
 		fmt.Println("result is empty")
-		return false, fmt.Errorf("no results found")
+		return false, "", fmt.Errorf("no results found")
 	}
 
 	target := result.Results[0]
@@ -330,36 +331,48 @@ func ValidateDistance(location string) (bool, error) {
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
 		fmt.Println("converting to json", err)
-		return false, err
+		return false, "", err
 	}
 	req, err = http.NewRequest(method, url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		fmt.Println("forming second request", err)
-		return false, err
+		return false, "", err
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err = client.Do(req)
 	if err != nil {
 		fmt.Println("second request err", err)
-		return false, err
+		return false, "", err
 	}
 	defer res.Body.Close()
 
 	body, err = io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println("reading second request err", err)
-		return false, err
+		return false, "", err
 	}
 	// logger.Info("req", slog.Any("req", string(jsonBody)))
 	// fmt.Println("printing second body", string(body))
 	var d distanceRes
 	if err := json.Unmarshal(body, &d); err != nil {
 		fmt.Println("unmarshaling into result object for first request", err)
-		return false, err
+		return false, "", err
 	}
-	if d.Sources_to_targets[0][0].Distance < 30 {
-		return true, err
+	if len(d.Sources_to_targets) == 0 {
+		return false, "", fmt.Errorf("empty array returned from geo")
+	} else if len(d.Sources_to_targets[0]) == 0 {
+		return false, "", fmt.Errorf("empty array returned from geo")
 	}
-	return false, err
+	Distance := d.Sources_to_targets[0][0].Distance
+	Time := int(d.Sources_to_targets[0][0].Time)
+	TimeMin := Time / 60
+	
+	if Distance < 30 {
+		// format time and distance format to be displayed in the discord message
+		retStr := fmt.Sprintf("%.1f miles, currently %d min ETA", Distance, TimeMin)
+		fmt.Println("formatted distance", retStr)
+		return true, retStr, err
+	}
+	return false, "", err
 }

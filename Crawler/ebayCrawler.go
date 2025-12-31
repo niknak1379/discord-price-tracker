@@ -42,6 +42,13 @@ type Body struct {
 type coordinates struct {
 	Location [2]float64 `json:"location"`
 }
+type dist struct {
+	Distance float64 `json:"distance"`
+	Time     float64 `json:"time"`
+}
+type distanceRes struct {
+	Sources_to_targets [][]dist `json:"sources_to_targets`
+}
 
 func ConstructEbaySearchURL(Name string, newPrice int) string {
 	baseURL := "https://www.ebay.com/sch/i.html?_nkw="
@@ -53,6 +60,7 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 // returns a map of urls and prices + shipping cost
 func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	log.Println("visiting ebay url ", url)
 	var listingArr []types.EbayListing
 	visited := false
@@ -63,6 +71,7 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 
 		// check to see if listing is viable
 		if !titleCorrectnessCheck(title, Name) {
+			fmt.Println("skipping title criteria not met", title)
 			return
 		}
 		condition := e.ChildText("div.s-card__subtitle")
@@ -111,7 +120,7 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 			Title:     title,
 			Condition: condition,
 		}
-		// logger.Info("listing", slog.Any("Listing Values", listing))
+		logger.Info("listing", slog.Any("ebay listing information", listing))
 		listingArr = append(listingArr, listing)
 	})
 	err := c.Visit(url)
@@ -234,9 +243,11 @@ func MarketPlaceCrawl(Name string, desiredPrice int) ([]types.EbayListing, error
 	for _, item := range items {
 		if titleCorrectnessCheck(item.Title, Name) && item.Price != 0 {
 			distance, err := ValidateDistance(item.Condition)
-			if err != nil || distance {
+			if err != nil || !distance {
+				fmt.Println("skipping url distance too long", item.URL)
 				continue
 			}
+			fmt.Println("appending facebook listing for", item.Title, distance)
 			retArr = append(retArr, item)
 		}
 	}
@@ -257,7 +268,7 @@ func GetSecondHandListings(Name string, Price int) ([]types.EbayListing, error) 
 
 func ValidateDistance(location string) (bool, error) {
 	base := "https://api.geoapify.com/v1/geocode/search?text="
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	// logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	api := "&format=json&apiKey=" + os.Getenv("GEO_API_KEY")
 	query := url.PathEscape(location)
 	url := base + query + api
@@ -340,7 +351,15 @@ func ValidateDistance(location string) (bool, error) {
 		fmt.Println("reading second request err", err)
 		return false, err
 	}
-	logger.Info("req", slog.Any("req", string(jsonBody)))
-	fmt.Println("printing second body", string(body))
-	return true, err
+	// logger.Info("req", slog.Any("req", string(jsonBody)))
+	// fmt.Println("printing second body", string(body))
+	var d distanceRes
+	if err := json.Unmarshal(body, &d); err != nil {
+		fmt.Println("unmarshaling into result object for first request", err)
+		return false, err
+	}
+	if d.Sources_to_targets[0][0].Distance < 30 {
+		return true, err
+	}
+	return false, err
 }

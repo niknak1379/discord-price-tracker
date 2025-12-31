@@ -9,13 +9,12 @@ import (
 	"os/signal"
 	"sync"
 
-	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
 
 	// crawler "priceTracker/Crawler"
 	discord "priceTracker/Discord"
 
-	// scheduler "priceTracker/Scheduler"
+	scheduler "priceTracker/Scheduler"
 
 	"github.com/joho/godotenv"
 )
@@ -29,16 +28,10 @@ func main() {
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
-	crawler.ValidateDistance("Los Angeles")
-	// go scheduler.InitScheduler(ctx)
-	// wg.Go(func() {
-	// discord.Run(ctx)
-	// })
-	//
-	//
-	// url := crawler.ConstructEbaySearchURL("fractal meshify c", 120)
-	// log.Println(url)
-	// crawler.GetEbayListings(url, "fractal meshify c")
+	go scheduler.InitScheduler(ctx)
+	wg.Go(func() {
+		discord.Run(ctx)
+	})
 
 	// make the program run unless sigINT is recieved
 	stop := make(chan os.Signal, 1)

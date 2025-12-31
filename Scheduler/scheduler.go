@@ -12,9 +12,12 @@ import (
 	discord "priceTracker/Discord"
 )
 
-func InitScheduler(ctx context.Context, ChannelID string) {
+func SetChannelScheduler(ctx context.Context) {
 	// -------------------- set timer for daily scrapping -------------//
-	updateAllPrices(ChannelID)
+	println("printing tables:", database.Tables)
+	for i := range database.Tables {
+		updateAllPrices(i)
+	}
 	go func() {
 		ticker := time.NewTicker(8 * time.Hour)
 		log.Println("setting ticker in crawler")
@@ -24,7 +27,9 @@ func InitScheduler(ctx context.Context, ChannelID string) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				updateAllPrices(ChannelID)
+				for i := range database.Tables {
+					updateAllPrices(i)
+				}
 				log.Println("ticking")
 			}
 		}
@@ -32,7 +37,7 @@ func InitScheduler(ctx context.Context, ChannelID string) {
 }
 
 func updateAllPrices(ChannelID string) {
-	log.Println("updateAllPrices being fired")
+	log.Println("updateAllPrices being fired for channel", ChannelID)
 	itemsArr := database.GetAllItems(ChannelID)
 	for _, v := range itemsArr {
 		date := time.Now()

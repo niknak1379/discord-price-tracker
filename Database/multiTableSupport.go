@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	Tables map[string]*mongo.Collection
+	Tables = make(map[string]*mongo.Collection)
 	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 )
 

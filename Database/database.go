@@ -241,7 +241,7 @@ func GetAllItems(ChannelID string) []*Item {
 	if err != nil {
 		panic(err)
 	}
-	log.Println("getting all items")
+	log.Println("getting all items", result)
 	return result
 }
 

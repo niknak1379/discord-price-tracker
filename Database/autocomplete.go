@@ -15,6 +15,7 @@ func FuzzyMatchName(Name string, ChannelID string) *[]string {
 	} else {
 		// Autocomplete search
 		searchStage = bson.D{{Key: "$search", Value: bson.D{
+			{Key: "index", Value: ChannelID},
 			{Key: "autocomplete", Value: bson.D{
 				{Key: "path", Value: "Name"},
 				{Key: "query", Value: Name},

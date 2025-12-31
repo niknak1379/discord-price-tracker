@@ -378,8 +378,9 @@ func RemoveTrackingInfo(itemName string, uri string, ChannelID string) (Item, er
 	return result, err
 }
 
-func InitDB(ctx context.Context) {
+func InitDB(context context.Context) {
 	godotenv.Load()
+	ctx = context
 	var err error
 	// Use the SetServerAPIOptions() method to set the version of the Stable API on the client
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)

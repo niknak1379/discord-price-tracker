@@ -43,15 +43,19 @@ func createChannelItemTableIfMissing(ChannelID string) *mongo.Collection {
 	if err != nil {
 		log.Fatalf("Failed to create collection: %v", err)
 	}
+	Channel := Channel{
+		ChannelID: ChannelID,
+	}
+	Client.Database("tracker").Collection("ChannelIDs").InsertOne(ctx, Channel)
+
 	Table := Client.Database("tracker").Collection(ChannelID)
 	// Sets the index name and type to "search"
-	const indexName = "default"
-	opts := options.SearchIndexes().SetName(indexName).SetType("search")
+	opts := options.SearchIndexes().SetName(ChannelID).SetType("search")
 	// Defines the index definition
 	searchIndexModel := mongo.SearchIndexModel{
 		Definition: bson.D{
 			{Key: "mappings", Value: bson.D{
-				{Key: "dynamic", Value: true},
+				{Key: "dynamic", Value: false},
 				{Key: "fields", Value: bson.D{
 					{Key: "Name", Value: bson.D{
 						{Key: "type", Value: "autocomplete"},

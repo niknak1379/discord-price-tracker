@@ -29,9 +29,7 @@ func main() {
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
-	url := crawler.FacebookURLGenerator("fractal north", 120)
-	fmt.Println(url)
-	crawler.MarketPlaceCrawl(url)
+	crawler.GetSecondHandListings("fractal north", 120)
 	// go scheduler.InitScheduler(ctx)
 	// wg.Go(func() {
 	// discord.Run(ctx)

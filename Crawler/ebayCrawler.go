@@ -27,7 +27,8 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 }
 
 // returns a map of urls and prices + shipping cost
-func GetEbayListings(url string, Name string, desiredPrice int) ([]types.EbayListing, error) {
+func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error) {
+	url := ConstructEbaySearchURL(Name, desiredPrice)
 	log.Println("visiting ebay url ", url)
 	var listingArr []types.EbayListing
 	visited := false
@@ -70,8 +71,12 @@ func GetEbayListings(url string, Name string, desiredPrice int) ([]types.EbayLis
 		})
 		link := e.ChildAttr("a.s-card__link", "href")
 		// skip item if any errors are met
-		if basePrice == 0 || err != nil || basePrice+shippingCost >= desiredPrice {
+		if basePrice == 0 || err != nil {
 			log.Print("price 0 something is wrong for", err, basePrice+shippingCost, link)
+			return
+		}
+		if basePrice+shippingCost >= desiredPrice {
+			fmt.Println("price too high skipping")
 			return
 		}
 
@@ -147,8 +152,10 @@ func FacebookURLGenerator(Name string, Price int) string {
 	return baseURL + priceQuery + query
 }
 
-func MarketPlaceCrawl(url string) []types.EbayListing {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+// JS loaded cannot use colly for this
+func MarketPlaceCrawl(Name string, desiredPrice int) ([]types.EbayListing, error) {
+	url := FacebookURLGenerator(Name, desiredPrice)
+	fmt.Println("crawling ", url)
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
@@ -190,18 +197,32 @@ func MarketPlaceCrawl(url string) []types.EbayListing {
 		// Price: parseInt((e.querySelector('span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.xlh3980.xvmahel.x1n0sxbx.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.x4zkp8e.x676frb.x1lkfr7t.x1lbecb7.x1s688f.xzsf02u')?.innerText || '0' ).replace('$', '').replaceAll(',', '')),
 		//                                        x193iq5w xeuugli x13faqbe x1vvkbs xlh3980 xvmahel x1n0sxbx x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x4zkp8e x3x7a5m x1lkfr7t x1lbecb7 x1s688f xzsf02u
 	)
-	logger.Info("listing", slog.Any("Listing Values", items))
+
 	os.WriteFile("first.png", first, 0644)
 	os.WriteFile("second.png", second, 0644)
+
+	var retArr []types.EbayListing
 	if err != nil {
 		fmt.Println(err)
+		return retArr, err
 	}
-	var retArr []types.EbayListing
 	// <------------------ sanitize the list ------------>
 	for _, item := range items {
-		if item.Title != "" && item.Price != 0 {
+		if titleCorrectnessCheck(item.Title, Name) && item.Price != 0 {
 			retArr = append(retArr, item)
 		}
 	}
-	return retArr
+	return retArr, err
+}
+
+func GetSecondHandListings(Name string, Price int) ([]types.EbayListing, error) {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	fb, err2 := MarketPlaceCrawl(Name, Price)
+	ebay, err := GetEbayListings(Name, Price)
+	if err != nil || err2 != nil {
+		fmt.Println("errors from getting second hand listing", err, err2)
+	}
+	retArr := append(ebay, fb...)
+	logger.Info("listing", slog.Any("Listing Values", retArr))
+	return retArr, err
 }

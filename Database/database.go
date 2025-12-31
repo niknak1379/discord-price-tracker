@@ -50,7 +50,7 @@ func AddItem(itemName string, uri string, query string) (Item, error) {
 		log.Print("invalid url", err)
 		return Item{}, err
 	}
-	ebayListings, _ := crawler.GetEbayListings(crawler.ConstructEbaySearchURL(itemName, p.Price), itemName, p.Price)
+	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price)
 	arr := []TrackingInfo{t}
 	PriceArr := []Price{p}
 	i := Item{

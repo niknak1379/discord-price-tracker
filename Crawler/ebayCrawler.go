@@ -48,7 +48,7 @@ type dist struct {
 	Time     float64 `json:"time"`
 }
 type distanceRes struct {
-	Sources_to_targets [][]dist `json:"sources_to_targets`
+	Sources_to_targets [][]dist `json:"sources_to_targets"`
 }
 
 func ConstructEbaySearchURL(Name string, newPrice int) string {

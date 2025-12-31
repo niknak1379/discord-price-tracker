@@ -16,14 +16,14 @@ func ready(discord *discordgo.Session, ready *discordgo.Ready) {
 	discord.UpdateGameStatus(1, "stonks")
 }
 
-func LowestPriceAlert(itemName string, newPrice int, oldPrice int, URL string) {
+func LowestPriceAlert(itemName string, newPrice int, oldPrice int, URL string, ChannelID string) {
 	content := fmt.Sprintf("New Price Alert!!!!\nItem %s has hit its lowest price of %d "+
 		"from previous lowest of %d with the following url \n%s",
 		itemName, newPrice, oldPrice, URL)
-	Discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
+	Discord.ChannelMessageSend(ChannelID, content)
 }
 
-func CrawlErrorAlert(itemName string, URL string, err error) {
+func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	content := fmt.Sprintf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
 		itemName, URL, err.Error())
 	log.Printf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
@@ -33,24 +33,24 @@ func CrawlErrorAlert(itemName string, URL string, err error) {
 		if err != nil {
 			log.Println("could not send ebay picture", err)
 		}
-		Discord.ChannelFileSend(os.Getenv("CHANNEL_ID"), "my-chart.png", reader)
+		Discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
 	} else if strings.Contains(err.Error(), "facebook") {
 		reader, err := os.Open("second.png")
 		if err != nil {
 			log.Println("could not send face book image", err)
 		}
-		Discord.ChannelFileSend(os.Getenv("CHANNEL_ID"), "my-chart.png", reader)
+		Discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
 	}
-	Discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
+	Discord.ChannelMessageSend(ChannelID, content)
 }
 
-func SendGraphPng(discord *discordgo.Session) {
+func SendGraphPng(discord *discordgo.Session, ChannelID string) {
 	// content := fmt.Sprintf("Chart for Product named %s for the last %d months", productName, months)
 	reader, err := os.Open("my-chart.png")
 	if err != nil {
 		log.Fatal(err)
 	}
-	discord.ChannelFileSend(os.Getenv("CHANNEL_ID"), "my-chart.png", reader)
+	discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
 }
 
 func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *discordgo.Session) {
@@ -60,9 +60,9 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 	// t int value 0 maps to name type, 1 to url type, 2 to css
 	switch t {
 	case 0:
-		items = database.FuzzyMatchName(Name)
+		items = database.FuzzyMatchName(Name, i.ChannelID)
 	case 1:
-		items = database.AutoCompleteURL(Name)
+		items = database.AutoCompleteURL(Name, i.ChannelID)
 	}
 
 	if len(*items) != 0 {
@@ -133,14 +133,14 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 	}
 }
 
-func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int) {
+func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int, ChannelID string) {
 	content := fmt.Sprintf("Price update for %s Listing for %s with the price of $%d from the old price of $%d with the following url \n%s",
 		newListing.Condition, newListing.Title, newListing.Price, oldPrice, newListing.URL)
-	Discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
+	Discord.ChannelMessageSend(ChannelID, content)
 }
 
-func NewEbayListingAlert(newListing types.EbayListing) {
+func NewEbayListingAlert(newListing types.EbayListing, ChannelID string) {
 	content := fmt.Sprintf("New %s Listing for %s with the price of %d with the following url \n%s",
 		newListing.Condition, newListing.Title, newListing.Price, newListing.URL)
-	Discord.ChannelMessageSend(os.Getenv("CHANNEL_ID"), content)
+	Discord.ChannelMessageSend(os.Getenv(ChannelID), content)
 }

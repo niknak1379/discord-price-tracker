@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"log"
 	"log/slog"
 	"os"
@@ -10,7 +11,7 @@ import (
 )
 
 var (
-	Tables []*mongo.Collection
+	Tables map[string]*mongo.Collection
 	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 )
 
@@ -30,5 +31,24 @@ func loadDBTables() {
 		log.Panic("could not read ChannelID results")
 	}
 	logger.Info("channels", slog.Any("IDs:", ChannelsArr))
+	for _, IDString := range ChannelsArr {
+		table := Client.Database("tracker").Collection(IDString.ChannelID)
+		Tables[IDString.ChannelID] = table
+	}
 }
 
+func createChannelItemTableIfMissing(ChannelID string) *mongo.Collection {
+	err := Client.Database("tracker").CreateCollection(context.TODO(), ChannelID)
+	if err != nil {
+		log.Fatalf("Failed to create collection: %v", err)
+	}
+	return Client.Database("tracker").Collection(ChannelID)
+}
+
+func loadChannelTable(ChannelID string) *mongo.Collection {
+	Table, ok := Tables[ChannelID]
+	if !ok {
+		Table = createChannelItemTableIfMissing(ChannelID)
+	}
+	return Table
+}

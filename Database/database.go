@@ -43,7 +43,8 @@ var (
 	ctx    context.Context
 )
 
-func AddItem(itemName string, uri string, query string) (Item, error) {
+func AddItem(itemName string, uri string, query string, ChannelID string) (Item, error) {
+	Table = loadChannelTable(ChannelID)
 	p, t, err := validateURI(uri, query)
 	imgURL := crawler.GetOpenGraphPic(uri)
 	if err != nil {
@@ -71,7 +72,8 @@ func AddItem(itemName string, uri string, query string) (Item, error) {
 	return i, err
 }
 
-func EditName(oldName string, newName string) (Item, error) {
+func EditName(oldName string, newName string, ChannelID string) (Item, error) {
+	Table = loadChannelTable(ChannelID)
 	var res Item
 	filter := bson.M{"Name": oldName}
 	update := bson.M{"$set": bson.M{"Name": newName}}
@@ -85,7 +87,8 @@ func EditName(oldName string, newName string) (Item, error) {
 }
 
 // method itself checks if the price is a duplicate and if so does not add it
-func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date time.Time) (Price, error) {
+func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date time.Time, ChannelID string) (Price, error) {
+	Table = loadChannelTable(ChannelID)
 	price := Price{
 		Price: newPrice,
 		Url:   uri,
@@ -141,7 +144,7 @@ func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date 
 	// Check for lowest historical price
 	log.Printf("%d old price, %d new price", historicalLow, newPrice)
 	if newPrice < historicalLow {
-		UpdateLowestHistoricalPrice(Name, price)
+		UpdateLowestHistoricalPrice(Name, price, ChannelID)
 	}
 
 	filter := bson.M{"Name": Name}
@@ -161,7 +164,8 @@ func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date 
 	return price, nil
 }
 
-func GetLowestHistoricalPrice(Name string) (Price, error) {
+func GetLowestHistoricalPrice(Name string, ChannelID string) (Price, error) {
+	Table = loadChannelTable(ChannelID)
 	filter := bson.M{"Name": Name}
 	opts := options.FindOne().SetProjection(bson.M{"LowestPrice": 1})
 	var res Item
@@ -173,7 +177,8 @@ func GetLowestHistoricalPrice(Name string) (Price, error) {
 	return res.LowestPrice, err
 }
 
-func UpdateLowestHistoricalPrice(Name string, newLow Price) (Item, error) {
+func UpdateLowestHistoricalPrice(Name string, newLow Price, ChannelID string) (Item, error) {
+	Table = loadChannelTable(ChannelID)
 	filter := bson.M{"Name": Name}
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHisotry", Value: 0}}).SetReturnDocument(options.After)
 	update := bson.M{
@@ -191,7 +196,8 @@ func UpdateLowestHistoricalPrice(Name string, newLow Price) (Item, error) {
 	return res, err
 }
 
-func GetLowestPrice(Name string) (Price, error) {
+func GetLowestPrice(Name string, ChannelID string) (Price, error) {
+	Table = loadChannelTable(ChannelID)
 	filter := bson.M{"Name": Name}
 	opts := options.FindOne().SetProjection(bson.M{"CurrentLowestPrice": 1})
 	var res Item
@@ -203,7 +209,8 @@ func GetLowestPrice(Name string) (Price, error) {
 	return res.LowestPrice, err
 }
 
-func UpdateLowestPrice(Name string, newLow Price) (Item, error) {
+func UpdateLowestPrice(Name string, newLow Price, ChannelID string) (Item, error) {
+	Table = loadChannelTable(ChannelID)
 	filter := bson.M{"Name": bson.M{"$regex": "^" + Name + "$", "$options": "i"}}
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHisotry", Value: 0}}).SetReturnDocument(options.After)
 	update := bson.M{
@@ -221,7 +228,8 @@ func UpdateLowestPrice(Name string, newLow Price) (Item, error) {
 	return res, err
 }
 
-func GetAllItems() []*Item {
+func GetAllItems(ChannelID string) []*Item {
+	Table = loadChannelTable(ChannelID)
 	opts := options.Find().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
 	cursor, err := Table.Find(ctx, bson.M{}, opts)
 	if err != nil {
@@ -237,7 +245,8 @@ func GetAllItems() []*Item {
 	return result
 }
 
-func GetEbayListings(itemName string) ([]types.EbayListing, error) {
+func GetEbayListings(itemName string, ChannelID string) ([]types.EbayListing, error) {
+	Table = loadChannelTable(ChannelID)
 	var res Item
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
 	opts := options.FindOne().SetProjection(bson.D{{Key: "EbayListings", Value: 1}})
@@ -248,7 +257,8 @@ func GetEbayListings(itemName string) ([]types.EbayListing, error) {
 	return res.EbayListings, err
 }
 
-func UpdateEbayListings(itemName string, listingsArr []types.EbayListing) error {
+func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, ChannelID string) error {
+	Table = loadChannelTable(ChannelID)
 	filter := bson.M{"Name": itemName}
 	update := bson.M{"$set": bson.M{
 		"EbayListings": listingsArr,
@@ -262,7 +272,8 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing) error 
 	return err
 }
 
-func GetItem(itemName string) (Item, error) {
+func GetItem(itemName string, ChannelID string) (Item, error) {
+	Table = loadChannelTable(ChannelID)
 	var res Item
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
 	opts := options.FindOne().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
@@ -274,7 +285,8 @@ func GetItem(itemName string) (Item, error) {
 }
 
 // returns the price
-func GetPriceHistory(Name string, date time.Time) ([]*Price, error) {
+func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, error) {
+	Table = loadChannelTable(ChannelID)
 	var res []*Price
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: bson.D{
@@ -318,7 +330,8 @@ func GetPriceHistory(Name string, date time.Time) ([]*Price, error) {
 	return res, err
 }
 
-func RemoveItem(itemName string) int64 {
+func RemoveItem(itemName string, ChannelID string) int64 {
+	Table = loadChannelTable(ChannelID)
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
 	results, err := Table.DeleteOne(ctx, filter)
 	if err != nil {
@@ -327,7 +340,8 @@ func RemoveItem(itemName string) int64 {
 	return results.DeletedCount
 }
 
-func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, Price, error) {
+func AddTrackingInfo(itemName string, uri string, querySelector string, ChannelID string) (Item, Price, error) {
+	Table = loadChannelTable(ChannelID)
 	p, t, err := validateURI(uri, querySelector)
 	if err != nil {
 		return Item{}, p, err
@@ -347,7 +361,8 @@ func AddTrackingInfo(itemName string, uri string, querySelector string) (Item, P
 	return result, p, err
 }
 
-func RemoveTrackingInfo(itemName string, uri string) (Item, error) {
+func RemoveTrackingInfo(itemName string, uri string, ChannelID string) (Item, error) {
+	Table = loadChannelTable(ChannelID)
 	filter := bson.M{
 		"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"},
 	}
@@ -380,7 +395,6 @@ func InitDB(ctx context.Context) {
 		panic(err)
 	}
 	loadDBTables()
-	Table = Client.Database("tracker").Collection("Items")
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 }
 

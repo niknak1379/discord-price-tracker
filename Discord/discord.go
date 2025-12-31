@@ -187,7 +187,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			content := ""
 			var em *discordgo.MessageEmbed
 			// add tracker to database
-			addRes, err := database.AddItem(options[0].StringValue(), options[1].StringValue(), options[2].StringValue())
+			addRes, err := database.AddItem(options[0].StringValue(), options[1].StringValue(), options[2].StringValue(), i.ChannelID)
 			if err != nil {
 				content = fmt.Sprint(err)
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
@@ -215,7 +215,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
 			// add tracker to database
-			getRes, err := database.GetItem(options[0].StringValue())
+			getRes, err := database.GetItem(options[0].StringValue(), i.ChannelID)
 			var embedArr []*discordgo.MessageEmbed
 			if err != nil {
 				content = err.Error()
@@ -244,7 +244,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
 			// add tracker to database
-			getRes, err := database.EditName(options[0].StringValue(), options[1].StringValue())
+			getRes, err := database.EditName(options[0].StringValue(), options[1].StringValue(), i.ChannelID)
 			var embedArr []*discordgo.MessageEmbed
 			if err != nil {
 				content = err.Error()
@@ -265,7 +265,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	},
 	"list": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// add tracker to database
-		getRes := database.GetAllItems()
+		getRes := database.GetAllItems(i.ChannelID)
 		// returnstr, _ := json.Marshal(getRes)
 		var embedArr []*discordgo.MessageEmbed
 		for _, Item := range getRes {
@@ -288,7 +288,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
 			// remove tracker to database
-			deleteRes := database.RemoveItem(options[0].StringValue())
+			deleteRes := database.RemoveItem(options[0].StringValue(), i.ChannelID)
 
 			// set up response to discord client
 			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -334,7 +334,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 
 				// database reutrns a price struct, setpricefield formats the returned price
 				// and adds it to the message embeds
-				res, p, err := database.AddTrackingInfo(name, uri, htmlQuery)
+				res, p, err := database.AddTrackingInfo(name, uri, htmlQuery, i.ChannelID)
 				priceField := setPriceField(p, "Newly Added Tracker")
 
 				// add price tracking info
@@ -347,7 +347,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				}
 
 			case "remove":
-				res, err := database.RemoveTrackingInfo(name, uri)
+				res, err := database.RemoveTrackingInfo(name, uri, i.ChannelID)
 				em := setEmbed(res)
 				if err != nil {
 					content = err.Error()
@@ -378,7 +378,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			// get command inputs from discord
 			logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 			logger.Info("options", slog.Any("optoin", options))
-			err := charts.PriceHistoryChart(options[0].StringValue(), int(options[1].IntValue()))
+			err := charts.PriceHistoryChart(options[0].StringValue(), int(options[1].IntValue()), i.ChannelID)
 			if err != nil {
 				log.Print(err)
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{

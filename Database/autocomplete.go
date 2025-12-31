@@ -6,7 +6,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
-func FuzzyMatchName(Name string) *[]string {
+func FuzzyMatchName(Name string, ChannelID string) *[]string {
+	Table = Tables[ChannelID]
 	var searchStage bson.D
 	if Name == "" {
 		// empty query list all items
@@ -54,8 +55,8 @@ func FuzzyMatchName(Name string) *[]string {
 
 // not really critical functionality i feel like i dont really
 // need to propogate the errors for this and the other autocomplete
-func AutoCompleteURL(Name string) *[]string {
-	item, err := GetItem(Name)
+func AutoCompleteURL(Name string, ChannelID string) *[]string {
+	item, err := GetItem(Name, ChannelID)
 	res := []string{}
 	if err != nil {
 		return &res

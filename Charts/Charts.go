@@ -12,9 +12,9 @@ import (
 	"github.com/go-echarts/snapshot-chromedp/render"
 )
 
-func PriceHistoryChart(Name string, month int) error {
+func PriceHistoryChart(Name string, month int, ChannelID string) error {
 	line := charts.NewLine()
-	priceList, err := database.GetPriceHistory(Name, time.Now().AddDate(0, -month, 0))
+	priceList, err := database.GetPriceHistory(Name, time.Now().AddDate(0, -month, 0), ChannelID)
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	if err != nil || len(priceList) == 0 {

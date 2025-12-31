@@ -10,3 +10,6 @@ services:
       - PUBLIC_KEY=${PUBLIC_KEY}
       - MONGODB_URI=${MONGODB_URI}
       - CHANNEL_ID=${CHANNEL_ID}
+      - GEO_API_KEY=${GEO_API_KEY}
+      - HOME_LAT=${HOME_LAT}
+      - HOME_LONG=${HOME_LONG}

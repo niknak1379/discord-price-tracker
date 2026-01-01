@@ -97,7 +97,7 @@ func handleEbayListingsUpdate(Name string, Price int, ChannelID string) {
 	for _, Listing := range oldEbayListings {
 		ListingsMap[Listing.Title] = Listing
 	}
-	ebayListings, err := crawler.GetSecondHandListings(Name, Price, ListingsMap)
+	ebayListings, err := crawler.GetSecondHandListings(Name, Price)
 	if err != nil {
 		discord.CrawlErrorAlert(Name, "ebay.com", err, ChannelID)
 	}

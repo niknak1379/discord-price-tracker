@@ -51,7 +51,7 @@ func AddItem(itemName string, uri string, query string, ChannelID string) (Item,
 		return Item{}, err
 	}
 	imgURL := crawler.GetOpenGraphPic(uri)
-	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price, make(map[string]types.EbayListing))
+	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price)
 	arr := []TrackingInfo{t}
 	PriceArr := []Price{p}
 	i := Item{

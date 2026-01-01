@@ -60,7 +60,7 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 }
 
 // returns a map of urls and prices + shipping cost
-func GetEbayListings(Name string, desiredPrice int, prevListings map[string]types.EbayListing) ([]types.EbayListing, error) {
+func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	log.Println("visiting ebay url ", url)
@@ -114,17 +114,11 @@ func GetEbayListings(Name string, desiredPrice int, prevListings map[string]type
 			fmt.Println("price too high skipping")
 			return
 		}
-		// if prev listing exists
-		if prevListing, ok := prevListings[title]; ok{
-			link = prevListing.URL
-			fmt.Println("canonical URL already exists skipping canoncial crawl:", link)
-		}else {
-			link = getCanonicalURL(c, link)
-		}
 		
 		listing := types.EbayListing{
 			Price:     shippingCost + basePrice,
-			URL:       link,
+			// it has metadata from search after url, this leans it up
+			URL:       strings.Split(link, "?_skw")[0], 
 			Title:     title,
 			Condition: condition,
 		}
@@ -272,10 +266,10 @@ func MarketPlaceCrawl(Name string, desiredPrice int) ([]types.EbayListing, error
 	return retArr, err
 }
 
-func GetSecondHandListings(Name string, Price int, prevListings map[string]types.EbayListing) ([]types.EbayListing, error) {
+func GetSecondHandListings(Name string, Price int) ([]types.EbayListing, error) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	fb, err2 := MarketPlaceCrawl(Name, Price)
-	ebay, err := GetEbayListings(Name, Price, prevListings)
+	ebay, err := GetEbayListings(Name, Price)
 	if err != nil || err2 != nil {
 		fmt.Println("errors from getting second hand listing", err, err2)
 	}

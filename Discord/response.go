@@ -8,6 +8,7 @@ import (
 	database "priceTracker/Database"
 	types "priceTracker/Types"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -22,6 +23,7 @@ func LowestPriceAlert(itemName string, newPrice int, oldPrice database.Price, UR
 	newPriceField := setPriceField(&database.Price{
 		Price: newPrice,
 		Url: URL,
+		Date: time.Now()
 	}, "New Lowest")
 	var Fields []*discordgo.MessageEmbedField
 	Fields = append(Fields, oldPriceField...)

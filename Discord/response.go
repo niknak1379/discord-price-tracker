@@ -59,6 +59,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	var Fields []*discordgo.MessageEmbedField
 	Fields = append(Fields, &nameField, &urlField, &errField)
 	// <--------------- send screenshots of failed crawl --------->
+	fmt.Println("logging ebay existance", strings.Contains(err.Error(), "ebay"))
 	if strings.Contains(err.Error(), "ebay") {
 		reader, err := os.Open("failoverSS.png")
 		if err != nil {

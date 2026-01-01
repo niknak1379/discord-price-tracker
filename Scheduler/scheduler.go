@@ -8,6 +8,7 @@ import (
 	"math/rand/v2"
 	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
+	types "priceTracker/Types"
 	"time"
 
 	discord "priceTracker/Discord"
@@ -91,23 +92,23 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Pric
 }
 
 func handleEbayListingsUpdate(Name string, Price int, ChannelID string) {
-	ebayListings, err := crawler.GetSecondHandListings(Name, Price)
+	oldEbayListings, _ := database.GetEbayListings(Name, ChannelID)
+	ListingsMap := map[string]types.EbayListing{} // maps titles to price for checking if price exists or was updated
+	for _, Listing := range oldEbayListings {
+		ListingsMap[Listing.Title] = Listing
+	}
+	ebayListings, err := crawler.GetSecondHandListings(Name, Price, ListingsMap)
 	if err != nil {
 		discord.CrawlErrorAlert(Name, "ebay.com", err, ChannelID)
 	}
-	oldEbayListings, _ := database.GetEbayListings(Name, ChannelID)
-	ListingsMap := map[string]int{} // maps titles to price for checking if price exists or was updated
-	for _, Listing := range oldEbayListings {
-		ListingsMap[Listing.Title] = Listing.Price
-	}
 	for _, newListing := range ebayListings {
-		oldPrice, ok := ListingsMap[newListing.Title]
+		oldListing, ok := ListingsMap[newListing.Title]
 		// if listing not found in the old list, or if price changed
 		// ping discord
-		if !ok || oldPrice != newListing.Price {
-			if ok && newListing.Price != oldPrice {
-				fmt.Println("calling new ebay listing with old price of and new price of", oldPrice, newListing.Price)
-				discord.EbayListingPriceChangeAlert(newListing, oldPrice, ChannelID)
+		if !ok || oldListing.Price != newListing.Price {
+			if ok && newListing.Price != oldListing.Price{
+				fmt.Println("calling new ebay listing with old price of and new price of", oldListing.Price, newListing.Price)
+				discord.EbayListingPriceChangeAlert(newListing, oldListing.Price, ChannelID)
 			} else {
 				discord.NewEbayListingAlert(newListing, ChannelID)
 			}

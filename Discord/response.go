@@ -35,8 +35,6 @@ func LowestPriceAlert(itemName string, newPrice int, oldPrice database.Price, UR
 }
 
 func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
-	content := fmt.Sprintf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
-		itemName, URL, err.Error())
 	log.Printf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
 		itemName, URL, err.Error())
 	nameField := discordgo.MessageEmbedField{

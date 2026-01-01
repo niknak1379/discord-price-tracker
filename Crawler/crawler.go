@@ -95,7 +95,7 @@ func GetPrice(uri string, querySelector string) (int, error) {
 	return res, err
 }
 
-func ChromeDPFailover(url, selector string) (int, error) {
+func ChromeDPFailover(url string, selector string) (int, error) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
@@ -123,7 +123,6 @@ func ChromeDPFailover(url, selector string) (int, error) {
 	)
 	os.WriteFile("failoverSS.png", htmlContent, 0644)
 	
-	log.Printf("Saved debug-page.html (%d bytes)", len(htmlContent))
 
 	if err != nil {
 		return 0, fmt.Errorf("page load failed: %w", err)
@@ -136,7 +135,7 @@ func ChromeDPFailover(url, selector string) (int, error) {
 
 	fmt.Println("hi")
 	if err != nil {
-		return 0, fmt.Errorf("selector '%s' not found: %w", selector, err)
+		return 0, fmt.Errorf("selector '%s' not found for url %s, %w", selector, url, err)
 	}
 
 	// Parse price

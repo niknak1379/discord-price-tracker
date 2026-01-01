@@ -259,6 +259,8 @@ func MarketPlaceCrawl(Name string, desiredPrice int) ([]types.EbayListing, error
 			items[i].Condition += " " + distStr
 			fmt.Println("appending facebook listing for", items[i].Title, items[i].Condition)
 			retArr = append(retArr, items[i])
+		}else{
+			fmt.Println("skipping title, criteria not met", items[i].Title)
 		}
 	}
 	return retArr, err

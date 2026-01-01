@@ -46,11 +46,11 @@ var (
 func AddItem(itemName string, uri string, query string, ChannelID string) (Item, error) {
 	Table = loadChannelTable(ChannelID)
 	p, t, err := validateURI(uri, query)
-	imgURL := crawler.GetOpenGraphPic(uri)
 	if err != nil {
 		log.Print("invalid url", err)
 		return Item{}, err
 	}
+	imgURL := crawler.GetOpenGraphPic(uri)
 	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price)
 	arr := []TrackingInfo{t}
 	PriceArr := []Price{p}

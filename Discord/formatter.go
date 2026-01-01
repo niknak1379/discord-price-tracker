@@ -9,7 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func setEmbed(Item database.Item) *discordgo.MessageEmbed {
+func setEmbed(Item *database.Item) *discordgo.MessageEmbed {
 	var fields []*discordgo.MessageEmbedField
 	// set up trackerArr infromation
 	field := discordgo.MessageEmbedField{
@@ -34,8 +34,8 @@ func setEmbed(Item database.Item) *discordgo.MessageEmbed {
 
 	// set up current price information
 	ebayFields := setSecondHandField(Item.EbayListings)
-	priceFields := setPriceField(Item.CurrentLowestPrice, "Current")
-	lowestPriceField := setPriceField(Item.LowestPrice, "Historically Lowest")
+	priceFields := setPriceField(&Item.CurrentLowestPrice, "Current")
+	lowestPriceField := setPriceField(&Item.LowestPrice, "Historically Lowest")
 	fields = append(fields, ebayFields...)
 	fields = append(fields, priceFields...)
 	fields = append(fields, lowestPriceField...)
@@ -83,7 +83,7 @@ func setSecondHandField(ebayArr []types.EbayListing) []*discordgo.MessageEmbedFi
 	return res
 }
 
-func setPriceField(p database.Price, message string) []*discordgo.MessageEmbedField {
+func setPriceField(p *database.Price, message string) []*discordgo.MessageEmbedField {
 	/* separatorField := discordgo.MessageEmbedField{
 		Name: "<------------------------------------------->",
 		Value: "",

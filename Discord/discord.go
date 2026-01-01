@@ -219,20 +219,17 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			})
 			// add tracker to database
 			getRes, err := database.GetItem(options[0].StringValue(), i.ChannelID)
-			var embedArr []*discordgo.MessageEmbed
 			if err != nil {
 				content = err.Error()
 			} else {
 				em := setEmbed(&getRes)
-				embedArr = append(embedArr, em...)
+				
+				// set up response to discord client
+				for _, embed := range em{
+					_, err = discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+					fmt.Println(err)
+				}
 			}
-
-			// set up response to discord client
-			_, err = discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-				Content: content,
-				Embeds:  embedArr,
-			})
-			fmt.Println(err)
 		}
 	},
 	"edit_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {

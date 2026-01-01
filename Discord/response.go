@@ -46,7 +46,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		Inline: false,
 	}
 	urlField := discordgo.MessageEmbedField{
-		Name:   embedSeparatorFormatter("Problemed URL", 43),
+		Name:   embedSeparatorFormatter("Problematic URL", 42),
 		Value:  URL,
 		Inline: false,
 	}
@@ -55,7 +55,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	maxLen := int(math.Min(float64(len(err.Error())), 1023))
 	
 	errField := discordgo.MessageEmbedField{
-		Name:   embedSeparatorFormatter("Error Message", 44),
+		Name:   embedSeparatorFormatter("Error Message", 43),
 		Value:  err.Error()[:maxLen],
 		Inline: false,
 	}

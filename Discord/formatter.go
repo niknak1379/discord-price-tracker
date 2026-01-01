@@ -49,7 +49,6 @@ func setEmbed(Item database.Item) *discordgo.MessageEmbed {
 		Fields: fields,
 		Type:   discordgo.EmbedTypeRich,
 	}
-	fmt.Println(Item.ImgURL)
 	return &em
 }
 

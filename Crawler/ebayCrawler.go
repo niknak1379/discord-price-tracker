@@ -55,7 +55,8 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 	baseURL := "https://www.ebay.com/sch/i.html?_nkw="
 	usedQuery := "&LH_ItemCondition=3000|2020|2010|1500"
 	priceQuery := fmt.Sprintf("&_udhi=%d&rt=nc", newPrice)
-	return baseURL + url.PathEscape(Name) + usedQuery + priceQuery
+	noAuction := "&LH_BIN=1"
+	return baseURL + url.PathEscape(Name) + usedQuery + priceQuery + noAuction
 }
 
 // returns a map of urls and prices + shipping cost
@@ -161,7 +162,9 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 	hasParts, _ := regexp.MatchString(`\bfor\s+parts\b`, listingTitle)
 	hasBroken, _ := regexp.MatchString(`\bbroken\b`, listingTitle)
 	hasAccessories, _ := regexp.MatchString(`\baccessories\b`, listingTitle)
-	return matched && !hasParts && !hasBroken && !hasAccessories
+	boxOnly, _ := regexp.MatchString(`\bbox only\b`, listingTitle) 
+	empty , _ := regexp.MatchString(`\bempty box\b`, listingTitle)
+	return matched && !hasParts && !hasBroken && !hasAccessories && !boxOnly && !empty
 }
 
 func getCanonicalURL(c *colly.Collector, url string) string {

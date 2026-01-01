@@ -165,7 +165,7 @@ var (
 			},
 		},
 		{
-			Name:        "shutdown",
+			Name:        "restart",
 			Description: "Saves Progress and Stops the Bot",
 		},
 	}
@@ -403,11 +403,11 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 		}
 	},
-	"shutdown": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"restart": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "shutting down",
+				Content: "restarting server...",
 			},
 		})
 

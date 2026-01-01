@@ -29,7 +29,8 @@ func LowestPriceAlert(itemName string, newPrice int, oldPrice database.Price, UR
 	Fields = append(Fields, oldPriceField...)
 	Fields = append(Fields, newPriceField...)
 	em := discordgo.MessageEmbed{
-		Title: itemName,
+		Title: "Price Update:",
+		Description: itemName,
 		URL: URL,
 		Fields: Fields,
 	}

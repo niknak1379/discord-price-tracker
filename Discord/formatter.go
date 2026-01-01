@@ -9,7 +9,43 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func setEmbed(Item *database.Item) *discordgo.MessageEmbed {
+func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
+	var fields []*discordgo.MessageEmbedField
+	var retArr []*discordgo.MessageEmbed
+	// set up current price information
+	trackerFields := setTrackerFields(Item)
+	ebayFields := setSecondHandField(Item.EbayListings)
+	priceFields := setPriceField(&Item.CurrentLowestPrice, "Current")
+	lowestPriceField := setPriceField(&Item.LowestPrice, "Historically Lowest")
+	fields = append(fields, trackerFields...)
+	fields = append(fields, ebayFields...)
+	fields = append(fields, priceFields...)
+	fields = append(fields, lowestPriceField...)
+	fmt.Println("total field length for", Item.Name, len(fields))
+	// apparently go doesnt have ceil for int division
+	// its either float conversions or this
+	for i := range (len(fields)+ 22)/23{
+		endInd := len(fields) - 1
+		if (i + 1) * 23 < endInd {
+			endInd = (i + 1) * 23
+		}
+		em := discordgo.MessageEmbed{
+			Title: Item.Name,
+			Image: &discordgo.MessageEmbedImage{
+				URL:    Item.ImgURL,
+				Height: 300,
+				Width:  300,
+			},
+			Fields: fields[i*23:endInd],
+			Type:   discordgo.EmbedTypeRich,
+		}
+		retArr = append(retArr, &em)
+		fmt.Println("setting embed for indexes ", i * 23, endInd, len(fields))
+	}
+	
+	return retArr
+}
+func setTrackerFields(Item *database.Item)[]*discordgo.MessageEmbedField{
 	var fields []*discordgo.MessageEmbedField
 	// set up trackerArr infromation
 	field := discordgo.MessageEmbedField{
@@ -31,27 +67,8 @@ func setEmbed(Item *database.Item) *discordgo.MessageEmbed {
 		}
 		fields = append(fields, &field, &separatorField)
 	}
-
-	// set up current price information
-	ebayFields := setSecondHandField(Item.EbayListings)
-	priceFields := setPriceField(&Item.CurrentLowestPrice, "Current")
-	lowestPriceField := setPriceField(&Item.LowestPrice, "Historically Lowest")
-	fields = append(fields, ebayFields...)
-	fields = append(fields, priceFields...)
-	fields = append(fields, lowestPriceField...)
-	em := discordgo.MessageEmbed{
-		Title: Item.Name,
-		Image: &discordgo.MessageEmbedImage{
-			URL:    Item.ImgURL,
-			Height: 300,
-			Width:  300,
-		},
-		Fields: fields,
-		Type:   discordgo.EmbedTypeRich,
-	}
-	return &em
+	return fields
 }
-
 func setSecondHandField(ebayArr []types.EbayListing) []*discordgo.MessageEmbedField {
 	var res []*discordgo.MessageEmbedField
 	if len(ebayArr) == 0 {

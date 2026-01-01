@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math"
 	"math/rand/v2"
@@ -105,6 +106,7 @@ func handleEbayListingsUpdate(Name string, Price int, ChannelID string) {
 		// ping discord
 		if !ok || oldPrice != newListing.Price {
 			if newListing.Price != oldPrice {
+				fmt.Println("calling new ebay listing with old price of ", oldPrice)
 				discord.EbayListingPriceChangeAlert(newListing, oldPrice, ChannelID)
 			} else {
 				discord.NewEbayListingAlert(newListing, ChannelID)

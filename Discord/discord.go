@@ -185,7 +185,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			options := i.ApplicationCommandData().Options
 			// 0 is item name, 1 is uri, 2 is htmlqueryselector
 			content := ""
-			var em *discordgo.MessageEmbed
+			var em []*discordgo.MessageEmbed
 			// add tracker to database
 			addRes, err := database.AddItem(options[0].StringValue(), options[1].StringValue(), options[2].StringValue(), i.ChannelID)
 			if err != nil {
@@ -200,7 +200,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			// set up response to discord client
 			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 				Content: content,
-				Embeds:  []*discordgo.MessageEmbed{em},
+				Embeds:  em,
 			})
 		}
 	},
@@ -208,12 +208,15 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"get": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
-		// 0 is item name, 1 is uri, 2 is htmlqueryselector
 		content := ""
+		// 0 is item name, 1 is uri, 2 is htmlqueryselector
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
 			// add tracker to database
 			getRes, err := database.GetItem(options[0].StringValue(), i.ChannelID)
 			var embedArr []*discordgo.MessageEmbed
@@ -221,16 +224,13 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				content = err.Error()
 			} else {
 				em := setEmbed(&getRes)
-				embedArr = append(embedArr, em)
+				embedArr = append(embedArr, em...)
 			}
 
 			// set up response to discord client
-			err = discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: content,
-					Embeds:  embedArr,
-				},
+			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+				Content: content,
+				Embeds:  embedArr,
 			})
 			fmt.Println(err)
 		}
@@ -251,7 +251,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				content = err.Error()
 			} else {
 				em := setEmbed(&getRes)
-				embedArr = append(embedArr, em)
+				embedArr = append(embedArr, em...)
 			}
 
 			// set up response to discord client
@@ -274,7 +274,10 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		
 		for _, Item := range getRes {
 			em := setEmbed(Item)
-			_, err := discord.ChannelMessageSendEmbed(i.ChannelID, em)
+			/* _, err := discord.ChannelMessageSendEmbeds(i.ChannelID, em) */
+			_, err := discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+				Embeds:  em,
+			})
 			fmt.Println("error from list",err)
 		}
 	},
@@ -336,11 +339,11 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 
 				// add price tracking info
 				em := setEmbed(&res)
-				em.Fields = append(em.Fields, priceField...)
+				em[len(em) - 1].Fields = append(em[len(em) - 1].Fields, priceField...)
 				if err != nil {
 					content = err.Error()
 				} else {
-					embeds = append(embeds, em)
+					embeds = append(embeds, em...)
 				}
 
 			case "remove":
@@ -349,7 +352,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				if err != nil {
 					content = err.Error()
 				} else {
-					embeds = append(embeds, em)
+					embeds = append(embeds, em...)
 				}
 			}
 

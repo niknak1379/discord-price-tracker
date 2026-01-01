@@ -18,11 +18,11 @@ func ready(discord *discordgo.Session, ready *discordgo.Ready) {
 }
 
 func LowestPriceAlert(itemName string, newPrice int, oldPrice database.Price, URL string, ChannelID string) {
-	oldPriceField := setPriceField(&oldPrice, "Previous Lowest Price")
+	oldPriceField := setPriceField(&oldPrice, "Previous Lowest")
 	newPriceField := setPriceField(&database.Price{
 		Price: newPrice,
 		Url: URL,
-	}, "New Lowest Price")
+	}, "New Lowest")
 	var Fields []*discordgo.MessageEmbedField
 	Fields = append(Fields, oldPriceField...)
 	Fields = append(Fields, newPriceField...)
@@ -38,12 +38,12 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	log.Printf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
 		itemName, URL, err.Error())
 	nameField := discordgo.MessageEmbedField{
-		Name:   embedSeparatorFormatter("Problemed Item", 43),
+		Name:   embedSeparatorFormatter("Problematic Item", 42),
 		Value:  itemName,
 		Inline: false,
 	}
 	urlField := discordgo.MessageEmbedField{
-		Name:   embedSeparatorFormatter("Problemed URL", 44),
+		Name:   embedSeparatorFormatter("Problemed URL", 43),
 		Value:  URL,
 		Inline: false,
 	}
@@ -60,16 +60,16 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	Fields = append(Fields, &nameField, &urlField, &errField)
 	// <--------------- send screenshots of failed crawl --------->
 	fmt.Println("logging ebay existance", strings.Contains(err.Error(), "ebay"))
-	if strings.Contains(err.Error(), "ebay") {
-		reader, err := os.Open("failoverSS.png")
-		if err != nil {
-			log.Println("could not send ebay picture", err)
-		}
-		Discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
-	} else if strings.Contains(err.Error(), "facebook") {
+	if strings.Contains(err.Error(), "facebook") {
 		reader, err := os.Open("second.png")
 		if err != nil {
 			log.Println("could not send face book image", err)
+		}
+		Discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
+	}else {
+		reader, err := os.Open("failoverSS.png")
+		if err != nil {
+			log.Println("could not send ebay picture", err)
 		}
 		Discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
 	}

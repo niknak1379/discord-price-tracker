@@ -228,7 +228,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 
 			// set up response to discord client
-			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+			_, err = discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 				Content: content,
 				Embeds:  embedArr,
 			})

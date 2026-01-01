@@ -36,7 +36,7 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 				Height: 300,
 				Width:  300,
 			},
-			Fields: fields[i*23:endInd],
+			Fields: fields[i*23:endInd + 1],
 			Type:   discordgo.EmbedTypeRich,
 		}
 		retArr = append(retArr, &em)

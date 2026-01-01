@@ -105,7 +105,7 @@ func handleEbayListingsUpdate(Name string, Price int, ChannelID string) {
 		// if listing not found in the old list, or if price changed
 		// ping discord
 		if !ok || oldPrice != newListing.Price {
-			if newListing.Price != oldPrice {
+			if ok && newListing.Price != oldPrice {
 				fmt.Println("calling new ebay listing with old price of and new price of", oldPrice, newListing.Price)
 				discord.EbayListingPriceChangeAlert(newListing, oldPrice, ChannelID)
 			} else {

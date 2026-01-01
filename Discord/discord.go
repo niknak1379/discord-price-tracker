@@ -208,7 +208,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"get": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
-		content := ""
 		// 0 is item name, 1 is uri, 2 is htmlqueryselector
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
@@ -220,7 +219,10 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			// add tracker to database
 			getRes, err := database.GetItem(options[0].StringValue(), i.ChannelID)
 			if err != nil {
-				content = err.Error()
+				content := err.Error()
+				discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+					Content: content,
+				})
 			} else {
 				em := setEmbed(&getRes)
 				

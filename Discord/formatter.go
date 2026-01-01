@@ -109,11 +109,6 @@ func formatSecondHandField (Listing types.EbayListing) []*discordgo.MessageEmbed
 	return append(ret, &priceField, &conditionField, &urlField, &separatorField)
 }
 func setPriceField(p *database.Price, message string) []*discordgo.MessageEmbedField {
-	/* separatorField := discordgo.MessageEmbedField{
-		Name: "<------------------------------------------->",
-		Value: "",
-		Inline: false,
-	} */
 	priceField := discordgo.MessageEmbedField{
 		Name: embedSeparatorFormatter(fmt.Sprintf("%s Price", message), 44),
 		Value: func() string {
@@ -133,7 +128,9 @@ func setPriceField(p *database.Price, message string) []*discordgo.MessageEmbedF
 	dateField := discordgo.MessageEmbedField{
 		Name: "Date:",
 		Value: p.Date.Format("2006-01-02"),
+		Inline: false,
 	}
+	fmt.Println(p.Date.Format("2006-01-02"))
 	var fields []*discordgo.MessageEmbedField
 	fields = append(fields, &priceField, &urlField, &dateField)
 	return fields

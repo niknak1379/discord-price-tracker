@@ -76,7 +76,10 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		Title: "Error",
 		Fields: Fields,
 	})
-	fmt.Println(err.Error())
+	if err != nil{
+		fmt.Println(err.Error())
+	}
+	
 }
 
 func SendGraphPng(discord *discordgo.Session, ChannelID string) {

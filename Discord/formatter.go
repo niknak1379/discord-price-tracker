@@ -130,8 +130,12 @@ func setPriceField(p *database.Price, message string) []*discordgo.MessageEmbedF
 		Value:  p.Url,
 		Inline: false,
 	}
+	dateField := discordgo.MessageEmbedField{
+		Name: "Date:",
+		Value: p.Date.Format("12/28/2012"),
+	}
 	var fields []*discordgo.MessageEmbedField
-	fields = append(fields, &priceField, &urlField)
+	fields = append(fields, &priceField, &urlField, &dateField)
 	return fields
 }
 

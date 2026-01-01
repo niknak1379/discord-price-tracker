@@ -179,7 +179,7 @@ func getCanonicalURL(c *colly.Collector, url string) string {
 	err := c.Visit(url)
 	if err != nil || !parsed {
 		// already have a url if it fails its fine
-		fmt.Println(err)
+		fmt.Println("error or not parsed in canonical", err, parsed)
 		return retURL
 	}
 	return retURL

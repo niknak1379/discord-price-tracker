@@ -60,7 +60,7 @@ func updateAllPrices(ChannelID string) {
 				log.Print(err)
 				continue
 			}
-			np, err = updatePrice(v.Name, t.URI, t.HtmlQuery, oldLow.Price, date, ChannelID)
+			np, err = updatePrice(v.Name, t.URI, t.HtmlQuery, oldLow, date, ChannelID)
 			if currLow.Price > np.Price && err == nil {
 				currLow = np
 			}
@@ -74,17 +74,17 @@ func updateAllPrices(ChannelID string) {
 	}
 }
 
-func updatePrice(Name string, URI string, HtmlQuery string, oldLow int, date time.Time, ChannelID string) (database.Price, error) {
+func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Price, date time.Time, ChannelID string) (database.Price, error) {
 	newPrice, err := crawler.GetPrice(URI, HtmlQuery)
 	if err != nil || newPrice == 0 {
 		log.Print("error getting price in updatePrice", err, newPrice)
 		discord.CrawlErrorAlert(Name, URI, err, ChannelID)
 		return database.Price{}, err
 	}
-	p, _ := database.AddNewPrice(Name, URI, newPrice, oldLow, date, ChannelID)
+	p, _ := database.AddNewPrice(Name, URI, newPrice, oldLow.Price, date, ChannelID)
 
 	// notify discord if a new historical low has been achieved
-	if oldLow > newPrice {
+	if oldLow.Price > newPrice {
 		discord.LowestPriceAlert(Name, newPrice, oldLow, URI, ChannelID)
 	}
 	return p, err

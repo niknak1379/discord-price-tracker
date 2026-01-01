@@ -79,27 +79,31 @@ func setSecondHandField(ebayArr []types.EbayListing) []*discordgo.MessageEmbedFi
 	}
 	res = append(res, &HeaderField)
 	for _, Listing := range ebayArr {
-		priceField := discordgo.MessageEmbedField{
-			Name:  Listing.Title,
-			Value: "$" + strconv.Itoa(Listing.Price+1),
-		}
-		conditionField := discordgo.MessageEmbedField{
-			Name:  "Condition/Location:",
-			Value: Listing.Condition,
-		}
-		urlField := discordgo.MessageEmbedField{
-			Name:  "From URL:",
-			Value: Listing.URL,
-		}
-		separatorField := discordgo.MessageEmbedField{
-			Name:  embedSeparatorFormatter("", 44),
-			Value: "",
-		}
-		res = append(res, &priceField, &conditionField, &urlField, &separatorField)
+		listFields := formatSecondHandField(Listing)
+		res = append(res, listFields...)
 	}
 	return res
 }
-
+func formatSecondHandField (Listing types.EbayListing) []*discordgo.MessageEmbedField{
+	priceField := discordgo.MessageEmbedField{
+		Name:  Listing.Title,
+		Value: "$" + strconv.Itoa(Listing.Price+1),
+	}
+	conditionField := discordgo.MessageEmbedField{
+		Name:  "Condition/Location:",
+		Value: Listing.Condition,
+	}
+	urlField := discordgo.MessageEmbedField{
+		Name:  "From URL:",
+		Value: Listing.URL,
+	}
+	separatorField := discordgo.MessageEmbedField{
+		Name:  embedSeparatorFormatter("", 44),
+		Value: "",
+	}
+	var ret []*discordgo.MessageEmbedField
+	return append(ret, &priceField, &conditionField, &urlField, &separatorField)
+}
 func setPriceField(p *database.Price, message string) []*discordgo.MessageEmbedField {
 	/* separatorField := discordgo.MessageEmbedField{
 		Name: "<------------------------------------------->",

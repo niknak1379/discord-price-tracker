@@ -16,11 +16,21 @@ func ready(discord *discordgo.Session, ready *discordgo.Ready) {
 	discord.UpdateGameStatus(1, "stonks")
 }
 
-func LowestPriceAlert(itemName string, newPrice int, oldPrice int, URL string, ChannelID string) {
-	content := fmt.Sprintf("New Price Alert!!!!\nItem %s has hit its lowest price of %d "+
-		"from previous lowest of %d with the following url \n%s",
-		itemName, newPrice, oldPrice, URL)
-	Discord.ChannelMessageSend(ChannelID, content)
+func LowestPriceAlert(itemName string, newPrice int, oldPrice database.Price, URL string, ChannelID string) {
+	oldPriceField := setPriceField(&oldPrice, "Previous Lowest Price")
+	newPriceField := setPriceField(&database.Price{
+		Price: newPrice,
+		Url: URL,
+	}, "New Lowest Price")
+	var Fields []*discordgo.MessageEmbedField
+	Fields = append(Fields, oldPriceField...)
+	Fields = append(Fields, newPriceField...)
+	em := discordgo.MessageEmbed{
+		Title: itemName,
+		URL: URL,
+		Fields: Fields,
+	}
+	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
 
 func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
@@ -134,13 +144,23 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 }
 
 func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int, ChannelID string) {
-	content := fmt.Sprintf("Price update for %s Listing for %s with the price of $%d from the old price of $%d with the following url \n%s",
-		newListing.Condition, newListing.Title, newListing.Price, oldPrice, newListing.URL)
-	Discord.ChannelMessageSend(ChannelID, content)
+	newFields := formatSecondHandField(newListing)
+	newListing.Price = oldPrice
+	oldFields := formatSecondHandField(newListing)
+	em := discordgo.MessageEmbed{
+		Title: "Second Hand Listing Price Change",
+		URL: newListing.URL,
+		Fields: append(oldFields, newFields...),
+	}
+	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
 
 func NewEbayListingAlert(newListing types.EbayListing, ChannelID string) {
-	content := fmt.Sprintf("New %s Listing for %s with the price of %d with the following url \n%s",
-		newListing.Condition, newListing.Title, newListing.Price, newListing.URL)
-	Discord.ChannelMessageSend(os.Getenv(ChannelID), content)
+	fields := formatSecondHandField(newListing)
+	em := discordgo.MessageEmbed{
+		Title: "New Second Hand Listing Found",
+		URL: newListing.URL,
+		Fields: fields,
+	}
+	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }

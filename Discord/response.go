@@ -3,6 +3,7 @@ package discord
 import (
 	"fmt"
 	"log"
+	"math"
 	"os"
 	database "priceTracker/Database"
 	types "priceTracker/Types"
@@ -38,6 +39,28 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		itemName, URL, err.Error())
 	log.Printf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
 		itemName, URL, err.Error())
+	nameField := discordgo.MessageEmbedField{
+		Name:   embedSeparatorFormatter("Problemed Item", 43),
+		Value:  itemName,
+		Inline: false,
+	}
+	urlField := discordgo.MessageEmbedField{
+		Name:   embedSeparatorFormatter("Problemed URL", 44),
+		Value:  URL,
+		Inline: false,
+	}
+
+	// character limit for each field is 1024 but i dont know how thats gonna go with other fields
+	maxLen := int(math.Min(float64(len(err.Error())), 1023))
+	
+	errField := discordgo.MessageEmbedField{
+		Name:   embedSeparatorFormatter("Error Message", 44),
+		Value:  err.Error()[:maxLen],
+		Inline: false,
+	}
+	var Fields []*discordgo.MessageEmbedField
+	Fields = append(Fields, &nameField, &urlField, &errField)
+	// <--------------- send screenshots of failed crawl --------->
 	if strings.Contains(err.Error(), "ebay") {
 		reader, err := os.Open("failoverSS.png")
 		if err != nil {
@@ -51,7 +74,11 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		}
 		Discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
 	}
-	Discord.ChannelMessageSend(ChannelID, content)
+	_, err = Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
+		Title: "Error",
+		Fields: Fields,
+	})
+	fmt.Println(err.Error())
 }
 
 func SendGraphPng(discord *discordgo.Session, ChannelID string) {

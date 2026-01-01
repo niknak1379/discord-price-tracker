@@ -88,18 +88,22 @@ func formatSecondHandField (Listing types.EbayListing) []*discordgo.MessageEmbed
 	priceField := discordgo.MessageEmbedField{
 		Name:  Listing.Title,
 		Value: "$" + strconv.Itoa(Listing.Price+1),
+		Inline: false,
 	}
 	conditionField := discordgo.MessageEmbedField{
 		Name:  "Condition/Location:",
 		Value: Listing.Condition,
+		Inline: false,
 	}
 	urlField := discordgo.MessageEmbedField{
 		Name:  "From URL:",
 		Value: Listing.URL,
+		Inline: false,
 	}
 	separatorField := discordgo.MessageEmbedField{
 		Name:  embedSeparatorFormatter("", 44),
 		Value: "",
+		Inline: false,
 	}
 	var ret []*discordgo.MessageEmbedField
 	return append(ret, &priceField, &conditionField, &urlField, &separatorField)

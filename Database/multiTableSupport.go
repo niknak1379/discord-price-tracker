@@ -49,6 +49,9 @@ func loadDBTables() {
 			Long: IDString.Long,
 			Distance: IDString.Distance,
 		}
+		if IDString.Lat == 0 || IDString.Long == 0 || IDString.Distance == 0 {
+			log.Panic("Could not load Channel, lat, long or distance empty")
+		}
 	}
 }
 
@@ -68,11 +71,15 @@ func CreateChannelItemTableIfMissing(ChannelID string, Location string, maxDista
 	if table, ok := Tables[ChannelID]; ok{
 		Coordinates[ChannelID] = Channel
 		update := bson.M{
-			"Distance" : maxDistance, 
-			"Lat" : Lat,
-			"Long" : Long,
-		}
-		table.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
+		"$set": bson.M{
+			"Distance": maxDistance, 
+			"Lat": Lat,
+			"Long": Long,
+		},
+}
+		Tables[ChannelID] = table
+		ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
+		ChannelTable.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
 		return nil
 	}
 	err = Client.Database("tracker").CreateCollection(context.TODO(), ChannelID)
@@ -111,7 +118,12 @@ func CreateChannelItemTableIfMissing(ChannelID string, Location string, maxDista
 
 	return err
 }
-
+func ChannelDeleteHandler(ChannelID string){
+	ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
+	ChannelTable.FindOneAndDelete(ctx, bson.M{"ChannelID": ChannelID})
+	delete(Tables, ChannelID)
+	delete(Coordinates, ChannelID)
+}
 func loadChannelTable(ChannelID string) (*mongo.Collection, error) {
 	Table, ok := Tables[ChannelID]
 	if !ok {

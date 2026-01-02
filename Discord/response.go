@@ -31,6 +31,7 @@ func LowestPriceAlert(itemName string, newPrice int, oldPrice database.Price, UR
 	em := discordgo.MessageEmbed{
 		Title: "Price Update:",
 		Description: itemName,
+		Color: 2067276,
 		URL: URL,
 		Fields: Fields,
 	}
@@ -79,6 +80,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	_, err = Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
 		Title: "Error",
 		Fields: Fields,
+		Color:  	10038562, //red
 	})
 	if err != nil{
 		fmt.Println(err.Error())
@@ -98,7 +100,7 @@ func SendGraphPng(discord *discordgo.Session, ChannelID string) {
 func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *discordgo.Session) {
 	var choices []*discordgo.ApplicationCommandOptionChoice
 	fmt.Println("auto being run", Name)
-	var items *[]string
+	var items []string
 	// t int value 0 maps to name type, 1 to url type, 2 to css
 	switch t {
 	case 0:
@@ -107,8 +109,8 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 		items = database.AutoCompleteURL(Name, i.ChannelID)
 	}
 
-	if len(*items) != 0 {
-		for _, item := range *items {
+	if len(items) != 0 {
+		for _, item := range items {
 			if len(item) > 100 {
 				choice := discordgo.ApplicationCommandOptionChoice{
 					Name:  "item too long" + item[8:20],
@@ -156,7 +158,7 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordgo.Session) {
 	items := database.AutoCompleteQuery()
 	var choices []*discordgo.ApplicationCommandOptionChoice
-	for name, query := range *items {
+	for name, query := range items {
 		choice := discordgo.ApplicationCommandOptionChoice{
 			Name:  name,
 			Value: query,
@@ -179,8 +181,13 @@ func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int, Cha
 	newFields := formatSecondHandField(newListing)
 	newListing.Price = oldPrice
 	oldFields := formatSecondHandField(newListing)
+	colorCode := 1146986 // aqua
+	if oldPrice > newListing.Price{
+		colorCode = 12745742 // dark gold
+	}
 	em := discordgo.MessageEmbed{
 		Title: "Second Hand Listing Price Change",
+		Color: colorCode,
 		URL: newListing.URL,
 		Fields: append(oldFields, newFields...),
 	}
@@ -191,6 +198,7 @@ func NewEbayListingAlert(newListing types.EbayListing, ChannelID string) {
 	fields := formatSecondHandField(newListing)
 	em := discordgo.MessageEmbed{
 		Title: "New Second Hand Listing Found",
+		Color: 1146986, // dark aqua
 		URL: newListing.URL,
 		Fields: fields,
 	}

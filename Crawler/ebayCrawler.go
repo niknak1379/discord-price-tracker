@@ -257,6 +257,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int) ([]types.EbayListing, error
 				continue
 			}
 			items[i].Condition += " " + distStr
+			items[i].URL = strings.Split(items[i].URL, "?ref")[0]
 			fmt.Println("appending facebook listing for", items[i].Title, items[i].Condition)
 			retArr = append(retArr, items[i])
 		}else{

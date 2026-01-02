@@ -54,7 +54,7 @@ func AddItem(itemName string, uri string, query string, ChannelID string) (Item,
 	imgURL := crawler.GetOpenGraphPic(uri)
 	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price)
 	slices.SortFunc(ebayListings, func(a, b types.EbayListing) int {
-		return a.Price - b.Price
+		return b.Price - a.Price
 	})
 	arr := []TrackingInfo{t}
 	PriceArr := []Price{p}
@@ -265,7 +265,7 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 	Table = loadChannelTable(ChannelID)
 	filter := bson.M{"Name": itemName}
 	slices.SortFunc(listingsArr, func(a, b types.EbayListing) int {
-		return a.Price - b.Price
+		return b.Price - a.Price
 	})
 	update := bson.M{"$set": bson.M{
 		"EbayListings": listingsArr,

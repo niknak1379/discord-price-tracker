@@ -155,13 +155,16 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 	pattern = ".*" + pattern
 
 	matched, _ := regexp.MatchString(pattern, listingTitle)
-	// exludes titles that have for parts
-	hasParts, _ := regexp.MatchString(`\bfor\s+parts\b`, listingTitle)
-	hasBroken, _ := regexp.MatchString(`\bbroken\b`, listingTitle)
-	hasAccessories, _ := regexp.MatchString(`\baccessories\b`, listingTitle)
-	boxOnly, _ := regexp.MatchString(`\bbox only\b`, listingTitle) 
-	empty , _ := regexp.MatchString(`\bempty box\b`, listingTitle)
-	return matched && !hasParts && !hasBroken && !hasAccessories && !boxOnly && !empty
+	// exludes titles that have these key words
+	var excludeArr = [7]string{`\bfor\s+parts\b`, `\bbroken\b`, `\baccessories\b`,
+		`\bbox only\b`, `\bempty box\b`, `\bcable\b`, `\bdongle\b`}
+	for _, excludeQuery := range excludeArr{
+		query, _ := regexp.MatchString(excludeQuery, listingTitle)
+		if query {
+			return false
+		}
+	}
+	return matched
 }
 
 func getCanonicalURL(c *colly.Collector, url string) string {

@@ -191,17 +191,19 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			if err != nil {
 				content = fmt.Sprint(err)
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-					Content: content,
+					Content: "Error",
 				})
+				CrawlErrorAlert(options[0].StringValue(), options[1].StringValue(), err, i.ChannelID)
 				return
 			} else {
 				em = setEmbed(&addRes)
 			}
 			// set up response to discord client
-			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 				Content: content,
 				Embeds:  em,
 			})
+			fmt.Println(err)
 		}
 	},
 

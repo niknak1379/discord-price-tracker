@@ -108,7 +108,7 @@ func ChromeDPFailover(url string, selector string) (int, error) {
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
-	ctx, timeoutCancel := context.WithTimeout(ctx, 60*time.Second) // Increased timeout
+	ctx, timeoutCancel := context.WithTimeout(ctx, 60*time.Second)
 	defer timeoutCancel()
 
 	var priceText string
@@ -120,24 +120,15 @@ func ChromeDPFailover(url string, selector string) (int, error) {
 		chromedp.Sleep(10*time.Second),
 		chromedp.WaitReady("body", chromedp.ByQuery),
 		chromedp.FullScreenshot(&htmlContent, 90),
-	)
-	os.WriteFile("failoverSS.png", htmlContent, 0644)
-	
-
-	if err != nil {
-		return 0, fmt.Errorf("page load failed: %w", err)
-	}
-
-	err = chromedp.Run(ctx,
-		chromedp.Sleep(2*time.Second),
 		chromedp.Text(selector, &priceText, chromedp.ByQuery),
 	)
-
-	fmt.Println("hi")
 	if err != nil {
+		os.WriteFile("failoverSS.png", htmlContent, 0644)
 		return 0, fmt.Errorf("selector '%s' not found for url %s, %w", selector, url, err)
 	}
 
+	fmt.Println("ChromeDP found Selector")
+	
 	// Parse price
 	priceText = strings.ReplaceAll(priceText, "$", "")
 	priceText = strings.ReplaceAll(priceText, ",", "")

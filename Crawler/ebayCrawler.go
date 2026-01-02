@@ -144,14 +144,11 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 	listingTitle = strings.ToLower(listingTitle)
 
 	// short designators like x, xt or numbers get lost, so add spaces
-	// around them
+	// around them ----- changed my mind ill do it for all of them
+	// ----- a lot of models still get mixed up especially for monitors
 	var patterns []string
 	for _, word := range words {
-		if len(word) < 4 {
-			patterns = append(patterns, `\b`+regexp.QuoteMeta(word)+`\b`)
-		} else {
-			patterns = append(patterns, regexp.QuoteMeta(word))
-		}
+		patterns = append(patterns, `\b`+regexp.QuoteMeta(word)+`\b`)
 	}
 
 	pattern := strings.Join(patterns, ".*")

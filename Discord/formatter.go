@@ -24,24 +24,23 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 	fmt.Println("total field length for", Item.Name, len(fields))
 	// apparently go doesnt have ceil for int division
 	// its either float conversions or this
-	for i := range (len(fields)+ 20)/21{
-		endInd := len(fields) - 1
-		if (i + 1) * 21 < endInd {
-			endInd = (i + 1) * 21
-		}
-		em := discordgo.MessageEmbed{
-			Title: Item.Name,
-			Image: &discordgo.MessageEmbedImage{
-				URL:    Item.ImgURL,
-				Height: 300,
-				Width:  300,
-			},
-			Fields: fields[i*21:endInd + 1],
-			Type:   discordgo.EmbedTypeRich,
-		}
-		retArr = append(retArr, &em)
-		fmt.Println("setting embed for indexes ", i * 21, endInd, len(fields))
-	}
+	for i := range (len(fields) + 20) / 21 {
+    start := i * 21
+    end := min(start+21, len(fields))
+    
+    em := discordgo.MessageEmbed{
+        Title: Item.Name,
+        Image: &discordgo.MessageEmbedImage{
+            URL:    Item.ImgURL,
+            Height: 300,
+            Width:  300,
+        },
+        Fields: fields[start:end],
+        Type:   discordgo.EmbedTypeRich,
+    }
+    retArr = append(retArr, &em)
+    fmt.Println("setting embed for indexes", start, end, len(fields))
+}
 	return retArr
 }
 func setTrackerFields(Item *database.Item)[]*discordgo.MessageEmbedField{

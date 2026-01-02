@@ -20,15 +20,11 @@ type Channel struct {
 	Long      float64 `bson:"Long"`
 	Distance int `bson:"Distance"`
 }
-type ChannelCoord struct {
-	Lat  float64 `bson:"Lat"`
-	Long float64 `bson:"Long"`
-	Distance int `bson:"Distance"`
-}
+
 
 var (
 	Tables      = make(map[string]*mongo.Collection)
-	Coordinates = make(map[string]ChannelCoord)
+	Coordinates = make(map[string]Channel)
 	logger      = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 )
 
@@ -47,7 +43,8 @@ func loadDBTables() {
 	for _, IDString := range ChannelsArr {
 		table := Client.Database("tracker").Collection(IDString.ChannelID)
 		Tables[IDString.ChannelID] = table
-		Coordinates[IDString.ChannelID] = ChannelCoord{
+		Coordinates[IDString.ChannelID] = Channel{
+			ChannelID: IDString.ChannelID,
 			Lat:  IDString.Lat,
 			Long: IDString.Long,
 			Distance: IDString.Distance,
@@ -61,13 +58,15 @@ func CreateChannelItemTableIfMissing(ChannelID string, Location string, maxDista
 	if err != nil {
 		return err
 	}
+	Channel := Channel{
+		ChannelID: ChannelID,
+		Lat: Lat,
+		Long: Long,
+		Distance: maxDistance,
+	}
 	// if channelID already exists, just update the Coordinates in DB and memory
 	if table, ok := Tables[ChannelID]; ok{
-		Coordinates[ChannelID] = ChannelCoord{
-			Lat:  Lat,
-			Long: Long,
-			Distance: maxDistance,
-		}
+		Coordinates[ChannelID] = Channel
 		update := bson.M{
 			"Distance" : maxDistance, 
 			"Lat" : Lat,
@@ -108,11 +107,7 @@ func CreateChannelItemTableIfMissing(ChannelID string, Location string, maxDista
 	}
 	table := Client.Database("tracker").Collection(ChannelID)
 	Tables[ChannelID] = table
-	Coordinates[ChannelID] = ChannelCoord{
-		Lat:  Lat,
-		Long: Long,
-		Distance: maxDistance,
-	}
+	Coordinates[ChannelID] = Channel
 
 	return err
 }

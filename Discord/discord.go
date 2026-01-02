@@ -227,7 +227,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			content := ""
 			var em []*discordgo.MessageEmbed
 			// add tracker to database
-			addRes, err := database.AddItem(options[0].StringValue(), options[1].StringValue(), options[2].StringValue(), i.ChannelID)
+			addRes, err := database.AddItem(options[0].StringValue(), 
+				options[1].StringValue(), options[2].StringValue(), database.Coordinates[i.ChannelID])
 			if err != nil {
 				content = fmt.Sprint(err)
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{

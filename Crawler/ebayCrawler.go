@@ -194,7 +194,9 @@ func FacebookURLGenerator(Name string, Price int) string {
 }
 
 // JS loaded cannot use colly for this
-func MarketPlaceCrawl(Name string, desiredPrice int, Channel types.Channel) ([]types.EbayListing, error) {
+func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong float64, 
+	maxDistance int) ([]types.EbayListing, error) {
+
 	url := FacebookURLGenerator(Name, desiredPrice)
 	fmt.Println("crawling ", url)
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -252,7 +254,8 @@ func MarketPlaceCrawl(Name string, desiredPrice int, Channel types.Channel) ([]t
 	// <------------------ sanitize the list ------------>
 	for i := range items {
 		if titleCorrectnessCheck(items[i].Title, Name) && items[i].Price != 0 {
-			distance, distStr, err := ValidateDistance(items[i].Condition, Channel)
+			distance, distStr, err := ValidateDistance(items[i].Condition, homeLat, 
+				homeLong, maxDistance)
 			if err != nil || !distance {
 				fmt.Println("skipping url distance too long", items[i].URL)
 				continue
@@ -268,9 +271,11 @@ func MarketPlaceCrawl(Name string, desiredPrice int, Channel types.Channel) ([]t
 	return retArr, err
 }
 
-func GetSecondHandListings(Name string, Price int, Channel types.Channel) ([]types.EbayListing, error) {
+func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong float64, 
+	maxDistance int) ([]types.EbayListing, error) {
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	fb, err2 := MarketPlaceCrawl(Name, Price, Channel)
+	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong, maxDistance)
 	ebay, err := GetEbayListings(Name, Price)
 	if err != nil || err2 != nil {
 		fmt.Println("errors from getting second hand listing", err, err2)
@@ -324,7 +329,7 @@ func GetCoordinates(Location string) (float64, float64, error) {
 	return target.Lat, target.Lon, err
 }
 
-func ValidateDistance(location string, homeLat float64, homeLong float64) (bool, string, error) {
+func ValidateDistance(location string, homeLat float64, homeLong float64, maxDistance int) (bool, string, error) {
 	// --------------- get distance from api------------------
 	api := "&format=json&apiKey=" + os.Getenv("GEO_API_KEY")
 	url := "https://api.geoapify.com/v1/routematrix?" + api
@@ -387,7 +392,7 @@ func ValidateDistance(location string, homeLat float64, homeLong float64) (bool,
 	Time := int(d.Sources_to_targets[0][0].Time)
 	TimeMin := Time / 60
 
-	if Distance < 30 {
+	if Distance < float64(maxDistance) {
 		// format time and distance format to be displayed in the discord message
 		retStr := fmt.Sprintf("%.1f miles, currently %d min ETA", Distance, TimeMin)
 		fmt.Println("formatted distance", retStr)

@@ -44,8 +44,8 @@ var (
 	ctx    context.Context
 )
 
-func AddItem(itemName string, uri string, query string, ChannelID types.Channel) (Item, error) {
-	Table, err := loadChannelTable(ChannelID.ChannelID)
+func AddItem(itemName string, uri string, query string, Channel Channel) (Item, error) {
+	Table, err := loadChannelTable(Channel.ChannelID)
 	if err != nil {
 		log.Print("Could not load Channel from DB")
 		return Item{}, err
@@ -56,7 +56,8 @@ func AddItem(itemName string, uri string, query string, ChannelID types.Channel)
 		return Item{}, err
 	}
 	imgURL := crawler.GetOpenGraphPic(uri)
-	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price, ChannelID)
+	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price, 
+		Channel.Lat, Channel.Long, Channel.Distance)
 	slices.SortFunc(ebayListings, func(a, b types.EbayListing) int {
 		return b.Price - a.Price
 	})

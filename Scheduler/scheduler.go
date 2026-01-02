@@ -17,8 +17,8 @@ import (
 func SetChannelScheduler(ctx context.Context) {
 	// -------------------- set timer for daily scrapping -------------//
 	println("printing tables:", database.Tables)
-	for i := range database.Tables {
-		updateAllPrices(i)
+	for _, Channel := range database.Coordinates {
+		updateAllPrices(Channel)
 	}
 	go func() {
 		ticker := time.NewTicker(8 * time.Hour)
@@ -29,8 +29,8 @@ func SetChannelScheduler(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				for i := range database.Tables {
-					updateAllPrices(i)
+				for _, Channel := range database.Coordinates {
+					updateAllPrices(Channel)
 				}
 				log.Println("ticking")
 			}
@@ -38,9 +38,9 @@ func SetChannelScheduler(ctx context.Context) {
 	}()
 }
 
-func updateAllPrices(ChannelID types.Channel) {
-	log.Println("updateAllPrices being fired for channel", ChannelID.ChannelID)
-	itemsArr := database.GetAllItems(ChannelID.ChannelID)
+func updateAllPrices(Channel database.Channel) {
+	log.Println("updateAllPrices being fired for channel", Channel.ChannelID)
+	itemsArr := database.GetAllItems(Channel.ChannelID)
 	for _, v := range itemsArr {
 		date := time.Now()
 		currLow := database.Price{
@@ -56,12 +56,12 @@ func updateAllPrices(ChannelID types.Channel) {
 
 			// updates the price from the price source in the pricearr list of
 			// the document
-			oldLow, err := database.GetLowestHistoricalPrice(v.Name, ChannelID.ChannelID)
+			oldLow, err := database.GetLowestHistoricalPrice(v.Name, Channel.ChannelID)
 			if err != nil {
 				log.Print(err)
 				continue
 			}
-			np, err = updatePrice(v.Name, t.URI, t.HtmlQuery, oldLow, date, ChannelID.ChannelID)
+			np, err = updatePrice(v.Name, t.URI, t.HtmlQuery, oldLow, date, Channel.ChannelID)
 			if currLow.Price > np.Price && err == nil {
 				currLow = np
 			}
@@ -69,9 +69,9 @@ func updateAllPrices(ChannelID types.Channel) {
 		// keeps track of current lowest price, if a new price has been found
 		// and no errors encountered
 		if currLow.Price != math.MaxInt32 {
-			database.UpdateLowestPrice(v.Name, currLow, ChannelID.ChannelID)
+			database.UpdateLowestPrice(v.Name, currLow, Channel.ChannelID)
 		}
-		handleEbayListingsUpdate(v.Name, currLow.Price, ChannelID)
+		handleEbayListingsUpdate(v.Name, currLow.Price, Channel)
 	}
 }
 
@@ -91,13 +91,14 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Pric
 	return p, err
 }
 
-func handleEbayListingsUpdate(Name string, Price int, Channel types.Channel) {
+func handleEbayListingsUpdate(Name string, Price int, Channel database.Channel) {
 	oldEbayListings, _ := database.GetEbayListings(Name, Channel.ChannelID)
 	ListingsMap := map[string]types.EbayListing{} // maps titles to price for checking if price exists or was updated
 	for _, Listing := range oldEbayListings {
 		ListingsMap[Listing.Title] = Listing
 	}
-	ebayListings, err := crawler.GetSecondHandListings(Name, Price, Channel)
+	ebayListings, err := crawler.GetSecondHandListings(Name, Price, 
+		Channel.Lat, Channel.Long, Channel.Distance)
 	if err != nil {
 		discord.CrawlErrorAlert(Name, "ebay.com", err, Channel.ChannelID)
 	}
@@ -108,16 +109,16 @@ func handleEbayListingsUpdate(Name string, Price int, Channel types.Channel) {
 		if !ok || oldListing.Price != newListing.Price {
 			if ok && newListing.Price != oldListing.Price {
 				fmt.Println("calling new ebay listing with old price of and new price of", oldListing.Price, newListing.Price)
-				discord.EbayListingPriceChangeAlert(newListing, oldListing.Price, ChannelID)
+				discord.EbayListingPriceChangeAlert(newListing, oldListing.Price, Channel.ChannelID)
 			} else {
-				discord.NewEbayListingAlert(newListing, ChannelID)
+				discord.NewEbayListingAlert(newListing, Channel.ChannelID)
 			}
 		}
 	}
-	err = database.UpdateEbayListings(Name, ebayListings, ChannelID)
+	err = database.UpdateEbayListings(Name, ebayListings, Channel.ChannelID)
 	if err != nil {
 		log.Print("error updaing DB in ebay listing", err, Name)
-		discord.CrawlErrorAlert(Name, "www.ebay.com/DBError", err, ChannelID)
+		discord.CrawlErrorAlert(Name, "www.ebay.com/DBError", err, Channel.ChannelID)
 		return
 	}
 }

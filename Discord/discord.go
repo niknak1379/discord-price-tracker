@@ -18,6 +18,24 @@ var (
 	Discord     *discordgo.Session
 	commandList = []*discordgo.ApplicationCommand{
 		{
+			Name:        "create_channel",
+			Description: "create new tracking table",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "location",
+					Description: "set marketplace location",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
+				},
+				{
+					Name:        "distance",
+					Description: "set marketplace max distance",
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Required:    true,
+				},
+			},
+		},
+		{
 			Name:        "add",
 			Description: "Add new Price Tracker",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -172,6 +190,28 @@ var (
 )
 
 var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.InteractionCreate){
+	"create_channel": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+		
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		})
+		// add tracker to database
+		err := database.CreateChannelItemTableIfMissing(i.ChannelID, options[0].StringValue(), 
+			int(options[1].IntValue()))
+		if err != nil {
+			content := err.Error()
+			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+				Content: content,
+			})
+		} else {
+			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+				Content: "Distance And Location Setup Successfully",
+			})
+		}
+		
+	},
 	"add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:

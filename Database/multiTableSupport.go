@@ -18,10 +18,12 @@ type Channel struct {
 	ChannelID string  `bson:"ChannelID"`
 	Lat       float64 `bson:"Lat"`
 	Long      float64 `bson:"Long"`
+	Distance int `bson:"Distance"`
 }
 type ChannelCoord struct {
 	Lat  float64 `bson:"Lat"`
 	Long float64 `bson:"Long"`
+	Distance int `bson:"Distance"`
 }
 
 var (
@@ -48,22 +50,38 @@ func loadDBTables() {
 		Coordinates[IDString.ChannelID] = ChannelCoord{
 			Lat:  IDString.Lat,
 			Long: IDString.Long,
+			Distance: IDString.Distance,
 		}
 	}
 }
 
-func createChannelItemTableIfMissing(ChannelID string, Location string) *mongo.Collection {
-	err := Client.Database("tracker").CreateCollection(context.TODO(), ChannelID)
+
+func CreateChannelItemTableIfMissing(ChannelID string, Location string, maxDistance int) (error) {
+	Lat, Long, err := crawler.GetCoordinates(Location)
 	if err != nil {
-		log.Fatalf("Failed to create collection: %v", err)
+		return err
+	}
+	// if channelID already exists, just update the Coordinates in DB and memory
+	if table, ok := Tables[ChannelID]; ok{
+		Coordinates[ChannelID] = ChannelCoord{
+			Lat:  Lat,
+			Long: Long,
+			Distance: maxDistance,
+		}
+		update := bson.M{
+			"Distance" : maxDistance, 
+			"Lat" : Lat,
+			"Long" : Long,
+		}
+		table.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
+		return nil
+	}
+	err = Client.Database("tracker").CreateCollection(context.TODO(), ChannelID)
+	if err != nil {
+		return err
 	}
 	// --------------- call to get coordinates goes here --------
-	Lat, Long, err := crawler.GetCoordinates(Location)
-	Channel := Channel{
-		Lat:       Lat,
-		Long:      Long,
-		ChannelID: ChannelID,
-	}
+	
 	Client.Database("tracker").Collection("ChannelIDs").InsertOne(ctx, Channel)
 
 	Table := Client.Database("tracker").Collection(ChannelID)
@@ -86,15 +104,17 @@ func createChannelItemTableIfMissing(ChannelID string, Location string) *mongo.C
 	// Creates the index
 	_, err = Table.SearchIndexes().CreateOne(ctx, searchIndexModel)
 	if err != nil {
-		log.Fatalf("Failed to create the MongoDB Search index: %v", err)
+		return err
 	}
-	Tables[ChannelID] = Channel
-	Coordinates[Channel.ChannelID] = ChannelCoord{
-		Lat:  Channel.Lat,
-		Long: Channel.Long,
+	table := Client.Database("tracker").Collection(ChannelID)
+	Tables[ChannelID] = table
+	Coordinates[ChannelID] = ChannelCoord{
+		Lat:  Lat,
+		Long: Long,
+		Distance: maxDistance,
 	}
 
-	return Table
+	return err
 }
 
 func loadChannelTable(ChannelID string) (*mongo.Collection, error) {

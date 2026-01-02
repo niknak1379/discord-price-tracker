@@ -8,6 +8,7 @@ import (
 	"os"
 	crawler "priceTracker/Crawler"
 	types "priceTracker/Types"
+	"slices"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -260,6 +261,9 @@ func GetEbayListings(itemName string, ChannelID string) ([]types.EbayListing, er
 func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, ChannelID string) error {
 	Table = loadChannelTable(ChannelID)
 	filter := bson.M{"Name": itemName}
+	slices.SortFunc(listingsArr, func(a, b types.EbayListing) int {
+		return a.Price - b.Price
+	})
 	update := bson.M{"$set": bson.M{
 		"EbayListings": listingsArr,
 	}}

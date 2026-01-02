@@ -2,23 +2,33 @@ package database
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
+	crawler "priceTracker/Crawler"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-var (
-	Tables = make(map[string]*mongo.Collection)
-	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
-)
-
 type Channel struct {
-	ChannelID string `bson:"ChannelID"`
+	ChannelID string  `bson:"ChannelID"`
+	Lat       float64 `bson:"Lat"`
+	Long      float64 `bson:"Long"`
 }
+type ChannelCoord struct {
+	Lat  float64 `bson:"Lat"`
+	Long float64 `bson:"Long"`
+}
+
+var (
+	Tables      = make(map[string]*mongo.Collection)
+	Coordinates = make(map[string]ChannelCoord)
+	logger      = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+)
 
 func loadDBTables() {
 	var ChannelsArr []Channel
@@ -35,15 +45,23 @@ func loadDBTables() {
 	for _, IDString := range ChannelsArr {
 		table := Client.Database("tracker").Collection(IDString.ChannelID)
 		Tables[IDString.ChannelID] = table
+		Coordinates[IDString.ChannelID] = ChannelCoord{
+			Lat:  IDString.Lat,
+			Long: IDString.Long,
+		}
 	}
 }
 
-func createChannelItemTableIfMissing(ChannelID string) *mongo.Collection {
+func createChannelItemTableIfMissing(ChannelID string, Location string) *mongo.Collection {
 	err := Client.Database("tracker").CreateCollection(context.TODO(), ChannelID)
 	if err != nil {
 		log.Fatalf("Failed to create collection: %v", err)
 	}
+	// --------------- call to get coordinates goes here --------
+	Lat, Long, err := crawler.GetCoordinates(Location)
 	Channel := Channel{
+		Lat:       Lat,
+		Long:      Long,
 		ChannelID: ChannelID,
 	}
 	Client.Database("tracker").Collection("ChannelIDs").InsertOne(ctx, Channel)
@@ -70,13 +88,23 @@ func createChannelItemTableIfMissing(ChannelID string) *mongo.Collection {
 	if err != nil {
 		log.Fatalf("Failed to create the MongoDB Search index: %v", err)
 	}
+	Tables[ChannelID] = Channel
+	Coordinates[Channel.ChannelID] = ChannelCoord{
+		Lat:  Channel.Lat,
+		Long: Channel.Long,
+	}
+
 	return Table
 }
 
-func loadChannelTable(ChannelID string) *mongo.Collection {
+func loadChannelTable(ChannelID string) (*mongo.Collection, error) {
 	Table, ok := Tables[ChannelID]
 	if !ok {
-		Table = createChannelItemTableIfMissing(ChannelID)
+		fmt.Println("channel does not exist have to call setup first")
+		//<------ make this a specific error that propogates 
+		// that forces the crawl thing to send error?
+		err := errors.New("channel not found in db, call setup function first")
+		return Table, err
 	}
-	return Table
+	return Table, nil
 }

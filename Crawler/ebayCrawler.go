@@ -10,7 +10,6 @@ import (
 	"log"
 	"log/slog"
 	"os"
-	"strconv"
 	"time"
 
 	// "log/slog"
@@ -114,11 +113,11 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 			fmt.Println("price too high skipping")
 			return
 		}
-		
+
 		listing := types.EbayListing{
-			Price:     shippingCost + basePrice,
+			Price: shippingCost + basePrice,
 			// it has metadata from search after url, this leans it up
-			URL:       strings.Split(link, "?_skw")[0], 
+			URL:       strings.Split(link, "?_skw")[0],
 			Title:     title,
 			Condition: condition,
 		}
@@ -156,9 +155,11 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 
 	matched, _ := regexp.MatchString(pattern, listingTitle)
 	// exludes titles that have these key words
-	var excludeArr = [7]string{`\bfor\s+parts\b`, `\bbroken\b`, `\baccessories\b`,
-		`\bbox only\b`, `\bempty box\b`, `\bcable\b`, `\bdongle\b`}
-	for _, excludeQuery := range excludeArr{
+	excludeArr := [7]string{
+		`\bfor\s+parts\b`, `\bbroken\b`, `\baccessories\b`,
+		`\bbox only\b`, `\bempty box\b`, `\bcable\b`, `\bdongle\b`,
+	}
+	for _, excludeQuery := range excludeArr {
 		query, _ := regexp.MatchString(excludeQuery, listingTitle)
 		if query {
 			return false
@@ -193,7 +194,7 @@ func FacebookURLGenerator(Name string, Price int) string {
 }
 
 // JS loaded cannot use colly for this
-func MarketPlaceCrawl(Name string, desiredPrice int) ([]types.EbayListing, error) {
+func MarketPlaceCrawl(Name string, desiredPrice int, Channel types.Channel) ([]types.EbayListing, error) {
 	url := FacebookURLGenerator(Name, desiredPrice)
 	fmt.Println("crawling ", url)
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -251,7 +252,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int) ([]types.EbayListing, error
 	// <------------------ sanitize the list ------------>
 	for i := range items {
 		if titleCorrectnessCheck(items[i].Title, Name) && items[i].Price != 0 {
-			distance, distStr, err := ValidateDistance(items[i].Condition)
+			distance, distStr, err := ValidateDistance(items[i].Condition, Channel)
 			if err != nil || !distance {
 				fmt.Println("skipping url distance too long", items[i].URL)
 				continue
@@ -260,16 +261,16 @@ func MarketPlaceCrawl(Name string, desiredPrice int) ([]types.EbayListing, error
 			items[i].URL = strings.Split(items[i].URL, "?ref")[0]
 			fmt.Println("appending facebook listing for", items[i].Title, items[i].Condition)
 			retArr = append(retArr, items[i])
-		}else{
+		} else {
 			fmt.Println("skipping title, criteria not met", items[i].Title)
 		}
 	}
 	return retArr, err
 }
 
-func GetSecondHandListings(Name string, Price int) ([]types.EbayListing, error) {
+func GetSecondHandListings(Name string, Price int, Channel types.Channel) ([]types.EbayListing, error) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	fb, err2 := MarketPlaceCrawl(Name, Price)
+	fb, err2 := MarketPlaceCrawl(Name, Price, Channel)
 	ebay, err := GetEbayListings(Name, Price)
 	if err != nil || err2 != nil {
 		fmt.Println("errors from getting second hand listing", err, err2)
@@ -279,11 +280,11 @@ func GetSecondHandListings(Name string, Price int) ([]types.EbayListing, error) 
 	return retArr, errors.Join(err, err2)
 }
 
-func ValidateDistance(location string) (bool, string, error) {
+func GetCoordinates(Location string) (float64, float64, error) {
 	base := "https://api.geoapify.com/v1/geocode/search?text="
 	// logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	api := "&format=json&apiKey=" + os.Getenv("GEO_API_KEY")
-	query := url.PathEscape(location)
+	query := url.PathEscape(Location)
 	url := base + query + api
 	method := "GET"
 
@@ -292,47 +293,53 @@ func ValidateDistance(location string) (bool, string, error) {
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		fmt.Println("forming first request err", err)
-		return false, "", err
+		return 0, 0, err
 	}
 	res, err := client.Do(req)
 	if err != nil {
 		fmt.Println("faild first request", err)
-		return false, "", err
+		return 0, 0, err
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println("reading first body", err)
-		return false, "", err
+		return 0, 0, err
 	}
 
 	// fmt.Println(string(body))
 	var result GeocodeResponse
 	if err := json.Unmarshal(body, &result); err != nil {
 		fmt.Println("unmarshaling into result object for first request", err)
-		return false, "", err
+		return 0, 0, err
 	}
 	// logger.Info("listing", slog.Any("Listing marshalled respone from first req", result))
 	if len(result.Results) == 0 {
 		fmt.Println("result is empty")
-		return false, "", fmt.Errorf("no results found")
+		return 0, 0, fmt.Errorf("no results found")
 	}
 
 	target := result.Results[0]
-	// --------------- get distance from api------------------
-	url = "https://api.geoapify.com/v1/routematrix?" + api
-	method = "POST"
+	return target.Lat, target.Lon, err
+}
 
-	t := coordinates{
-		Location: [2]float64{target.Lon, target.Lat},
+func ValidateDistance(location string, homeLat float64, homeLong float64) (bool, string, error) {
+	// --------------- get distance from api------------------
+	api := "&format=json&apiKey=" + os.Getenv("GEO_API_KEY")
+	url := "https://api.geoapify.com/v1/routematrix?" + api
+	method := "POST"
+	client := &http.Client{}
+
+	targetLat, targetLong, err := GetCoordinates(location)
+	if err != nil {
+		return false, "", err
 	}
-	homeLong := os.Getenv("HOME_LONG")
-	homeLat := os.Getenv("HOME_LAT")
-	floatLong, _ := strconv.ParseFloat(homeLong, 64)
-	floatLat, _ := strconv.ParseFloat(homeLat, 64)
+	t := coordinates{
+		Location: [2]float64{targetLong, targetLat},
+	}
 	h := coordinates{
-		Location: [2]float64{floatLong, floatLat},
+		Location: [2]float64{homeLong, homeLat},
 	}
 	reqBody := Body{
 		Mode:    "drive",
@@ -345,21 +352,21 @@ func ValidateDistance(location string) (bool, string, error) {
 		fmt.Println("converting to json", err)
 		return false, "", err
 	}
-	req, err = http.NewRequest(method, url, bytes.NewBuffer(jsonBody))
+	req, err := http.NewRequest(method, url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		fmt.Println("forming second request", err)
 		return false, "", err
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	res, err = client.Do(req)
+	res, err := client.Do(req)
 	if err != nil {
 		fmt.Println("second request err", err)
 		return false, "", err
 	}
 	defer res.Body.Close()
 
-	body, err = io.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println("reading second request err", err)
 		return false, "", err

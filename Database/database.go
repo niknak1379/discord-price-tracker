@@ -44,15 +44,19 @@ var (
 	ctx    context.Context
 )
 
-func AddItem(itemName string, uri string, query string, ChannelID string) (Item, error) {
-	Table = loadChannelTable(ChannelID)
+func AddItem(itemName string, uri string, query string, ChannelID types.Channel) (Item, error) {
+	Table, err := loadChannelTable(ChannelID.ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return Item{}, err
+	}
 	p, t, err := validateURI(uri, query)
 	if err != nil {
 		log.Print("invalid url", err)
 		return Item{}, err
 	}
 	imgURL := crawler.GetOpenGraphPic(uri)
-	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price)
+	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price, ChannelID)
 	slices.SortFunc(ebayListings, func(a, b types.EbayListing) int {
 		return b.Price - a.Price
 	})
@@ -77,12 +81,16 @@ func AddItem(itemName string, uri string, query string, ChannelID string) (Item,
 }
 
 func EditName(oldName string, newName string, ChannelID string) (Item, error) {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return Item{}, err
+	}
 	var res Item
 	filter := bson.M{"Name": oldName}
 	update := bson.M{"$set": bson.M{"Name": newName}}
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
-	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
+	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
 	if err != nil {
 		fmt.Println("error changing name of item, ", oldName)
 		return Item{}, err
@@ -92,7 +100,11 @@ func EditName(oldName string, newName string, ChannelID string) (Item, error) {
 
 // method itself checks if the price is a duplicate and if so does not add it
 func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date time.Time, ChannelID string) (Price, error) {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return Price{}, err
+	}
 	price := Price{
 		Price: newPrice,
 		Url:   uri,
@@ -169,11 +181,15 @@ func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date 
 }
 
 func GetLowestHistoricalPrice(Name string, ChannelID string) (Price, error) {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return Price{}, err
+	}
 	filter := bson.M{"Name": Name}
 	opts := options.FindOne().SetProjection(bson.M{"LowestPrice": 1})
 	var res Item
-	err := Table.FindOne(ctx, filter, opts).Decode(&res)
+	err = Table.FindOne(ctx, filter, opts).Decode(&res)
 	if err != nil {
 		return res.LowestPrice, err
 	}
@@ -182,7 +198,11 @@ func GetLowestHistoricalPrice(Name string, ChannelID string) (Price, error) {
 }
 
 func UpdateLowestHistoricalPrice(Name string, newLow Price, ChannelID string) (Item, error) {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return Item{}, err
+	}
 	filter := bson.M{"Name": Name}
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHisotry", Value: 0}}).SetReturnDocument(options.After)
 	update := bson.M{
@@ -191,7 +211,7 @@ func UpdateLowestHistoricalPrice(Name string, newLow Price, ChannelID string) (I
 		},
 	}
 	var res Item
-	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
+	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
 	if err != nil {
 		log.Print("error in updating lowest price", err)
 		return res, err
@@ -201,11 +221,15 @@ func UpdateLowestHistoricalPrice(Name string, newLow Price, ChannelID string) (I
 }
 
 func GetLowestPrice(Name string, ChannelID string) (Price, error) {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return Price{}, err
+	}
 	filter := bson.M{"Name": Name}
 	opts := options.FindOne().SetProjection(bson.M{"CurrentLowestPrice": 1})
 	var res Item
-	err := Table.FindOne(ctx, filter, opts).Decode(&res)
+	err = Table.FindOne(ctx, filter, opts).Decode(&res)
 	if err != nil {
 		return res.LowestPrice, err
 	}
@@ -214,7 +238,11 @@ func GetLowestPrice(Name string, ChannelID string) (Price, error) {
 }
 
 func UpdateLowestPrice(Name string, newLow Price, ChannelID string) (Item, error) {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return Item{}, err
+	}
 	filter := bson.M{"Name": bson.M{"$regex": "^" + Name + "$", "$options": "i"}}
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHisotry", Value: 0}}).SetReturnDocument(options.After)
 	update := bson.M{
@@ -223,7 +251,7 @@ func UpdateLowestPrice(Name string, newLow Price, ChannelID string) (Item, error
 		},
 	}
 	var res Item
-	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
+	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
 	if err != nil {
 		log.Print("error in updating lowest price", err)
 		return res, err
@@ -233,7 +261,11 @@ func UpdateLowestPrice(Name string, newLow Price, ChannelID string) (Item, error
 }
 
 func GetAllItems(ChannelID string) []*Item {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return []*Item{}
+	}
 	opts := options.Find().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
 	cursor, err := Table.Find(ctx, bson.M{}, opts)
 	if err != nil {
@@ -250,11 +282,15 @@ func GetAllItems(ChannelID string) []*Item {
 }
 
 func GetEbayListings(itemName string, ChannelID string) ([]types.EbayListing, error) {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return []types.EbayListing{}, err
+	}
 	var res Item
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
 	opts := options.FindOne().SetProjection(bson.D{{Key: "EbayListings", Value: 1}})
-	err := Table.FindOne(ctx, filter, opts).Decode(&res)
+	err = Table.FindOne(ctx, filter, opts).Decode(&res)
 	if err != nil {
 		return res.EbayListings, err
 	}
@@ -262,7 +298,11 @@ func GetEbayListings(itemName string, ChannelID string) ([]types.EbayListing, er
 }
 
 func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, ChannelID string) error {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return err
+	}
 	filter := bson.M{"Name": itemName}
 	slices.SortFunc(listingsArr, func(a, b types.EbayListing) int {
 		return b.Price - a.Price
@@ -272,17 +312,21 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 	}}
 	var result Item
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
-	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
+	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	
 	return err
 }
 
 func GetItem(itemName string, ChannelID string) (Item, error) {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return Item{}, err
+	}
 	var res Item
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
 	opts := options.FindOne().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
-	err := Table.FindOne(ctx, filter, opts).Decode(&res)
+	err = Table.FindOne(ctx, filter, opts).Decode(&res)
 	if err != nil {
 		return res, err
 	}
@@ -291,7 +335,11 @@ func GetItem(itemName string, ChannelID string) (Item, error) {
 
 // returns the price
 func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, error) {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return []*Price{}, err
+	}
 	var res []*Price
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: bson.D{
@@ -336,7 +384,11 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 }
 
 func RemoveItem(itemName string, ChannelID string) int64 {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return 0
+	}
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
 	results, err := Table.DeleteOne(ctx, filter)
 	if err != nil {
@@ -346,7 +398,11 @@ func RemoveItem(itemName string, ChannelID string) int64 {
 }
 
 func AddTrackingInfo(itemName string, uri string, querySelector string, ChannelID string) (Item, Price, error) {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return Item{}, Price{}, err
+	}
 	p, t, err := validateURI(uri, querySelector)
 	if err != nil {
 		return Item{}, p, err
@@ -367,7 +423,11 @@ func AddTrackingInfo(itemName string, uri string, querySelector string, ChannelI
 }
 
 func RemoveTrackingInfo(itemName string, uri string, ChannelID string) (Item, error) {
-	Table = loadChannelTable(ChannelID)
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return Item{}, err
+	}
 	filter := bson.M{
 		"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"},
 	}
@@ -376,7 +436,7 @@ func RemoveTrackingInfo(itemName string, uri string, ChannelID string) (Item, er
 
 	var result Item
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
-	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
+	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil {
 		return result, err
 	}

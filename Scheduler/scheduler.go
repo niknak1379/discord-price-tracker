@@ -38,9 +38,9 @@ func SetChannelScheduler(ctx context.Context) {
 	}()
 }
 
-func updateAllPrices(ChannelID string) {
-	log.Println("updateAllPrices being fired for channel", ChannelID)
-	itemsArr := database.GetAllItems(ChannelID)
+func updateAllPrices(ChannelID types.Channel) {
+	log.Println("updateAllPrices being fired for channel", ChannelID.ChannelID)
+	itemsArr := database.GetAllItems(ChannelID.ChannelID)
 	for _, v := range itemsArr {
 		date := time.Now()
 		currLow := database.Price{
@@ -56,12 +56,12 @@ func updateAllPrices(ChannelID string) {
 
 			// updates the price from the price source in the pricearr list of
 			// the document
-			oldLow, err := database.GetLowestHistoricalPrice(v.Name, ChannelID)
+			oldLow, err := database.GetLowestHistoricalPrice(v.Name, ChannelID.ChannelID)
 			if err != nil {
 				log.Print(err)
 				continue
 			}
-			np, err = updatePrice(v.Name, t.URI, t.HtmlQuery, oldLow, date, ChannelID)
+			np, err = updatePrice(v.Name, t.URI, t.HtmlQuery, oldLow, date, ChannelID.ChannelID)
 			if currLow.Price > np.Price && err == nil {
 				currLow = np
 			}
@@ -69,7 +69,7 @@ func updateAllPrices(ChannelID string) {
 		// keeps track of current lowest price, if a new price has been found
 		// and no errors encountered
 		if currLow.Price != math.MaxInt32 {
-			database.UpdateLowestPrice(v.Name, currLow, ChannelID)
+			database.UpdateLowestPrice(v.Name, currLow, ChannelID.ChannelID)
 		}
 		handleEbayListingsUpdate(v.Name, currLow.Price, ChannelID)
 	}
@@ -91,22 +91,22 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Pric
 	return p, err
 }
 
-func handleEbayListingsUpdate(Name string, Price int, ChannelID string) {
-	oldEbayListings, _ := database.GetEbayListings(Name, ChannelID)
+func handleEbayListingsUpdate(Name string, Price int, Channel types.Channel) {
+	oldEbayListings, _ := database.GetEbayListings(Name, Channel.ChannelID)
 	ListingsMap := map[string]types.EbayListing{} // maps titles to price for checking if price exists or was updated
 	for _, Listing := range oldEbayListings {
 		ListingsMap[Listing.Title] = Listing
 	}
-	ebayListings, err := crawler.GetSecondHandListings(Name, Price)
+	ebayListings, err := crawler.GetSecondHandListings(Name, Price, Channel)
 	if err != nil {
-		discord.CrawlErrorAlert(Name, "ebay.com", err, ChannelID)
+		discord.CrawlErrorAlert(Name, "ebay.com", err, Channel.ChannelID)
 	}
 	for _, newListing := range ebayListings {
 		oldListing, ok := ListingsMap[newListing.Title]
 		// if listing not found in the old list, or if price changed
 		// ping discord
 		if !ok || oldListing.Price != newListing.Price {
-			if ok && newListing.Price != oldListing.Price{
+			if ok && newListing.Price != oldListing.Price {
 				fmt.Println("calling new ebay listing with old price of and new price of", oldListing.Price, newListing.Price)
 				discord.EbayListingPriceChangeAlert(newListing, oldListing.Price, ChannelID)
 			} else {

@@ -53,6 +53,9 @@ func AddItem(itemName string, uri string, query string, ChannelID string) (Item,
 	}
 	imgURL := crawler.GetOpenGraphPic(uri)
 	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price)
+	slices.SortFunc(ebayListings, func(a, b types.EbayListing) int {
+		return a.Price - b.Price
+	})
 	arr := []TrackingInfo{t}
 	PriceArr := []Price{p}
 	i := Item{
@@ -270,9 +273,7 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 	var result Item
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
 	err := Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
-	if err != nil {
-		return err
-	}
+	
 	return err
 }
 

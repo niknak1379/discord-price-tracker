@@ -18,7 +18,10 @@ func SetChannelScheduler(ctx context.Context) {
 	// -------------------- set timer for daily scrapping -------------//
 	println("printing tables:", database.Tables)
 	for _, Channel := range database.Coordinates {
+		now := time.Now()
 		updateAllPrices(Channel)
+		finishTime := time.Since(now)
+		fmt.Printf("first crawl took %f hours and %f minutes", finishTime.Hours(), finishTime.Minutes())
 	}
 	go func() {
 		ticker := time.NewTicker(8 * time.Hour)

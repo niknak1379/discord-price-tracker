@@ -135,7 +135,7 @@ func setSecondHandField(ebayArr []types.EbayListing) []*discordgo.MessageEmbedFi
 
 func formatSecondHandField(Listing types.EbayListing, Message string) []*discordgo.MessageEmbedField {
 	currOrOld := discordgo.MessageEmbedField{
-		Name:   embedSeparatorFormatter("Message", 44),
+		Name:   embedSeparatorFormatter(Message, 44),
 		Value:  "",
 		Inline: false,
 	}

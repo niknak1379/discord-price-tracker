@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"net/url"
 	types "priceTracker/Types"
+	"strings"
 	"time"
 
 	"github.com/gocolly/colly/v2"
@@ -40,10 +42,18 @@ func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
         condition := ""
         
         // Handler for product page
-        t := time.NewTicker(8*time.Second)
-        <- t.C
+        r := rand.IntN(30)
+		r += r + 30
+		time.Sleep(time.Duration(r) * time.Second)
+
         productCollector.OnHTML("p.styles_textWrapper__v3kxJ", func(pe *colly.HTMLElement) {
             condition = pe.Text
+            replacer := strings.NewReplacer(
+                ".", " ",
+                "'", " ",
+                "’", " ",
+            )
+            condition = replacer.Replace(condition)
             fmt.Println(condition)
             fmt.Println(Name)
             if titleCorrectnessCheck(condition, Name) {

@@ -54,8 +54,7 @@ func updateAllPrices(Channel database.Channel) {
 		for _, t := range v.TrackingList {
 			r := rand.IntN(120)
 			r += r + 60
-			timer := time.NewTimer(time.Duration(r) * time.Second)
-			<-timer.C
+			time.Sleep(time.Duration(r) * time.Second)
 
 			// updates the price from the price source in the pricearr list of
 			// the document

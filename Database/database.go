@@ -252,7 +252,7 @@ func UpdateLowestPrice(Name string, newLow Price, ChannelID string) (Item, error
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHisotry", Value: 0}}).SetReturnDocument(options.After)
 	update := bson.M{
 		"$set": bson.M{
-			"CurrentLowstPrice": newLow,
+			"CurrentLowestPrice": newLow,
 		},
 	}
 	var res Item

@@ -397,7 +397,12 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 	// ------------ pipeline for getting used Price -------------
 	usedAvgRes := []*Price{}
 	usedAvgPipeline := mongo.Pipeline{
-		bson.D{{Key: "$match", Value: bson.D{{Key: "Name", Value: "radeon rx 7900 xt"}}}},
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "Name", Value: bson.D{
+				{Key: "$regex", Value: "^" + Name + "$"},
+				{Key: "$options", Value: "i"},
+			}},
+		}}},
 		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$ListingsHistory"}}}},
 		bson.D{
 			{Key: "$group", Value: bson.D{
@@ -446,9 +451,9 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 		},
 		bson.D{
 			{Key: "$project", Value: bson.D{
-				{Key: "Price", Value: "$Price"},
+				{Key: "Price", Value: bson.D{{Key: "$toInt", Value: "$Price"}}},
 				{Key: "Date", Value: "$_id"},
-				{Key: "URL", Value: "USED"},
+				{Key: "Url", Value: "USED"},
 			}},
 		},
 	}
@@ -464,7 +469,12 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 	newRes = append(newRes, usedAvgRes...)
 	var usedLowestRes []*Price
 	usedLowestPipeline := mongo.Pipeline{
-		bson.D{{Key: "$match", Value: bson.D{{Key: "Name", Value: "radeon rx 7900 xt"}}}},
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "Name", Value: bson.D{
+				{Key: "$regex", Value: "^" + Name + "$"},
+				{Key: "$options", Value: "i"},
+			}},
+		}}},
 		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$ListingsHistory"}}}},
 		bson.D{
 			{Key: "$group", Value: bson.D{
@@ -513,9 +523,9 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 		},
 		bson.D{
 			{Key: "$project", Value: bson.D{
-				{Key: "Price", Value: "$Price"},
+				{Key: "Price", Value: bson.D{{Key: "$toInt", Value: "$Price"}}},
 				{Key: "Date", Value: "$_id"},
-				{Key: "URL", Value: "USED_LOWEST"},
+				{Key: "Url", Value: "USED_LOWEST"},
 			}},
 		},
 	}

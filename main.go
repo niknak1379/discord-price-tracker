@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	database "priceTracker/Database"
-	scheduler "priceTracker/Scheduler"
 
 	// crawler "priceTracker/Crawler"
 	discord "priceTracker/Discord"
@@ -28,7 +27,7 @@ func main() {
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
-	go scheduler.SetChannelScheduler(ctx)
+	// go scheduler.SetChannelScheduler(ctx)
 	wg.Go(func() {
 		discord.Run(ctx)
 	})

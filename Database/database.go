@@ -359,7 +359,7 @@ func GetItem(itemName string, ChannelID string) (Item, error) {
 func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		log.Print("Could not load Channel from DB", err)
 		return []*Price{}, err
 	}
 	var newRes []*Price
@@ -370,8 +370,8 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 				{Key: "$regex", Value: "^" + Name + "$"},
 				{Key: "$options", Value: "i"},
 			}},
-		}}}, // Fixed: Added proper closing braces
-		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$ListingsHistory"}}}},
+		}}},
+		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$PriceHistory"}}}},
 		bson.D{{Key: "$sort", Value: bson.D{{Key: "PriceHistory.Date", Value: 1}}}},
 		bson.D{
 			{
@@ -386,9 +386,11 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 	}
 	cursor, err := Table.Aggregate(ctx, pipeline)
 	if err != nil {
+		log.Print("error aggregating price history", err)
 		return newRes, err
 	}
 	if err = cursor.All(ctx, &newRes); err != nil {
+		log.Print("error aggregating price history from cursor", err)
 		return newRes, err
 	}
 
@@ -405,6 +407,40 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 						{Key: "unit", Value: "day"},
 					}},
 				}},
+				{Key: "AVGPrice", Value: bson.D{{Key: "$avg", Value: "$ListingsHistory.Price"}}},
+				{Key: "STDEV", Value: bson.D{{Key: "$stdDevPop", Value: "$ListingsHistory.Price"}}},
+				{Key: "ListingsHistory", Value: bson.D{{Key: "$push", Value: "$ListingsHistory"}}},
+			}},
+		},
+		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$ListingsHistory"}}}},
+		bson.D{
+			{Key: "$match", Value: bson.D{
+				{Key: "$expr", Value: bson.D{
+					{Key: "$gte", Value: bson.A{
+						"$ListingsHistory.Price",
+						bson.D{
+							{Key: "$subtract", Value: bson.A{
+								"$AVGPrice",
+								bson.D{
+									{Key: "$multiply", Value: bson.A{
+										"$STDEV",
+										3,
+									}},
+								},
+							}},
+						},
+					}},
+				}},
+			}},
+		},
+		bson.D{
+			{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: bson.D{
+					{Key: "$dateTrunc", Value: bson.D{
+						{Key: "date", Value: "$ListingsHistory.Date"},
+						{Key: "unit", Value: "day"},
+					}},
+				}},
 				{Key: "Price", Value: bson.D{{Key: "$avg", Value: "$ListingsHistory.Price"}}},
 			}},
 		},
@@ -412,21 +448,58 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 			{Key: "$project", Value: bson.D{
 				{Key: "Price", Value: "$Price"},
 				{Key: "Date", Value: "$_id"},
-				{Key: "URL", Value: "USED_AVG"},
+				{Key: "URL", Value: "USED"},
 			}},
 		},
 	}
 	cursor, err = Table.Aggregate(ctx, usedAvgPipeline)
 	if err != nil {
+		log.Print("error aggregating used avg price history", err)
 		return newRes, err
 	}
 	if err = cursor.All(ctx, &usedAvgRes); err != nil {
-		return usedAvgRes, err
+		log.Print("error aggregating used avg price history from cursor", err)
+		return newRes, err
 	}
+	newRes = append(newRes, usedAvgRes...)
 	var usedLowestRes []*Price
 	usedLowestPipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: bson.D{{Key: "Name", Value: "radeon rx 7900 xt"}}}},
 		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$ListingsHistory"}}}},
+		bson.D{
+			{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: bson.D{
+					{Key: "$dateTrunc", Value: bson.D{
+						{Key: "date", Value: "$ListingsHistory.Date"},
+						{Key: "unit", Value: "day"},
+					}},
+				}},
+				{Key: "AVGPrice", Value: bson.D{{Key: "$avg", Value: "$ListingsHistory.Price"}}},
+				{Key: "STDEV", Value: bson.D{{Key: "$stdDevPop", Value: "$ListingsHistory.Price"}}},
+				{Key: "ListingsHistory", Value: bson.D{{Key: "$push", Value: "$ListingsHistory"}}},
+			}},
+		},
+		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$ListingsHistory"}}}},
+		bson.D{
+			{Key: "$match", Value: bson.D{
+				{Key: "$expr", Value: bson.D{
+					{Key: "$gte", Value: bson.A{
+						"$ListingsHistory.Price",
+						bson.D{
+							{Key: "$subtract", Value: bson.A{
+								"$AVGPrice",
+								bson.D{
+									{Key: "$multiply", Value: bson.A{
+										"$STDEV",
+										3,
+									}},
+								},
+							}},
+						},
+					}},
+				}},
+			}},
+		},
 		bson.D{
 			{Key: "$group", Value: bson.D{
 				{Key: "_id", Value: bson.D{
@@ -442,20 +515,21 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 			{Key: "$project", Value: bson.D{
 				{Key: "Price", Value: "$Price"},
 				{Key: "Date", Value: "$_id"},
-				{Key: "URL", Value: "USED_LOW"},
+				{Key: "URL", Value: "USED_LOWEST"},
 			}},
 		},
 	}
 	cursor, err = Table.Aggregate(ctx, usedLowestPipeline)
 	if err != nil {
+		log.Print("error aggregating used min price history", err)
 		return newRes, err
 	}
 	if err = cursor.All(ctx, &usedLowestRes); err != nil {
-		return usedAvgRes, err
+		log.Print("error aggregating used min price history from cursor", err)
+		return newRes, err
 	}
 	defer cursor.Close(ctx)
 
-	newRes = append(newRes, usedAvgRes...)
 	return append(newRes, usedLowestRes...), err
 }
 

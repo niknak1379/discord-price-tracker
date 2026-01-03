@@ -113,14 +113,14 @@ func PriceHistoryChart(Name string, month int, ChannelID string) error {
 	}
 	logger.Info("dates", slog.Any("dates", dates))
 	for url, data := range result {
-		logger.Info("slog message", slog.Any("hi", data))
+		logger.Info("make chart, adding series data for", slog.Any(url, data))
 		line.AddSeries(url, data)
 	}
 
 	line.SetXAxis(dates)
 	line.SetSeriesOptions(
 		charts.WithLineChartOpts(opts.LineChart{
-			ShowSymbol: opts.Bool(true), // ← Show data point markers
+			ShowSymbol: opts.Bool(true),
 		}),
 	)
 	err = render.MakeChartSnapshot(line.RenderContent(), "my-chart.png")

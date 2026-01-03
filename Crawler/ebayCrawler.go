@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net/url"
 	"os"
+	"regexp"
+	"strings"
 
 	// "log/slog"
 
-	"net/url"
-
 	// "os"
 	types "priceTracker/Types"
-	"regexp"
-	"strings"
 
 	"github.com/gocolly/colly/v2"
 )
@@ -22,7 +21,9 @@ import (
 type GeocodeResponse struct {
 	Results []Location `json:"results"`
 }
+
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
 type Location struct {
 	Lat float64 `json:"lat"`
 	Lon float64 `json:"lon"`
@@ -53,11 +54,11 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 }
 
 // returns a map of urls and prices + shipping cost
-// it returns an error on items that are local pickup only 
+// it returns an error on items that are local pickup only
 // since they dont have a shipping fee div
 func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
-	
+
 	log.Println("visiting ebay url ", url)
 	var listingArr []types.EbayListing
 	visited := false
@@ -137,17 +138,23 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 	words := strings.Fields(strings.ToLower(itemName))
 	listingTitle = strings.ToLower(listingTitle)
+	replacer := strings.NewReplacer(
+		".", " ",
+		"'", " ",
+		"’", " ",
+	)
+	listingTitle = replacer.Replace(listingTitle)
 
 	// short designators like x, xt or numbers get lost, so add spaces
 	// around them ----- changed my mind ill do it for all of them
 	// ----- a lot of models still get mixed up especially for monitors
 	for _, word := range words {
-        pattern := `\b` + regexp.QuoteMeta(word) + `\b`
-        matched, _ := regexp.MatchString(pattern, listingTitle)
-        if !matched {
-            return false // Word not found
-        }
-    }
+		pattern := `\b` + regexp.QuoteMeta(word) + `\b`
+		matched, _ := regexp.MatchString(pattern, listingTitle)
+		if !matched {
+			return false // Word not found
+		}
+	}
 	// exludes titles that have these key words
 	excludeArr := [7]string{
 		`\bfor\s+parts\b`, `\bbroken\b`, `\baccessories\b`,
@@ -163,7 +170,7 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 }
 
 // i dont need this anymore but ill keep it just in case
-// i was being dumb and didnt see the start of the url 
+// i was being dumb and didnt see the start of the url
 // was there and i didnt have to crawl the link itself
 func getCanonicalURL(c *colly.Collector, url string) string {
 	retURL := url
@@ -182,4 +189,3 @@ func getCanonicalURL(c *colly.Collector, url string) string {
 	}
 	return retURL
 }
-

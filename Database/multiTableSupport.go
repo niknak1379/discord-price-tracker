@@ -18,9 +18,8 @@ type Channel struct {
 	ChannelID string  `bson:"ChannelID"`
 	Lat       float64 `bson:"Lat"`
 	Long      float64 `bson:"Long"`
-	Distance int `bson:"Distance"`
+	Distance  int     `bson:"Distance"`
 }
-
 
 var (
 	Tables      = make(map[string]*mongo.Collection)
@@ -45,9 +44,9 @@ func loadDBTables() {
 		Tables[IDString.ChannelID] = table
 		Coordinates[IDString.ChannelID] = Channel{
 			ChannelID: IDString.ChannelID,
-			Lat:  IDString.Lat,
-			Long: IDString.Long,
-			Distance: IDString.Distance,
+			Lat:       IDString.Lat,
+			Long:      IDString.Long,
+			Distance:  IDString.Distance,
 		}
 		if IDString.Lat == 0 || IDString.Long == 0 || IDString.Distance == 0 {
 			log.Panic("Could not load Channel, lat, long or distance empty")
@@ -55,28 +54,27 @@ func loadDBTables() {
 	}
 }
 
-
-func CreateChannelItemTableIfMissing(ChannelID string, Location string, maxDistance int) (error) {
+func CreateChannelItemTableIfMissing(ChannelID string, Location string, maxDistance int) error {
 	Lat, Long, err := crawler.GetCoordinates(Location)
 	if err != nil {
 		return err
 	}
 	Channel := Channel{
 		ChannelID: ChannelID,
-		Lat: Lat,
-		Long: Long,
-		Distance: maxDistance,
+		Lat:       Lat,
+		Long:      Long,
+		Distance:  maxDistance,
 	}
 	// if channelID already exists, just update the Coordinates in DB and memory
-	if table, ok := Tables[ChannelID]; ok{
+	if table, ok := Tables[ChannelID]; ok {
 		Coordinates[ChannelID] = Channel
 		update := bson.M{
-		"$set": bson.M{
-			"Distance": maxDistance, 
-			"Lat": Lat,
-			"Long": Long,
-		},
-}
+			"$set": bson.M{
+				"Distance": maxDistance,
+				"Lat":      Lat,
+				"Long":     Long,
+			},
+		}
 		Tables[ChannelID] = table
 		ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
 		ChannelTable.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
@@ -87,7 +85,7 @@ func CreateChannelItemTableIfMissing(ChannelID string, Location string, maxDista
 		return err
 	}
 	// --------------- call to get coordinates goes here --------
-	
+
 	Client.Database("tracker").Collection("ChannelIDs").InsertOne(ctx, Channel)
 
 	Table := Client.Database("tracker").Collection(ChannelID)
@@ -118,17 +116,21 @@ func CreateChannelItemTableIfMissing(ChannelID string, Location string, maxDista
 
 	return err
 }
-func ChannelDeleteHandler(ChannelID string){
-	ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
-	ChannelTable.FindOneAndDelete(ctx, bson.M{"ChannelID": ChannelID})
-	delete(Tables, ChannelID)
-	delete(Coordinates, ChannelID)
+
+func ChannelDeleteHandler(ChannelID string) {
+	if _, ok := Tables[ChannelID]; ok {
+		ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
+		ChannelTable.FindOneAndDelete(ctx, bson.M{"ChannelID": ChannelID})
+		delete(Tables, ChannelID)
+		delete(Coordinates, ChannelID)
+	}
 }
+
 func loadChannelTable(ChannelID string) (*mongo.Collection, error) {
 	Table, ok := Tables[ChannelID]
 	if !ok {
 		fmt.Println("channel does not exist have to call setup first")
-		//<------ make this a specific error that propogates 
+		//<------ make this a specific error that propogates
 		// that forces the crawl thing to send error?
 		err := errors.New("channel not found in db, call setup function first")
 		return Table, err

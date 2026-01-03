@@ -17,28 +17,28 @@ import (
 func SetChannelScheduler(ctx context.Context) {
 	// -------------------- set timer for daily scrapping -------------//
 	println("printing tables:", database.Tables)
+	now := time.Now()
+	fmt.Println("first crawl start time", now)
 	for _, Channel := range database.Coordinates {
-		now := time.Now()
 		updateAllPrices(Channel)
-		finishTime := time.Since(now)
-		fmt.Printf("first crawl took %f hours and %f minutes", finishTime.Hours(), finishTime.Minutes())
 	}
-	go func() {
-		ticker := time.NewTicker(8 * time.Hour)
-		log.Println("setting ticker in crawler")
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				for _, Channel := range database.Coordinates {
-					updateAllPrices(Channel)
-				}
-				log.Println("ticking")
+	finishTime := time.Since(now)
+	fmt.Printf("first crawl took %.2f hours and %.2f minutes", finishTime.Hours(), finishTime.Minutes())
+
+	ticker := time.NewTicker(8 * time.Hour)
+	log.Println("setting ticker in crawler")
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			for _, Channel := range database.Coordinates {
+				updateAllPrices(Channel)
 			}
+			log.Println("ticking")
 		}
-	}()
+	}
 }
 
 func updateAllPrices(Channel database.Channel) {
@@ -74,7 +74,7 @@ func updateAllPrices(Channel database.Channel) {
 		if currLow.Price != math.MaxInt32 {
 			database.UpdateLowestPrice(v.Name, currLow, Channel.ChannelID)
 		}
-		handleEbayListingsUpdate(v.Name, currLow.Price, Channel)
+		handleEbayListingsUpdate(v.Name, currLow.Price, v.Type, Channel)
 	}
 }
 
@@ -94,14 +94,14 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Pric
 	return p, err
 }
 
-func handleEbayListingsUpdate(Name string, Price int, Channel database.Channel) {
+func handleEbayListingsUpdate(Name string, Price int, Type string, Channel database.Channel) {
 	oldEbayListings, _ := database.GetEbayListings(Name, Channel.ChannelID)
 	ListingsMap := map[string]types.EbayListing{} // maps titles to price for checking if price exists or was updated
 	for _, Listing := range oldEbayListings {
 		ListingsMap[Listing.Title] = Listing
 	}
 	ebayListings, err := crawler.GetSecondHandListings(Name, Price, 
-		Channel.Lat, Channel.Long, Channel.Distance)
+		Channel.Lat, Channel.Long, Channel.Distance, Type)
 	if err != nil {
 		discord.CrawlErrorAlert(Name, "ebay.com", err, Channel.ChannelID)
 	}

@@ -17,6 +17,26 @@ import (
 
 	"github.com/chromedp/chromedp"
 )
+func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong float64, 
+	maxDistance int, itemType string) ([]types.EbayListing, error) {
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong, maxDistance)
+	ebay, err := GetEbayListings(Name, Price)
+	var depop []types.EbayListing
+	var err3 error
+	if itemType == "Clothes"{
+		depop, err3 = CrawlDepop(Name, Price)
+	}
+	if err != nil || err2 != nil || err3 != nil{
+		fmt.Println("errors from getting second hand listing", err, err2)
+	}
+	retArr := append(ebay, fb...)
+	retArr = append(retArr, depop...)
+
+	logger.Info("listing", slog.Any("Listing Values", retArr))
+	return retArr, errors.Join(err, err2)
+}
 
 func FacebookURLGenerator(Name string, Price int) string {
 	baseURL := "https://www.facebook.com/marketplace/107711145919004/search"
@@ -101,20 +121,6 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 		}
 	}
 	return retArr, err
-}
-
-func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong float64, 
-	maxDistance int) ([]types.EbayListing, error) {
-
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong, maxDistance)
-	ebay, err := GetEbayListings(Name, Price)
-	if err != nil || err2 != nil {
-		fmt.Println("errors from getting second hand listing", err, err2)
-	}
-	retArr := append(ebay, fb...)
-	logger.Info("listing", slog.Any("Listing Values", retArr))
-	return retArr, errors.Join(err, err2)
 }
 
 func GetCoordinates(Location string) (float64, float64, error) {

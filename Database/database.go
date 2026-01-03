@@ -34,6 +34,7 @@ type Item struct {
 	LowestPrice        Price               `bson:"LowestPrice"`
 	PriceHistory       []Price             `bson:"PriceHistory"`
 	CurrentLowestPrice Price               `bson:"CurrentLowestPrice"`
+	Type               string              `bson:"Type"`
 	ImgURL             string              `bson:"ImgURL"`
 	EbayListings       []types.EbayListing `bson:"EbayListings"`
 }
@@ -44,7 +45,7 @@ var (
 	ctx    context.Context
 )
 
-func AddItem(itemName string, uri string, query string, Channel Channel) (Item, error) {
+func AddItem(itemName string, uri string, query string, Type string, Channel Channel) (Item, error) {
 	Table, err := loadChannelTable(Channel.ChannelID)
 	if err != nil {
 		log.Print("Could not load Channel from DB")
@@ -56,8 +57,8 @@ func AddItem(itemName string, uri string, query string, Channel Channel) (Item, 
 		return Item{}, err
 	}
 	imgURL := crawler.GetOpenGraphPic(uri)
-	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price, 
-		Channel.Lat, Channel.Long, Channel.Distance)
+	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price,
+		Channel.Lat, Channel.Long, Channel.Distance, Type)
 	slices.SortFunc(ebayListings, func(a, b types.EbayListing) int {
 		return b.Price - a.Price
 	})
@@ -314,7 +315,7 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 	var result Item
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
-	
+
 	return err
 }
 

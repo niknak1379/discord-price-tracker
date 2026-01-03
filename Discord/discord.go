@@ -58,6 +58,22 @@ var (
 					Required:     true,
 					Autocomplete: true,
 				},
+				{
+					Name:        "type",
+					Description: "Item Type",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{
+							Name:  "Tech",
+							Value: "Tech",
+						},
+						{
+							Name:  "Clothes",
+							Value: "Clothes",
+						},
+					},
+				},
 			},
 		},
 		{
@@ -193,12 +209,12 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"setup": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
-		
+
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 		})
 		// add tracker to database
-		err := database.CreateChannelItemTableIfMissing(i.ChannelID, options[0].StringValue(), 
+		err := database.CreateChannelItemTableIfMissing(i.ChannelID, options[0].StringValue(),
 			int(options[1].IntValue()))
 		if err != nil {
 			content := err.Error()
@@ -206,10 +222,10 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Embeds: []*discordgo.MessageEmbed{
 					{
 						Title: "priceTracker",
-						Color:  	10038562, //red
+						Color: 10038562, // red
 						Fields: []*discordgo.MessageEmbedField{
 							{
-								Name: "Setup unSuccessful",
+								Name:  "Setup unSuccessful",
 								Value: content,
 							},
 						},
@@ -221,10 +237,10 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Embeds: []*discordgo.MessageEmbed{
 					{
 						Title: "priceTracker",
-						Color: 10181046, //purple
+						Color: 10181046, // purple
 						Fields: []*discordgo.MessageEmbedField{
 							{
-								Name: "Setup Successful",
+								Name:  "Setup Successful",
 								Value: "",
 							},
 						},
@@ -232,7 +248,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				},
 			})
 		}
-		
 	},
 	"add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		switch i.Type {
@@ -249,8 +264,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			content := ""
 			var em []*discordgo.MessageEmbed
 			// add tracker to database
-			addRes, err := database.AddItem(options[0].StringValue(), 
-				options[1].StringValue(), options[2].StringValue(), database.Coordinates[i.ChannelID])
+			addRes, err := database.AddItem(options[0].StringValue(),
+				options[1].StringValue(), options[2].StringValue(),
+				options[3].StringValue(), database.Coordinates[i.ChannelID])
 			if err != nil {
 				content = fmt.Sprint(err)
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
@@ -290,9 +306,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				})
 			} else {
 				em := setEmbed(&getRes)
-				
+
 				// set up response to discord client
-				for _, embed := range em{
+				for _, embed := range em {
 					_, err = discord.ChannelMessageSendEmbed(i.ChannelID, embed)
 					fmt.Println(err)
 				}
@@ -331,24 +347,24 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"list": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// add tracker to database
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 		})
 		getRes := database.GetAllItems(i.ChannelID)
 		// returnstr, _ := json.Marshal(getRes)
-		
+
 		for _, Item := range getRes {
 			em := setEmbed(Item)
 			/* _, err := discord.ChannelMessageSendEmbeds(i.ChannelID, em) */
 			_, err := discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-				Embeds:  em,
+				Embeds: em,
 			})
-			fmt.Println("error from list",err)
+			fmt.Println("error from list", err)
 		}
-		if len(getRes) == 0{
+		if len(getRes) == 0 {
 			_, err := discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 				Content: "No Items Are Being Tracked in This Channel",
 			})
-			fmt.Println("error from list",err)
+			fmt.Println("error from list", err)
 		}
 	},
 	"remove": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -409,7 +425,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 
 				// add price tracking info
 				em := setEmbed(&res)
-				em[len(em) - 1].Fields = append(em[len(em) - 1].Fields, priceField...)
+				em[len(em)-1].Fields = append(em[len(em)-1].Fields, priceField...)
 				if err != nil {
 					content = err.Error()
 				} else {
@@ -484,10 +500,12 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 	},
 }
-func channelDeleteHandler(discord *discordgo.Session, i *discordgo.ChannelDelete){
+
+func channelDeleteHandler(discord *discordgo.Session, i *discordgo.ChannelDelete) {
 	fmt.Println("Channel being deleted with id: ", i.Channel.ID)
 	database.ChannelDeleteHandler(i.Channel.ID)
 }
+
 func Run(ctx context.Context) {
 	// create a session
 	var err error

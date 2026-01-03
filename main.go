@@ -10,8 +10,8 @@ import (
 	"os/signal"
 	"sync"
 
+	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
-	scheduler "priceTracker/Scheduler"
 
 	// crawler "priceTracker/Crawler"
 	discord "priceTracker/Discord"
@@ -28,10 +28,12 @@ func main() {
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
-	go scheduler.SetChannelScheduler(ctx)
-	wg.Go(func() {
+	// go scheduler.SetChannelScheduler(ctx)
+	/* wg.Go(func() {
 		discord.Run(ctx)
-	})
+	}) */
+	crawler.CrawlDepop("dr. martens 1460 men's US 11", 120)
+	
 
 	// make the program run unless sigINT is recieved
 	stop := make(chan os.Signal, 1)

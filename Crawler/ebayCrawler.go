@@ -22,7 +22,7 @@ import (
 type GeocodeResponse struct {
 	Results []Location `json:"results"`
 }
-
+var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 type Location struct {
 	Lat float64 `json:"lat"`
 	Lon float64 `json:"lon"`
@@ -53,9 +53,11 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 }
 
 // returns a map of urls and prices + shipping cost
+// it returns an error on items that are local pickup only 
+// since they dont have a shipping fee div
 func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	
 	log.Println("visiting ebay url ", url)
 	var listingArr []types.EbayListing
 	visited := false
@@ -139,15 +141,13 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 	// short designators like x, xt or numbers get lost, so add spaces
 	// around them ----- changed my mind ill do it for all of them
 	// ----- a lot of models still get mixed up especially for monitors
-	var patterns []string
 	for _, word := range words {
-		patterns = append(patterns, `\b`+regexp.QuoteMeta(word)+`\b`)
-	}
-
-	pattern := strings.Join(patterns, ".*")
-	pattern = ".*" + pattern
-
-	matched, _ := regexp.MatchString(pattern, listingTitle)
+        pattern := `\b` + regexp.QuoteMeta(word) + `\b`
+        matched, _ := regexp.MatchString(pattern, listingTitle)
+        if !matched {
+            return false // Word not found
+        }
+    }
 	// exludes titles that have these key words
 	excludeArr := [7]string{
 		`\bfor\s+parts\b`, `\bbroken\b`, `\baccessories\b`,
@@ -159,7 +159,7 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 			return false
 		}
 	}
-	return matched
+	return true
 }
 
 // i dont need this anymore but ill keep it just in case

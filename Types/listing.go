@@ -3,10 +3,10 @@ package types
 import "time"
 
 type EbayListing struct {
-	ItemName  string    `json:"ItemName"`
-	Price     int       `json:"Price"`
-	URL       string    `json:"URL"`
-	Title     string    `json:"Title"`
-	Condition string    `json:"Condition"`
-	Date      time.Time `json:"Date"`
+	ItemName  string    `bson:"ItemName"`
+	Price     int       `bson:"Price"`
+	URL       string    `bson:"URL"`
+	Title     string    `bson:"Title"`
+	Condition string    `bson:"Condition"`
+	Date      time.Time `bson:"Date"`
 }

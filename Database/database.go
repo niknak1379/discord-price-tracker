@@ -313,13 +313,13 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 		return b.Price - a.Price
 	})
 	var update bson.M
-	if len(listingsArr) == 0{
+	if len(listingsArr) == 0 {
 		update = bson.M{
 			"$set": bson.M{
 				"EbayListings": listingsArr,
 			},
 		}
-	}else{
+	} else {
 		update = bson.M{
 			"$set": bson.M{
 				"EbayListings": listingsArr,
@@ -331,7 +331,7 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 			},
 		}
 	}
-	
+
 	var result Item
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
@@ -372,18 +372,6 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 			}},
 		}}}, // Fixed: Added proper closing braces
 		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$ListingsHistory"}}}},
-		bson.D{
-			{
-				Key: "$unset",
-				Value: bson.A{
-					"Name",
-					"_id",
-					"LowestPrice",
-					"TrackingList",
-					"ListingsHistory",
-				},
-			},
-		},
 		bson.D{{Key: "$sort", Value: bson.D{{Key: "PriceHistory.Date", Value: 1}}}},
 		bson.D{
 			{
@@ -405,50 +393,70 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 	}
 
 	// ------------ pipeline for getting used Price -------------
-	usedRes := []*Price{}
-	usedPipeline := mongo.Pipeline{
-		bson.D{{Key: "$match", Value: bson.D{
-			{Key: "Name", Value: bson.D{
-				{Key: "$regex", Value: "^" + Name + "$"},
-				{Key: "$options", Value: "i"},
+	usedAvgRes := []*Price{}
+	usedAvgPipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.D{{Key: "Name", Value: "radeon rx 7900 xt"}}}},
+		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$ListingsHistory"}}}},
+		bson.D{
+			{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: bson.D{
+					{Key: "$dateTrunc", Value: bson.D{
+						{Key: "date", Value: "$ListingsHistory.Date"},
+						{Key: "unit", Value: "day"},
+					}},
+				}},
+				{Key: "Price", Value: bson.D{{Key: "$avg", Value: "$ListingsHistory.Price"}}},
 			}},
-		}}}, // Fixed: Added proper closing braces
-		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$Listing"}}}},
-		bson.D{
-			{
-				Key: "$unset",
-				Value: bson.A{
-					"Name",
-					"_id",
-					"LowestPrice",
-					"TrackingList",
-					"PriceHistory",
-				},
-			},
 		},
-		bson.D{{Key: "$sort", Value: bson.D{{Key: "ListingsHistory.Date", Value: 1}}}},
 		bson.D{
-			{
-				Key: "$project",
-				Value: bson.D{
-					{Key: "Date", Value: "$PriceHistory.Date"},
-					{Key: "Price", Value: "$PriceHistory.Price"},
-					{Key: "Url", Value: "USED"},
-					// add average used and lowest used as separate data points
-				},
-			},
+			{Key: "$project", Value: bson.D{
+				{Key: "Price", Value: "$Price"},
+				{Key: "Date", Value: "$_id"},
+				{Key: "URL", Value: "USED_AVG"},
+			}},
 		},
 	}
-	cursor, err = Table.Aggregate(ctx, usedPipeline)
+	cursor, err = Table.Aggregate(ctx, usedAvgPipeline)
 	if err != nil {
 		return newRes, err
 	}
-	if err = cursor.All(ctx, &usedRes); err != nil {
-		return usedRes, err
+	if err = cursor.All(ctx, &usedAvgRes); err != nil {
+		return usedAvgRes, err
+	}
+	var usedLowestRes []*Price
+	usedLowestPipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.D{{Key: "Name", Value: "radeon rx 7900 xt"}}}},
+		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$ListingsHistory"}}}},
+		bson.D{
+			{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: bson.D{
+					{Key: "$dateTrunc", Value: bson.D{
+						{Key: "date", Value: "$ListingsHistory.Date"},
+						{Key: "unit", Value: "day"},
+					}},
+				}},
+				{Key: "Price", Value: bson.D{{Key: "$min", Value: "$ListingsHistory.Price"}}},
+			}},
+		},
+		bson.D{
+			{Key: "$project", Value: bson.D{
+				{Key: "Price", Value: "$Price"},
+				{Key: "Date", Value: "$_id"},
+				{Key: "URL", Value: "USED_LOW"},
+			}},
+		},
+	}
+	cursor, err = Table.Aggregate(ctx, usedLowestPipeline)
+	if err != nil {
+		return newRes, err
+	}
+	if err = cursor.All(ctx, &usedLowestRes); err != nil {
+		return usedAvgRes, err
 	}
 	defer cursor.Close(ctx)
 
-	return append(newRes, usedRes...), err
+	newRes = append(newRes, usedAvgRes...)
+	return append(newRes, usedLowestRes...), err
 }
 
 func RemoveItem(itemName string, ChannelID string) int64 {

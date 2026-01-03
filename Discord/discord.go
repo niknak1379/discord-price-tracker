@@ -8,6 +8,7 @@ import (
 	"os"
 	charts "priceTracker/Charts"
 	database "priceTracker/Database"
+	"sync"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -270,7 +271,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			if err != nil {
 				content = fmt.Sprint(err)
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-					Content: "Error",
+					Content: "Error adding item" + content,
 				})
 				CrawlErrorAlert(options[0].StringValue(), options[1].StringValue(), err, i.ChannelID)
 				return
@@ -282,7 +283,12 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Content: content,
 				Embeds:  em,
 			})
-			fmt.Println(err)
+			if err != nil {
+				fmt.Println("add took too long, sending separate message", err)
+				for _, embed := range em {
+					discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+				}
+			}
 		}
 	},
 
@@ -316,32 +322,36 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		}
 	},
 	"edit_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
-		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
 
-		content := ""
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(options[0].StringValue(), 0, i, discord)
-		default:
-			// add tracker to database
+			return
+		case discordgo.InteractionApplicationCommand:
 			getRes, err := database.EditName(options[0].StringValue(), options[1].StringValue(), i.ChannelID)
 			var embedArr []*discordgo.MessageEmbed
+			var content string
+
 			if err != nil {
-				content = err.Error()
+				content = "Error: " + err.Error()
+				discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Data: &discordgo.InteractionResponseData{
+						Content: content,
+					},
+				})
 			} else {
 				em := setEmbed(&getRes)
 				embedArr = append(embedArr, em...)
 			}
 
-			// set up response to discord client
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: content,
-					Embeds:  embedArr,
-				},
-			})
+			for _, embed := range embedArr {
+				_, err = discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+				fmt.Println(err)
+				if err != nil {
+					fmt.Println("err in edit_name", err)
+				}
+			}
 		}
 	},
 	"list": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -546,12 +556,13 @@ func Run(ctx context.Context) {
 	if err != nil {
 		log.Panicf("Cannot get application registered command list")
 	}
+	var shutDownWG sync.WaitGroup
 	for _, v := range registeredCommands {
-		err = Discord.ApplicationCommandDelete(Discord.State.User.ID, "", v.ID)
-		if err != nil {
-			log.Printf("Cannot delete '%v' command: %v", v.Name, err)
-		}
+		shutDownWG.Go(func() {
+			Discord.ApplicationCommandDelete(Discord.State.User.ID, "", v.ID)
+		})
 	}
+	shutDownWG.Wait()
 	Discord.Close()
 	log.Println("shut down discord")
 }

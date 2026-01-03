@@ -94,12 +94,16 @@ func EditName(oldName string, newName string, ChannelID string) (Item, error) {
 	var res Item
 	filter := bson.M{"Name": oldName}
 	update := bson.M{"$set": bson.M{"Name": newName}}
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{
+		{Key: "PriceHistory", Value: 0},
+		{Key: "ListingsHistory", Value: 0},
+	}).SetReturnDocument(options.After)
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
 	if err != nil {
 		fmt.Println("error changing name of item, ", oldName)
 		return Item{}, err
 	}
+	fmt.Println("logging res", res)
 	return res, err
 }
 

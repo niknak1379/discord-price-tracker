@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	// "log/slog"
 
@@ -61,6 +62,7 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 
 	log.Println("visiting ebay url ", url)
 	var listingArr []types.EbayListing
+	crawlDate := time.Now()
 	visited := false
 	c := initCrawler()
 	c.OnHTML("ul.srp-results > li", func(e *colly.HTMLElement) {
@@ -112,11 +114,13 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 		}
 
 		listing := types.EbayListing{
-			Price: shippingCost + basePrice,
+			ItemName: Name,
+			Price:    shippingCost + basePrice,
 			// it has metadata from search after url, this leans it up
 			URL:       strings.Split(link, "?_skw")[0],
 			Title:     title,
 			Condition: condition,
+			Date:      crawlDate,
 		}
 		logger.Info("listing", slog.Any("ebay listing information", listing))
 		listingArr = append(listingArr, listing)

@@ -24,6 +24,7 @@ func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
 	url := depopURLGenerator(Name, Price)
 	c := initCrawler()
 
+	crawlDate := time.Now()
 	retArr := []types.EbayListing{}
 	visited := false
 	fmt.Println("logging depop url: ", url)
@@ -61,10 +62,12 @@ func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
 		// Now approved and condition are set
 		if approved && price < Price {
 			Listing := types.EbayListing{
+				ItemName:  Name,
 				Title:     condition,
 				Price:     price,
 				Condition: Name,
 				URL:       productURL,
+				Date:      crawlDate,
 			}
 			logger.Info("listing", slog.Any("depop listing information", Listing))
 			retArr = append(retArr, Listing)

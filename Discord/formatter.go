@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	MaxFieldsPerEmbed = 25  // Discord limit
-	MaxFieldNameLen   = 256 // Discord limit
+	MaxFieldsPerEmbed = 25   // Discord limit
+	MaxFieldNameLen   = 256  // Discord limit
 	MaxFieldValueLen  = 1024 // Discord limit
 	MaxEmbedSize      = 6000 // Total characters across all fields
 )
@@ -25,7 +25,7 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 	ebayFields := setSecondHandField(Item.EbayListings)
 	priceFields := setPriceField(&Item.CurrentLowestPrice, "Current")
 	lowestPriceField := setPriceField(&Item.LowestPrice, "Historically Lowest")
-	
+
 	fields = append(fields, trackerFields...)
 	fields = append(fields, ebayFields...)
 	fields = append(fields, priceFields...)
@@ -39,9 +39,9 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 
 	for _, field := range fields {
 		fieldSize := len(field.Name) + len(field.Value)
-		
+
 		// Check if adding this field would exceed limits
-		shouldCreateNewEmbed := len(currentFields) >= MaxFieldsPerEmbed || 
+		shouldCreateNewEmbed := len(currentFields) >= MaxFieldsPerEmbed ||
 			currentSize+fieldSize > MaxEmbedSize
 
 		if shouldCreateNewEmbed && len(currentFields) > 0 {
@@ -90,7 +90,7 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 
 func setTrackerFields(Item *database.Item) []*discordgo.MessageEmbedField {
 	var fields []*discordgo.MessageEmbedField
-	
+
 	// Set up trackerArr information
 	field := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter("Tracking URL", 43),
@@ -98,7 +98,7 @@ func setTrackerFields(Item *database.Item) []*discordgo.MessageEmbedField {
 		Inline: false,
 	}
 	fields = append(fields, &field)
-	
+
 	for _, tracker := range Item.TrackingList {
 		field := discordgo.MessageEmbedField{
 			Name:   truncateString(tracker.URI, MaxFieldNameLen),
@@ -120,20 +120,25 @@ func setSecondHandField(ebayArr []types.EbayListing) []*discordgo.MessageEmbedFi
 	if len(ebayArr) == 0 {
 		return res
 	}
-	
+
 	HeaderField := discordgo.MessageEmbedField{
 		Name: embedSeparatorFormatter("Ebay Listings", 44),
 	}
 	res = append(res, &HeaderField)
-	
+
 	for _, Listing := range ebayArr {
-		listFields := formatSecondHandField(Listing)
+		listFields := formatSecondHandField(Listing, "Price")
 		res = append(res, listFields...)
 	}
 	return res
 }
 
-func formatSecondHandField(Listing types.EbayListing) []*discordgo.MessageEmbedField {
+func formatSecondHandField(Listing types.EbayListing, Message string) []*discordgo.MessageEmbedField {
+	currOrOld := discordgo.MessageEmbedField{
+		Name:   embedSeparatorFormatter("Message", 44),
+		Value:  "",
+		Inline: false,
+	}
 	priceField := discordgo.MessageEmbedField{
 		Name:   truncateString(Listing.Title, MaxFieldNameLen),
 		Value:  "$" + strconv.Itoa(Listing.Price+1),
@@ -154,9 +159,9 @@ func formatSecondHandField(Listing types.EbayListing) []*discordgo.MessageEmbedF
 		Value:  "",
 		Inline: false,
 	}
-	
+
 	var ret []*discordgo.MessageEmbedField
-	return append(ret, &priceField, &conditionField, &urlField, &separatorField)
+	return append(ret, &currOrOld, &priceField, &conditionField, &urlField, &separatorField)
 }
 
 func setPriceField(p *database.Price, message string) []*discordgo.MessageEmbedField {
@@ -182,7 +187,7 @@ func setPriceField(p *database.Price, message string) []*discordgo.MessageEmbedF
 		Inline: false,
 	}
 	fmt.Println(p.Date.Format("2006-01-02"))
-	
+
 	var fields []*discordgo.MessageEmbedField
 	fields = append(fields, &priceField, &urlField, &dateField)
 	return fields
@@ -222,3 +227,4 @@ func embedSeparatorFormatter(s string, l int) string {
 	}
 	return s
 }
+

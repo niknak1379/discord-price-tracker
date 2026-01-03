@@ -37,6 +37,7 @@ type Item struct {
 	Type               string              `bson:"Type"`
 	ImgURL             string              `bson:"ImgURL"`
 	EbayListings       []types.EbayListing `bson:"EbayListings"`
+	ListingsHistory    []types.EbayListing `bson:"ListingsHistory"`
 }
 
 var (
@@ -68,10 +69,12 @@ func AddItem(itemName string, uri string, query string, Type string, Channel Cha
 		Name:               itemName,
 		ImgURL:             imgURL,
 		LowestPrice:        p,
+		Type:               Type,
 		TrackingList:       arr,
 		PriceHistory:       PriceArr,
 		CurrentLowestPrice: p,
 		EbayListings:       ebayListings,
+		ListingsHistory:    ebayListings,
 	}
 	result, err := Table.InsertOne(ctx, i)
 	if err != nil {
@@ -309,9 +312,16 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 	slices.SortFunc(listingsArr, func(a, b types.EbayListing) int {
 		return b.Price - a.Price
 	})
-	update := bson.M{"$set": bson.M{
-		"EbayListings": listingsArr,
-	}}
+	update := bson.M{
+		"$set": bson.M{
+			"EbayListings": listingsArr,
+		},
+		"$push": bson.M{
+			"ListingsHistory": bson.M{
+				"$each": listingsArr,
+			},
+		},
+	}
 	var result Item
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)

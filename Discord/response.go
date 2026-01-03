@@ -22,18 +22,18 @@ func LowestPriceAlert(itemName string, newPrice int, oldPrice database.Price, UR
 	oldPriceField := setPriceField(&oldPrice, "Previous Lowest")
 	newPriceField := setPriceField(&database.Price{
 		Price: newPrice,
-		Url: URL,
-		Date: time.Now(),
+		Url:   URL,
+		Date:  time.Now(),
 	}, "New Lowest")
 	var Fields []*discordgo.MessageEmbedField
 	Fields = append(Fields, oldPriceField...)
 	Fields = append(Fields, newPriceField...)
 	em := discordgo.MessageEmbed{
-		Title: "Price Update:",
+		Title:       "Price Update:",
 		Description: itemName,
-		Color: 2067276,
-		URL: URL,
-		Fields: Fields,
+		Color:       2067276,
+		URL:         URL,
+		Fields:      Fields,
 	}
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
@@ -54,7 +54,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 
 	// character limit for each field is 1024 but i dont know how thats gonna go with other fields
 	maxLen := int(math.Min(float64(len(err.Error())), 1023))
-	
+
 	errField := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter("Error Message", 43),
 		Value:  err.Error()[:maxLen],
@@ -70,7 +70,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 			log.Println("could not send face book image", err)
 		}
 		Discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
-	}else {
+	} else {
 		reader, err := os.Open("failoverSS.png")
 		if err != nil {
 			log.Println("could not send ebay picture", err)
@@ -78,14 +78,13 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		Discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
 	}
 	_, err = Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
-		Title: "Error",
+		Title:  "Error",
 		Fields: Fields,
-		Color:  	10038562, //red
+		Color:  10038562, // red
 	})
-	if err != nil{
+	if err != nil {
 		fmt.Println(err.Error())
 	}
-	
 }
 
 func SendGraphPng(discord *discordgo.Session, ChannelID string) {
@@ -178,29 +177,29 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 }
 
 func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int, ChannelID string) {
-	newFields := formatSecondHandField(newListing)
+	newFields := formatSecondHandField(newListing, "New Price")
 	newListing.Price = oldPrice
-	oldFields := formatSecondHandField(newListing)
+	oldFields := formatSecondHandField(newListing, "Old Price")
 	colorCode := 1752220 // aqua
-	if oldPrice < newListing.Price{
+	if oldPrice < newListing.Price {
 		fmt.Print("new price higher than old price")
 		colorCode = 12745742 // dark gold
 	}
 	em := discordgo.MessageEmbed{
-		Title: "Second Hand Listing Price Change",
-		Color: colorCode,
-		URL: newListing.URL,
+		Title:  "Second Hand Listing Price Change",
+		Color:  colorCode,
+		URL:    newListing.URL,
 		Fields: append(oldFields, newFields...),
 	}
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
 
 func NewEbayListingAlert(newListing types.EbayListing, ChannelID string) {
-	fields := formatSecondHandField(newListing)
+	fields := formatSecondHandField(newListing, "Price")
 	em := discordgo.MessageEmbed{
-		Title: "New Second Hand Listing Found",
-		Color: 15277667, // pink
-		URL: newListing.URL,
+		Title:  "New Second Hand Listing Found",
+		Color:  15277667, // pink
+		URL:    newListing.URL,
 		Fields: fields,
 	}
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)

@@ -17,18 +17,19 @@ import (
 
 	"github.com/chromedp/chromedp"
 )
-func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong float64, 
-	maxDistance int, itemType string) ([]types.EbayListing, error) {
 
+func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong float64,
+	maxDistance int, itemType string,
+) ([]types.EbayListing, error) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong, maxDistance)
 	ebay, err := GetEbayListings(Name, Price)
 	var depop []types.EbayListing
 	var err3 error
-	if itemType == "Clothes"{
+	if itemType == "Clothes" {
 		depop, err3 = CrawlDepop(Name, Price)
 	}
-	if err != nil || err2 != nil || err3 != nil{
+	if err != nil || err2 != nil || err3 != nil {
 		fmt.Println("errors from getting second hand listing", err, err2)
 	}
 	retArr := append(ebay, fb...)
@@ -46,9 +47,10 @@ func FacebookURLGenerator(Name string, Price int) string {
 }
 
 // JS loaded cannot use colly for this
-func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong float64, 
-	maxDistance int) ([]types.EbayListing, error) {
-
+func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong float64,
+	maxDistance int,
+) ([]types.EbayListing, error) {
+	crawlDate := time.Now()
 	url := FacebookURLGenerator(Name, desiredPrice)
 	fmt.Println("crawling ", url)
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -106,14 +108,16 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 	// <------------------ sanitize the list ------------>
 	for i := range items {
 		if titleCorrectnessCheck(items[i].Title, Name) && items[i].Price != 0 {
-			distance, distStr, err := ValidateDistance(items[i].Condition, homeLat, 
+			distance, distStr, err := ValidateDistance(items[i].Condition, homeLat,
 				homeLong, maxDistance)
 			if err != nil || !distance {
 				fmt.Println("skipping url distance too long", items[i].URL)
 				continue
 			}
+			items[i].ItemName = Name
 			items[i].Condition += " " + distStr
 			items[i].URL = strings.Split(items[i].URL, "?ref")[0]
+			items[i].Date = crawlDate
 			fmt.Println("appending facebook listing for", items[i].Title, items[i].Condition)
 			retArr = append(retArr, items[i])
 		} else {

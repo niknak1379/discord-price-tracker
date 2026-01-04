@@ -278,9 +278,9 @@ func GenerateSecondHandPriceReport(Name string, endDate time.Time, Days int, Cha
 		return AggregateReport{}, err
 	}
 	if len(res) != 0 {
-		return *res[0], err
+		return AggregateReport{}, err
 	}
-	return AggregateReport{}, err
+	return *res[0], err
 }
 
 func UpdateAggregateReport(Name, ChannelID string) error {

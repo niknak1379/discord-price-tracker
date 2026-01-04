@@ -277,7 +277,7 @@ func GenerateSecondHandPriceReport(Name string, endDate time.Time, Days int, Cha
 		log.Print("error aggregate report after decode", err)
 		return AggregateReport{}, err
 	}
-	if len(res) != 0 {
+	if len(res) == 0 {
 		return AggregateReport{}, err
 	}
 	return *res[0], err

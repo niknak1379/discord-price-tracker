@@ -10,6 +10,7 @@ import (
 	database "priceTracker/Database"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -194,6 +195,31 @@ var (
 				{
 					Name:        "months",
 					Description: "how long of the history to graph",
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "aggregate",
+			Description: "Get Aggregate Data for the Used Listings of the Item",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "name",
+					Description:  "Add item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:        "months",
+					Description: "how long of the history to aggregate",
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Required:    true,
+				},
+				{
+					Name:        "ending_month",
+					Description: "how many months ago the ending point of the aggregation should be",
 					Type:        discordgo.ApplicationCommandOptionInteger,
 					Required:    true,
 				},
@@ -483,7 +509,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			} else {
 				reader, err := os.Open("my-chart.png")
 				if err != nil {
-					log.Fatal(err)
+					log.Println(err)
 				}
 				File := discordgo.File{
 					Name:        "chart.png",
@@ -497,6 +523,40 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 					fmt.Printf("Error sending follow-up message: %v\n", err)
 				}
 			}
+		}
+	},
+	"aggregate": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		options := i.ApplicationCommandData().Options
+
+		// handle autocomplete for name and normal request
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoComplete(options[0].StringValue(), 0, i, discord)
+		default:
+			// set up response to discord client
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
+			// get command inputs from discord
+			Aggregate, err := database.GenerateSecondHandPriceReport(
+				options[0].StringValue(),
+				time.Now().AddDate(0, int(options[2].IntValue()), 0),
+				int(options[1].IntValue())*30, i.ChannelID)
+			content := ""
+			var fields []*discordgo.MessageEmbedField
+			if err != nil {
+				content = err.Error()
+			} else {
+				fields = formateAggregateFields(Aggregate, fmt.Sprintf("%d Month Aggregate", int(options[0].IntValue())))
+			}
+			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: content,
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						Fields: fields,
+					},
+				},
+			})
 		}
 	},
 	"restart": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {

@@ -556,7 +556,7 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 	return append(newRes, usedLowestRes...), err
 }
 
-func GenerateSecondHandPriceReport(Name string, startDate time.Time, endDate time.Time, ChannelID string) (AggregateReport, error) {
+func GenerateSecondHandPriceReport(Name string, endDate time.Time, Days int, ChannelID string) (AggregateReport, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
 		log.Print("Could not load Channel from DB", err)
@@ -575,7 +575,7 @@ func GenerateSecondHandPriceReport(Name string, startDate time.Time, endDate tim
 		bson.D{
 			{Key: "$match", Value: bson.D{
 				{Key: "$and", Value: bson.A{
-					bson.D{{Key: "Date", Value: bson.D{{Key: "$gte", Value: startDate}}}},
+					bson.D{{Key: "Date", Value: bson.D{{Key: "$gte", Value: endDate.AddDate(0, 0, -1*Days)}}}},
 					bson.D{{Key: "Date", Value: bson.D{{Key: "$lte", Value: endDate}}}},
 				}},
 			}},
@@ -646,7 +646,7 @@ func UpdateAggregateReport(Name, ChannelID string) error {
 		log.Print("Could not load Channel from DB")
 		return err
 	}
-	AggregateReport, err := GenerateSecondHandPriceReport(Name, time.Now().AddDate(0, 0, -7), time.Now(), ChannelID)
+	AggregateReport, err := GenerateSecondHandPriceReport(Name, time.Now(), 7, ChannelID)
 	if err != nil {
 		fmt.Println("error getting aggregate from generate", err)
 		return err

@@ -23,7 +23,7 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 	// Set up current price information
 	trackerFields := setTrackerFields(Item)
 	ebayFields := setSecondHandField(Item.EbayListings)
-	aggregatefields := formateAggregateFields(Item.SevenDayAggregate, "Seven Day Second Hand Date")
+	aggregatefields := formateAggregateFields(Item.SevenDayAggregate, "Used Aggregation For the Last 7 Days")
 	priceFields := setPriceField(&Item.CurrentLowestPrice, "Current")
 	lowestPriceField := setPriceField(&Item.LowestPrice, "Historically Lowest")
 
@@ -89,6 +89,7 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 
 	return retArr
 }
+
 
 func setTrackerFields(Item *database.Item) []*discordgo.MessageEmbedField {
 	var fields []*discordgo.MessageEmbedField
@@ -211,8 +212,13 @@ func formateAggregateFields(Aggregate database.AggregateReport, message string) 
 		Value:  "$ " + strconv.Itoa(Aggregate.LowestPriceDuringTimePeriod),
 		Inline: false,
 	}
+	SeparatorField := discordgo.MessageEmbedField{
+		Name:   embedSeparatorFormatter("", 44),
+		Value:  "",
+		Inline: false,
+	}
 	var res []*discordgo.MessageEmbedField
-	res = append(res, &Message, &uniqueLitings, &AverageDuration, &AveragePrice, &AveragePriceWhenSold, &STDEV, &LowestPriceDuringTimePeriod)
+	res = append(res, &Message, &uniqueLitings, &AverageDuration, &AveragePrice, &AveragePriceWhenSold, &STDEV, &LowestPriceDuringTimePeriod, &SeparatorField)
 	return res
 }
 

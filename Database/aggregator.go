@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
+
 func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -276,7 +277,10 @@ func GenerateSecondHandPriceReport(Name string, endDate time.Time, Days int, Cha
 		log.Print("error aggregate report after decode", err)
 		return AggregateReport{}, err
 	}
-	return *res[0], err
+	if len(res) != 0 {
+		return *res[0], err
+	}
+	return AggregateReport{}, err
 }
 
 func UpdateAggregateReport(Name, ChannelID string) error {
@@ -303,3 +307,4 @@ func UpdateAggregateReport(Name, ChannelID string) error {
 	}
 	return nil
 }
+

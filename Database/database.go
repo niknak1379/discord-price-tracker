@@ -91,6 +91,7 @@ func AddItem(itemName string, uri string, query string, Type string, Channel Cha
 	log.Println("added new item with mongodb logs:", result)
 	log.Println("lowest price being passed on", i.LowestPrice.Price, i.LowestPrice.Url)
 	UpdateAggregateReport(itemName, Channel.ChannelID)
+	i, err = GetItem(itemName, Channel.ChannelID)
 	return i, err
 }
 
@@ -367,7 +368,6 @@ func GetItem(itemName string, ChannelID string) (Item, error) {
 	}
 	return res, err
 }
-
 
 func RemoveItem(itemName string, ChannelID string) int64 {
 	Table, err := loadChannelTable(ChannelID)

@@ -74,6 +74,7 @@ func updateAllPrices(Channel database.Channel) {
 			database.UpdateLowestPrice(v.Name, currLow, Channel.ChannelID)
 		}
 		handleEbayListingsUpdate(v.Name, currLow.Price, v.Type, Channel)
+		database.UpdateAggregateReport(v.Name, Channel.ChannelID)
 	}
 }
 
@@ -99,7 +100,7 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 	for _, Listing := range oldEbayListings {
 		ListingsMap[Listing.Title] = Listing
 	}
-	ebayListings, err := crawler.GetSecondHandListings(Name, Price, 
+	ebayListings, err := crawler.GetSecondHandListings(Name, Price,
 		Channel.Lat, Channel.Long, Channel.Distance, Type)
 	if err != nil {
 		discord.CrawlErrorAlert(Name, "ebay.com", err, Channel.ChannelID)

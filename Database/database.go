@@ -27,7 +27,14 @@ type Price struct {
 	Price int       `bson:"Price"`
 	Url   string    `bson:"Url"`
 }
-
+type AggregateReport struct {
+	UniqueListings              int `bson:"UniqueListings"`
+	AverageDaysUP               int `bson:"AverageDaysUP"`
+	AveragePrice                int `bson:"AveragePrice"`
+	PriceSTDEV                  int `bson:"PriceSTDEV"`
+	AveragePriceWhenSold        int `bson:"AveragePriceWhenSold"`
+	LowestPriceDuringTimePeriod int `bson:"LowestPriceDuringTimePeriod"`
+}
 type Item struct {
 	Name               string              `bson:"Name"`
 	TrackingList       []TrackingInfo      `bson:"TrackingList"`
@@ -38,6 +45,7 @@ type Item struct {
 	ImgURL             string              `bson:"ImgURL"`
 	EbayListings       []types.EbayListing `bson:"EbayListings"`
 	ListingsHistory    []types.EbayListing `bson:"ListingsHistory"`
+	SevenDayAggregate  AggregateReport     `bson:"SevenDayAggregate"`
 }
 
 var (
@@ -82,6 +90,7 @@ func AddItem(itemName string, uri string, query string, Type string, Channel Cha
 	}
 	log.Println("added new item with mongodb logs:", result)
 	log.Println("lowest price being passed on", i.LowestPrice.Price, i.LowestPrice.Url)
+	UpdateAggregateReport(itemName, Channel.ChannelID)
 	return i, err
 }
 
@@ -545,6 +554,115 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 	defer cursor.Close(ctx)
 
 	return append(newRes, usedLowestRes...), err
+}
+
+func GenerateSecondHandPriceReport(Name string, startDate time.Time, endDate time.Time, ChannelID string) (AggregateReport, error) {
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB", err)
+		return AggregateReport{}, err
+	}
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.D{{Key: "Name", Value: Name}}}},
+		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$ListingsHistory"}}}},
+		bson.D{
+			{Key: "$project", Value: bson.D{
+				{Key: "URL", Value: "$ListingsHistory.URL"},
+				{Key: "Date", Value: "$ListingsHistory.Date"},
+				{Key: "Price", Value: "$ListingsHistory.Price"},
+			}},
+		},
+		bson.D{
+			{Key: "$match", Value: bson.D{
+				{Key: "$and", Value: bson.A{
+					bson.D{{Key: "Date", Value: bson.D{{Key: "$gte", Value: startDate}}}},
+					bson.D{{Key: "Date", Value: bson.D{{Key: "$lte", Value: endDate}}}},
+				}},
+			}},
+		},
+		bson.D{
+			{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: "$URL"},
+				{Key: "first", Value: bson.D{{Key: "$min", Value: "$Date"}}},
+				{Key: "last", Value: bson.D{{Key: "$max", Value: "$Date"}}},
+				{Key: "priceWhenSold", Value: bson.D{{Key: "$last", Value: "$Price"}}},
+				{Key: "averagePrice", Value: bson.D{{Key: "$avg", Value: "$Price"}}},
+				{Key: "LowestPriceDuringTimePeriod", Value: bson.D{{Key: "$min", Value: "$Price"}}},
+			}},
+		},
+		bson.D{
+			{Key: "$project", Value: bson.D{
+				{Key: "DaysUp", Value: bson.D{
+					{Key: "$dateDiff", Value: bson.D{
+						{Key: "startDate", Value: "$first"},
+						{Key: "endDate", Value: "$last"},
+						{Key: "unit", Value: "day"},
+						{Key: "timezone", Value: "America/Los_Angeles"},
+					}},
+				}},
+				{Key: "priceWhenSold", Value: "$priceWhenSold"},
+				{Key: "averagePrice", Value: "$averagePrice"},
+				{Key: "LowestPriceDuringTimePeriod", Value: "$LowestPriceDuringTimePeriod"},
+			}},
+		},
+		bson.D{
+			{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: nil},
+				{Key: "AverageDaysUP", Value: bson.D{{Key: "$avg", Value: "$DaysUp"}}},
+				{Key: "AveragePriceWhenSold", Value: bson.D{{Key: "$avg", Value: "$priceWhenSold"}}},
+				{Key: "AveragePrice", Value: bson.D{{Key: "$avg", Value: "$averagePrice"}}},
+				{Key: "PriceSTDEV", Value: bson.D{{Key: "$stdDevSamp", Value: "$LowestPriceDuringTimePeriod"}}},
+				{Key: "UniqueListings", Value: bson.D{{Key: "$sum", Value: 1}}},
+				{Key: "LowestPriceDuringTimePeriod", Value: bson.D{{Key: "$min", Value: "$LowestPriceDuringTimePeriod"}}},
+			}},
+		},
+		bson.D{
+			{Key: "$project", Value: bson.D{
+				{Key: "AverageDaysUP", Value: bson.D{{Key: "$toInt", Value: "$AverageDaysUP"}}},
+				{Key: "AveragePriceWhenSold", Value: bson.D{{Key: "$toInt", Value: "$AveragePriceWhenSold"}}},
+				{Key: "AveragePrice", Value: bson.D{{Key: "$toInt", Value: "$AveragePrice"}}},
+				{Key: "PriceSTDEV", Value: bson.D{{Key: "$toInt", Value: "$PriceSTDEV"}}},
+				{Key: "UniqueListings", Value: "$UniqueListings"},
+				{Key: "LowestPriceDuringTimePeriod", Value: bson.D{{Key: "$toInt", Value: "$LowestPriceDuringTimePeriod"}}},
+			}},
+		},
+	}
+	var res []*AggregateReport
+	cursor, err := Table.Aggregate(ctx, pipeline)
+	if err != nil {
+		log.Print("error aggregate report from runnign pipeline", err)
+		return AggregateReport{}, err
+	}
+	if err = cursor.All(ctx, &res); err != nil {
+		log.Print("error aggregate report after decode", err)
+		return AggregateReport{}, err
+	}
+	return *res[0], err
+}
+
+func UpdateAggregateReport(Name, ChannelID string) error {
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return err
+	}
+	AggregateReport, err := GenerateSecondHandPriceReport(Name, time.Now().AddDate(0, 0, -7), time.Now(), ChannelID)
+	if err != nil {
+		fmt.Println("error getting aggregate from generate", err)
+		return err
+	}
+	result := Table.FindOneAndUpdate(ctx, bson.M{
+		"Name": Name,
+	}, bson.M{
+		"$set": bson.M{
+			"SevenDayAggregate": AggregateReport,
+		},
+	})
+	if result.Err() != nil {
+		fmt.Println("could not update item with new aggregate", err)
+		return err
+	}
+	return nil
 }
 
 func RemoveItem(itemName string, ChannelID string) int64 {

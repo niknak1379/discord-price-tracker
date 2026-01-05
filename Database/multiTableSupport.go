@@ -15,10 +15,11 @@ import (
 )
 
 type Channel struct {
-	ChannelID string  `bson:"ChannelID"`
-	Lat       float64 `bson:"Lat"`
-	Long      float64 `bson:"Long"`
-	Distance  int     `bson:"Distance"`
+	ChannelID    string  `bson:"ChannelID"`
+	Lat          float64 `bson:"Lat"`
+	Long         float64 `bson:"Long"`
+	Distance     int     `bson:"Distance"`
+	LocationCode string  `bson:"LocationCode"`
 }
 
 var (
@@ -43,10 +44,11 @@ func loadDBTables() {
 		table := Client.Database("tracker").Collection(IDString.ChannelID)
 		Tables[IDString.ChannelID] = table
 		Coordinates[IDString.ChannelID] = Channel{
-			ChannelID: IDString.ChannelID,
-			Lat:       IDString.Lat,
-			Long:      IDString.Long,
-			Distance:  IDString.Distance,
+			ChannelID:    IDString.ChannelID,
+			Lat:          IDString.Lat,
+			Long:         IDString.Long,
+			Distance:     IDString.Distance,
+			LocationCode: IDString.LocationCode,
 		}
 		if IDString.Lat == 0 || IDString.Long == 0 || IDString.Distance == 0 {
 			log.Panic("Could not load Channel, lat, long or distance empty")
@@ -54,25 +56,27 @@ func loadDBTables() {
 	}
 }
 
-func CreateChannelItemTableIfMissing(ChannelID string, Location string, maxDistance int) error {
+func CreateChannelItemTableIfMissing(ChannelID string, Location string, LocationCode string, maxDistance int) error {
 	Lat, Long, err := crawler.GetCoordinates(Location)
 	if err != nil {
 		return err
 	}
 	Channel := Channel{
-		ChannelID: ChannelID,
-		Lat:       Lat,
-		Long:      Long,
-		Distance:  maxDistance,
+		ChannelID:    ChannelID,
+		Lat:          Lat,
+		Long:         Long,
+		Distance:     maxDistance,
+		LocationCode: LocationCode,
 	}
 	// if channelID already exists, just update the Coordinates in DB and memory
 	if table, ok := Tables[ChannelID]; ok {
 		Coordinates[ChannelID] = Channel
 		update := bson.M{
 			"$set": bson.M{
-				"Distance": maxDistance,
-				"Lat":      Lat,
-				"Long":     Long,
+				"Distance":     maxDistance,
+				"Lat":          Lat,
+				"Long":         Long,
+				"LocationCode": LocationCode,
 			},
 		}
 		Tables[ChannelID] = table

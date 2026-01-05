@@ -30,6 +30,12 @@ var (
 					Required:    true,
 				},
 				{
+					Name:        "marketplace-location-code",
+					Description: "Location Code market place uses to represent ur region",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
+				},
+				{
 					Name:        "distance",
 					Description: "set marketplace max distance",
 					Type:        discordgo.ApplicationCommandOptionInteger,
@@ -267,7 +273,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 		})
 		// add tracker to database
-		err := database.CreateChannelItemTableIfMissing(i.ChannelID, options[0].StringValue(),
+		err := database.CreateChannelItemTableIfMissing(i.ChannelID,
+			options[0].StringValue(),
+			options[1].StringValue(),
 			int(options[1].IntValue()))
 		if err != nil {
 			content := err.Error()

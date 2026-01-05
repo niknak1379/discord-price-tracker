@@ -19,7 +19,7 @@ import (
 )
 
 func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong float64,
-	maxDistance int, itemType string,
+	maxDistance int, itemType string, LocationCode string,
 ) ([]types.EbayListing, error) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	var depop []types.EbayListing
@@ -28,11 +28,9 @@ func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong flo
 		Price = Price / 2
 		depop, err3 = CrawlDepop(Name, Price)
 	}
-	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong, maxDistance)
+	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong, maxDistance, LocationCode)
 	ebay, err := GetEbayListings(Name, Price)
-	
-	
-	
+
 	if err != nil || err2 != nil || err3 != nil {
 		fmt.Println("errors from getting second hand listing", err, err2)
 	}
@@ -43,7 +41,7 @@ func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong flo
 	return retArr, errors.Join(err, err2)
 }
 
-func FacebookURLGenerator(Name string, Price int) string {
+func FacebookURLGenerator(Name string, Price int, LocationCode string) string {
 	baseURL := "https://www.facebook.com/marketplace/107711145919004/search"
 	priceQuery := fmt.Sprintf("?maxPrice=%d", Price)
 	query := "&query=" + url.PathEscape(Name) + "&exact=false"
@@ -52,10 +50,10 @@ func FacebookURLGenerator(Name string, Price int) string {
 
 // JS loaded cannot use colly for this
 func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong float64,
-	maxDistance int,
+	maxDistance int, LocationCode string,
 ) ([]types.EbayListing, error) {
 	crawlDate := time.Now()
-	url := FacebookURLGenerator(Name, desiredPrice)
+	url := FacebookURLGenerator(Name, desiredPrice, LocationCode)
 	fmt.Println("crawling ", url)
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),

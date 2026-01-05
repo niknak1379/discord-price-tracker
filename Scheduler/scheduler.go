@@ -101,7 +101,7 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 		ListingsMap[Listing.Title] = Listing
 	}
 	ebayListings, err := crawler.GetSecondHandListings(Name, Price,
-		Channel.Lat, Channel.Long, Channel.Distance, Type)
+		Channel.Lat, Channel.Long, Channel.Distance, Type, Channel.LocationCode)
 	if err != nil {
 		discord.CrawlErrorAlert(Name, "ebay.com", err, Channel.ChannelID)
 	}

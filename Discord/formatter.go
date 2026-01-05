@@ -23,7 +23,7 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 	// Set up current price information
 	trackerFields := setTrackerFields(Item)
 	ebayFields := setSecondHandField(Item.EbayListings)
-	aggregatefields := formateAggregateFields(Item.SevenDayAggregate, "Used Aggregation For the Last 7 Days")
+	aggregatefields := formatAggregateFields(Item.SevenDayAggregate, "Used Aggregation For the Last 7 Days")
 	priceFields := setPriceField(&Item.CurrentLowestPrice, "Current")
 	lowestPriceField := setPriceField(&Item.LowestPrice, "Historically Lowest")
 
@@ -89,7 +89,6 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 
 	return retArr
 }
-
 
 func setTrackerFields(Item *database.Item) []*discordgo.MessageEmbedField {
 	var fields []*discordgo.MessageEmbedField
@@ -167,7 +166,7 @@ func formatSecondHandField(Listing types.EbayListing, Message string) []*discord
 	return append(ret, &currOrOld, &priceField, &conditionField, &urlField, &separatorField)
 }
 
-func formateAggregateFields(Aggregate database.AggregateReport, message string) []*discordgo.MessageEmbedField {
+func formatAggregateFields(Aggregate database.AggregateReport, message string) []*discordgo.MessageEmbedField {
 	/*
 		struct {
 		UniqueListings              int `bson:"UniqueListings"`

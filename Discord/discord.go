@@ -547,7 +547,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			if err != nil {
 				content = err.Error()
 			} else {
-				fields = formateAggregateFields(Aggregate, fmt.Sprintf("%d Month Aggregate", int(options[0].IntValue())))
+				fields = formatAggregateFields(Aggregate, fmt.Sprintf("%d Month Aggregate", int(options[1].IntValue())))
 			}
 			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 				Content: content,

@@ -178,7 +178,7 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 			{Key: "$project", Value: bson.D{
 				{Key: "Price", Value: bson.D{{Key: "$toInt", Value: "$Price"}}},
 				{Key: "Date", Value: "$_id"},
-				{Key: "Url", Value: "USED_LOWEST"},
+				{Key: "Url", Value: "USED-LOWEST"},
 			}},
 		},
 	}

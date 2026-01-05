@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	database "priceTracker/Database"
+	"slices"
 	"strings"
 	"time"
 
@@ -23,11 +24,14 @@ func getPriceHistory(Names []string, month int, ChannelID string) ([]*database.P
 			return priceList, err
 		}
 		for i := range priceArr {
-			priceArr[i].Url = Name + "-" + ExtractDomainName(priceArr[i].Url)
+			priceArr[i].Url = Name + " - " + ExtractDomainName(priceArr[i].Url)
 		}
 		priceList = append(priceList, priceArr...)
 
 	}
+	slices.SortFunc(priceList, func(a, b *database.Price) int {
+		return a.Date.Compare(b.Date)
+	})
 	return priceList, err
 }
 

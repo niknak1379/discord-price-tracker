@@ -25,7 +25,7 @@ func SetChannelScheduler(ctx context.Context) {
 	finishTime := time.Since(now)
 	log.Printf("first crawl took %.2f hours and %.2f minutes", finishTime.Hours(), finishTime.Minutes())
 
-	ticker := time.NewTicker(8 * time.Hour)
+	ticker := time.NewTicker(4 * time.Hour)
 	log.Println("setting ticker in crawler")
 	defer ticker.Stop()
 	for {

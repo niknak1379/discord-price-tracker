@@ -32,7 +32,7 @@ func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
 		visited = true
 		price, _ := formatPrice(e.ChildText("p.styles_price__H8qdh"))
 		productURL := "https://depop.com" + e.ChildAttr("a", "href")
-		if price > Price/2 {
+		if price > Price {
 			fmt.Println("skipping depop item, price too high", price)
 			return
 		}
@@ -61,7 +61,7 @@ func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
 		productCollector.Wait()
 
 		// Now approved and condition are set
-		if approved && price < Price/2 {
+		if approved && price < Price {
 			Listing := types.EbayListing{
 				ItemName:  Name,
 				Title:     condition,

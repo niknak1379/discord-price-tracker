@@ -22,13 +22,17 @@ func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong flo
 	maxDistance int, itemType string,
 ) ([]types.EbayListing, error) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong, maxDistance)
-	ebay, err := GetEbayListings(Name, Price)
 	var depop []types.EbayListing
 	var err3 error
 	if itemType == "Clothes" {
+		Price = Price / 2
 		depop, err3 = CrawlDepop(Name, Price)
 	}
+	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong, maxDistance)
+	ebay, err := GetEbayListings(Name, Price)
+	
+	
+	
 	if err != nil || err2 != nil || err3 != nil {
 		fmt.Println("errors from getting second hand listing", err, err2)
 	}

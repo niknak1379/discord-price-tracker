@@ -222,12 +222,46 @@ func GenerateSecondHandPriceReport(Name string, endDate time.Time, Days int, Cha
 		},
 		bson.D{
 			{Key: "$group", Value: bson.D{
-				{Key: "_id", Value: "$URL"},
-				{Key: "first", Value: bson.D{{Key: "$min", Value: "$Date"}}},
-				{Key: "last", Value: bson.D{{Key: "$max", Value: "$Date"}}},
-				{Key: "priceWhenSold", Value: bson.D{{Key: "$last", Value: "$Price"}}},
-				{Key: "averagePrice", Value: bson.D{{Key: "$avg", Value: "$Price"}}},
-				{Key: "LowestPriceDuringTimePeriod", Value: bson.D{{Key: "$min", Value: "$Price"}}},
+				{Key: "_id", Value: bson.D{
+					{Key: "$dateTrunc", Value: bson.D{
+						{Key: "date", Value: "$Date"},
+						{Key: "unit", Value: "day"},
+					}},
+				}},
+				{Key: "AVGPrice", Value: bson.D{{Key: "$avg", Value: "$Price"}}},
+				{Key: "STDEV", Value: bson.D{{Key: "$stdDevPop", Value: "$Price"}}},
+				{Key: "ListingsHistory", Value: bson.D{{Key: "$push", Value: "$$ROOT"}}},
+			}},
+		},
+		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$ListingsHistory"}}}},
+		bson.D{
+			{Key: "$match", Value: bson.D{
+				{Key: "$expr", Value: bson.D{
+					{Key: "$gte", Value: bson.A{
+						"$ListingsHistory.Price",
+						bson.D{
+							{Key: "$subtract", Value: bson.A{
+								"$AVGPrice",
+								bson.D{
+									{Key: "$multiply", Value: bson.A{
+										"$STDEV",
+										3,
+									}},
+								},
+							}},
+						},
+					}},
+				}},
+			}},
+		},
+		bson.D{
+			{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: "$ListingsHistory.URL"},
+				{Key: "first", Value: bson.D{{Key: "$min", Value: "$ListingsHistory.Date"}}},
+				{Key: "last", Value: bson.D{{Key: "$max", Value: "$ListingsHistory.Date"}}},
+				{Key: "priceWhenSold", Value: bson.D{{Key: "$last", Value: "$ListingsHistory.Price"}}},
+				{Key: "averagePrice", Value: bson.D{{Key: "$avg", Value: "$ListingsHistory.Price"}}},
+				{Key: "LowestPriceDuringTimePeriod", Value: bson.D{{Key: "$min", Value: "$ListingsHistory.Price"}}},
 			}},
 		},
 		bson.D{

@@ -182,7 +182,7 @@ func formatAggregateFields(Aggregate database.AggregateReport, message string) [
 		Inline: false,
 	}
 	uniqueLitings := discordgo.MessageEmbedField{
-		Name:   "Unique Listins:",
+		Name:   "Unique Listings:",
 		Value:  strconv.Itoa(Aggregate.UniqueListings),
 		Inline: false,
 	}

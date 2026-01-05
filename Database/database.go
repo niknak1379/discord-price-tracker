@@ -67,7 +67,7 @@ func AddItem(itemName string, uri string, query string, Type string, Channel Cha
 	}
 	imgURL := crawler.GetOpenGraphPic(uri)
 	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price,
-		Channel.Lat, Channel.Long, Channel.Distance, Type)
+		Channel.Lat, Channel.Long, Channel.Distance, Type, Channel.LocationCode)
 	slices.SortFunc(ebayListings, func(a, b types.EbayListing) int {
 		return b.Price - a.Price
 	})

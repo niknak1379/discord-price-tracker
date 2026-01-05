@@ -137,7 +137,7 @@ func setSecondHandField(ebayArr []types.EbayListing) []*discordgo.MessageEmbedFi
 
 func formatSecondHandField(Listing types.EbayListing, Message string) []*discordgo.MessageEmbedField {
 	currOrOld := discordgo.MessageEmbedField{
-		Name:   embedSeparatorFormatter(Message, 44),
+		Name:   embedSeparatorFormatter(Message, 43),
 		Value:  "",
 		Inline: false,
 	}
@@ -177,7 +177,7 @@ func formatAggregateFields(Aggregate database.AggregateReport, message string) [
 		LowestPriceDuringTimePeriod int `bson:"LowestPriceDuringTimePeriod"`
 	}*/
 	Message := discordgo.MessageEmbedField{
-		Name:   embedSeparatorFormatter(message, 44),
+		Name:   embedSeparatorFormatter(message, 43),
 		Value:  "",
 		Inline: false,
 	}

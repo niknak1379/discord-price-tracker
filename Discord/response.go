@@ -69,13 +69,13 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		if err != nil {
 			log.Println("could not send face book image", err)
 		}
-		Discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
+		Discord.ChannelFileSend(ChannelID, "second.png", reader)
 	} else {
 		reader, err := os.Open("failoverSS.png")
 		if err != nil {
 			log.Println("could not send ebay picture", err)
 		}
-		Discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
+		Discord.ChannelFileSend(ChannelID, "second.png", reader)
 	}
 	_, err = Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
 		Title:  "Error",
@@ -177,14 +177,14 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 }
 
 func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int, ChannelID string) {
-	newFields := formatSecondHandField(newListing, "New Price")
-	newListing.Price = oldPrice
-	oldFields := formatSecondHandField(newListing, "Old Price")
 	colorCode := 1752220 // aqua
 	if oldPrice < newListing.Price {
 		fmt.Print("new price higher than old price")
 		colorCode = 12745742 // dark gold
 	}
+	newFields := formatSecondHandField(newListing, "New Price")
+	newListing.Price = oldPrice
+	oldFields := formatSecondHandField(newListing, "Old Price")
 	em := discordgo.MessageEmbed{
 		Title:  "Second Hand Listing Price Change",
 		Color:  colorCode,

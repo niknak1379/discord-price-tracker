@@ -2,9 +2,11 @@ package charts
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	database "priceTracker/Database"
+	"strings"
 	"time"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -12,11 +14,28 @@ import (
 	"github.com/go-echarts/snapshot-chromedp/render"
 )
 
-func PriceHistoryChart(Name string, month int, ChannelID string) error {
+func getPriceHistory(Names []string, month int, ChannelID string) ([]*database.Price, error) {
+	var priceList []*database.Price
+	var err error
+	for _, Name := range Names {
+		priceArr, err := database.GetPriceHistory(Name, time.Now().AddDate(0, -month, 0), ChannelID)
+		if err != nil {
+			return priceList, err
+		}
+		for i := range priceArr {
+			priceArr[i].Url = Name + "-" + ExtractDomainName(priceArr[i].Url)
+		}
+		priceList = append(priceList, priceArr...)
+
+	}
+	return priceList, err
+}
+
+func PriceHistoryChart(Names []string, month int, ChannelID string) error {
 	line := charts.NewLine()
-	priceList, err := database.GetPriceHistory(Name, time.Now().AddDate(0, -month, 0), ChannelID)
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
+	priceList, err := getPriceHistory(Names, month, ChannelID)
 	if err != nil || len(priceList) == 0 {
 		if len(priceList) == 0 {
 			err = errors.New("no price history was found for the requested item")
@@ -26,7 +45,7 @@ func PriceHistoryChart(Name string, month int, ChannelID string) error {
 
 	line.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{
-			Title: Name,
+			Title: "Price Chart",
 			TitleStyle: &opts.TextStyle{
 				Color:      "Black",
 				FontWeight: "bold",
@@ -126,4 +145,19 @@ func PriceHistoryChart(Name string, month int, ChannelID string) error {
 	err = render.MakeChartSnapshot(line.RenderContent(), "my-chart.png")
 
 	return err
+}
+
+func ExtractDomainName(url string) string {
+	// Remove protocol
+	url = strings.TrimPrefix(url, "https://")
+	url = strings.TrimPrefix(url, "http://")
+
+	fmt.Println(url)
+	// Remove www.
+	url = strings.TrimPrefix(url, "www.")
+
+	fmt.Println(url)
+	// Split by . and get first part
+	parts := strings.Split(url, ".")
+	return parts[0]
 }

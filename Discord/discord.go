@@ -201,6 +201,32 @@ var (
 			},
 		},
 		{
+			Name:        "graph-compare",
+			Description: "graph price of items",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "name1",
+					Description:  "Add item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:         "name2",
+					Description:  "Add item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:        "months",
+					Description: "how long of the history to graph",
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Required:    true,
+				},
+			},
+		},
+		{
 			Name:        "aggregate",
 			Description: "Get Aggregate Data for the Used Listings of the Item",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -500,7 +526,56 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			// get command inputs from discord
 			logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 			logger.Info("options", slog.Any("optoin", options))
-			err := charts.PriceHistoryChart(options[0].StringValue(), int(options[1].IntValue()), i.ChannelID)
+			err := charts.PriceHistoryChart([]string{options[0].StringValue()}, int(options[1].IntValue()), i.ChannelID)
+			if err != nil {
+				log.Print(err)
+				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Content: fmt.Sprint(err),
+				})
+			} else {
+				reader, err := os.Open("my-chart.png")
+				if err != nil {
+					log.Println(err)
+				}
+				File := discordgo.File{
+					Name:        "chart.png",
+					ContentType: "Image",
+					Reader:      reader,
+				}
+				_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Files: []*discordgo.File{&File},
+				})
+				if err != nil {
+					fmt.Printf("Error sending follow-up message: %v\n", err)
+				}
+			}
+		}
+	},
+	"graph-compare": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		options := i.ApplicationCommandData().Options
+		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+		// handle autocomplete for name and normal request
+		switch i.Type {
+
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			switch {
+			case options[0].Focused:
+				logger.Info("auto complete interaction coming in", slog.Any("option", options))
+				autoComplete(options[0].StringValue(), 0, i, discord)
+			case options[1].Focused:
+				autoComplete(options[1].StringValue(), 0, i, discord)
+			}
+
+		default:
+			// set up response to discord client
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
+			// get command inputs from discord
+			logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+			logger.Info("options", slog.Any("optoin", options))
+			err := charts.PriceHistoryChart([]string{options[0].StringValue(), options[1].StringValue()}, int(options[2].IntValue()), i.ChannelID)
 			if err != nil {
 				log.Print(err)
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
@@ -538,16 +613,20 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
 			// get command inputs from discord
+			//
+			endDate := time.Now().AddDate(0, -1*int(options[2].IntValue()), 0)
 			Aggregate, err := database.GenerateSecondHandPriceReport(
 				options[0].StringValue(),
-				time.Now().AddDate(0, int(options[2].IntValue()), 0),
+				endDate,
 				int(options[1].IntValue())*30, i.ChannelID)
 			content := ""
 			var fields []*discordgo.MessageEmbedField
 			if err != nil {
 				content = err.Error()
 			} else {
-				fields = formatAggregateFields(Aggregate, fmt.Sprintf("%d Month Aggregate", int(options[1].IntValue())))
+				startDate := endDate.AddDate(0, 0, -30*int(options[1].IntValue()))
+				message := startDate.Format("2006-01-02") + " - " + endDate.Format("2006-01-02")
+				fields = formatAggregateFields(Aggregate, message)
 			}
 			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 				Content: content,

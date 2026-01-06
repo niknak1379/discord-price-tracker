@@ -66,16 +66,19 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	fmt.Println("logging ebay existance", strings.Contains(err.Error(), "ebay"))
 	if strings.Contains(err.Error(), "facebook") {
 		reader, err := os.Open("second.png")
+		reader2, err := os.Open("first.png")
 		if err != nil {
 			log.Println("could not send face book image", err)
 		}
 		Discord.ChannelFileSend(ChannelID, "second.png", reader)
+		Discord.ChannelFileSend(ChannelID, "first.png", reader2)
 	} else {
 		reader, err := os.Open("failoverSS.png")
 		if err != nil {
 			log.Println("could not send ebay picture", err)
 		}
-		Discord.ChannelFileSend(ChannelID, "second.png", reader)
+		Discord.ChannelFileSend(ChannelID, "failoverSS.png", reader)
+
 	}
 	_, err = Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
 		Title:  "Error",

@@ -82,7 +82,7 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 								bson.D{
 									{Key: "$multiply", Value: bson.A{
 										"$STDEV",
-										3,
+										6,
 									}},
 								},
 							}},
@@ -154,7 +154,7 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 								bson.D{
 									{Key: "$multiply", Value: bson.A{
 										"$STDEV",
-										3,
+										6,
 									}},
 								},
 							}},

@@ -98,7 +98,7 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 	oldEbayListings, _ := database.GetEbayListings(Name, Channel.ChannelID)
 	ListingsMap := map[string]types.EbayListing{} // maps titles to price for checking if price exists or was updated
 	for _, Listing := range oldEbayListings {
-		ListingsMap[Listing.Title] = Listing
+		ListingsMap[Listing.URL] = Listing
 	}
 	ebayListings, err := crawler.GetSecondHandListings(Name, Price,
 		Channel.Lat, Channel.Long, Channel.Distance, Type, Channel.LocationCode)
@@ -106,7 +106,7 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 		discord.CrawlErrorAlert(Name, "Second Hand Listings", err, Channel.ChannelID)
 	}
 	for _, newListing := range ebayListings {
-		oldListing, ok := ListingsMap[newListing.Title]
+		oldListing, ok := ListingsMap[newListing.URL]
 		// if listing not found in the old list, or if price changed
 		// ping discord
 		if !ok || oldListing.Price != newListing.Price {

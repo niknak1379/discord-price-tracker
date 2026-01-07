@@ -85,6 +85,25 @@ var (
 			},
 		},
 		{
+			Name:        "suppress",
+			Description: "Suppress notifications for this item",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "name",
+					Description:  "Add item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:        "suppress",
+					Description: "bool, wether to suppress or not",
+					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Required:    true,
+				},
+			},
+		},
+		{
 			Name:        "get",
 			Description: "Add all links for the item",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -352,7 +371,29 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		}
 	},
 
-	"get": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"suppress": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoComplete(options[0].StringValue(), 0, i, discord)
+		default:
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
+			// add tracker to database
+			err := database.EditSuppress(options[0].StringValue(), options[1].BoolValue(), i.ChannelID)
+			content := ""
+			if err != nil {
+				content = err.Error()
+			} else {
+				content = fmt.Sprintf("Price Update Notification Status: %t", options[1].BoolValue())
+			}
+			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+				Content: content,
+			})
+		}
+	}, "get": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
 		// 0 is item name, 1 is uri, 2 is htmlqueryselector

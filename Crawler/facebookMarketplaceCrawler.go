@@ -109,7 +109,8 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 	}
 	// <------------------ sanitize the list ------------>
 	for i := range items {
-		if titleCorrectnessCheck(items[i].Title, Name) && items[i].Price != 0 {
+		if titleCorrectnessCheck(items[i].Title, Name) && items[i].Price != 0 && 
+		items[i].Price < desiredPrice{
 			distance, distStr, err := ValidateDistance(items[i].Condition, homeLat,
 				homeLong, maxDistance)
 			if err != nil || !distance {

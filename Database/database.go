@@ -36,16 +36,17 @@ type AggregateReport struct {
 	LowestPriceDuringTimePeriod int `bson:"LowestPriceDuringTimePeriod"`
 }
 type Item struct {
-	Name               string              `bson:"Name"`
-	TrackingList       []TrackingInfo      `bson:"TrackingList"`
-	LowestPrice        Price               `bson:"LowestPrice"`
-	PriceHistory       []Price             `bson:"PriceHistory"`
-	CurrentLowestPrice Price               `bson:"CurrentLowestPrice"`
-	Type               string              `bson:"Type"`
-	ImgURL             string              `bson:"ImgURL"`
-	EbayListings       []types.EbayListing `bson:"EbayListings"`
-	ListingsHistory    []types.EbayListing `bson:"ListingsHistory"`
-	SevenDayAggregate  AggregateReport     `bson:"SevenDayAggregate"`
+	Name                  string              `bson:"Name"`
+	TrackingList          []TrackingInfo      `bson:"TrackingList"`
+	LowestPrice           Price               `bson:"LowestPrice"`
+	PriceHistory          []Price             `bson:"PriceHistory"`
+	CurrentLowestPrice    Price               `bson:"CurrentLowestPrice"`
+	Type                  string              `bson:"Type"`
+	ImgURL                string              `bson:"ImgURL"`
+	EbayListings          []types.EbayListing `bson:"EbayListings"`
+	ListingsHistory       []types.EbayListing `bson:"ListingsHistory"`
+	SevenDayAggregate     AggregateReport     `bson:"SevenDayAggregate"`
+	SuppressNotifications bool                `bson:"SuppressNotifications"`
 }
 
 var (
@@ -74,15 +75,16 @@ func AddItem(itemName string, uri string, query string, Type string, Channel Cha
 	arr := []TrackingInfo{t}
 	PriceArr := []Price{p}
 	i := Item{
-		Name:               itemName,
-		ImgURL:             imgURL,
-		LowestPrice:        p,
-		Type:               Type,
-		TrackingList:       arr,
-		PriceHistory:       PriceArr,
-		CurrentLowestPrice: p,
-		EbayListings:       ebayListings,
-		ListingsHistory:    ebayListings,
+		Name:                  itemName,
+		ImgURL:                imgURL,
+		LowestPrice:           p,
+		Type:                  Type,
+		TrackingList:          arr,
+		PriceHistory:          PriceArr,
+		CurrentLowestPrice:    p,
+		EbayListings:          ebayListings,
+		ListingsHistory:       ebayListings,
+		SuppressNotifications: false,
 	}
 	result, err := Table.InsertOne(ctx, i)
 	if err != nil {
@@ -93,6 +95,21 @@ func AddItem(itemName string, uri string, query string, Type string, Channel Cha
 	UpdateAggregateReport(itemName, Channel.ChannelID)
 	i, err = GetItem(itemName, Channel.ChannelID)
 	return i, err
+}
+
+func EditSuppress(Name string, Suppress bool, ChannelID string) error {
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		log.Print("Could not load Channel from DB")
+		return err
+	}
+	update := bson.M{
+		"$set": bson.M{
+			"SuppressNotifications": Suppress,
+		},
+	}
+	res := Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update)
+	return res.Err()
 }
 
 func EditName(oldName string, newName string, ChannelID string) (Item, error) {

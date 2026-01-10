@@ -112,6 +112,7 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 		//
 		// update how long the listing has been online for
 		if ok {
+			fmt.Println("old duration, new Duration", oldListing.Duration, oldListing.Duration + 4*time.Hour)
 			newListing.Duration = oldListing.Duration + 4*time.Hour
 		}
 		if !Suppress && (!ok || oldListing.Price != newListing.Price) {

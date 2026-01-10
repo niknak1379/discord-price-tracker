@@ -156,6 +156,13 @@ func formatSecondHandField(Listing types.EbayListing, Message string) []*discord
 		Value:  truncateString(Listing.URL, MaxFieldValueLen),
 		Inline: false,
 	}
+	durationField := discordgo.MessageEmbedField{
+		Value: strconv.Itoa(int(Listing.Duration/24)) + "Days and " +
+			strconv.Itoa(int(Listing.Duration%24)) + "Hours",
+		Name:   "Listing Online For:",
+		Inline: false,
+	}
+
 	separatorField := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter("", 44),
 		Value:  "",
@@ -163,7 +170,7 @@ func formatSecondHandField(Listing types.EbayListing, Message string) []*discord
 	}
 
 	var ret []*discordgo.MessageEmbedField
-	return append(ret, &currOrOld, &priceField, &conditionField, &urlField, &separatorField)
+	return append(ret, &currOrOld, &priceField, &conditionField, &urlField, &durationField, &separatorField)
 }
 
 func formatAggregateFields(Aggregate database.AggregateReport, message string) []*discordgo.MessageEmbedField {

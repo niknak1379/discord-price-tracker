@@ -121,6 +121,7 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 			Title:     title,
 			Condition: condition,
 			Date:      crawlDate,
+			Duration:  0,
 		}
 		logger.Info("listing", slog.Any("ebay listing information", listing))
 		listingArr = append(listingArr, listing)

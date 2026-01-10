@@ -109,8 +109,8 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 	}
 	// <------------------ sanitize the list ------------>
 	for i := range items {
-		if titleCorrectnessCheck(items[i].Title, Name) && items[i].Price != 0 && 
-		items[i].Price < desiredPrice{
+		if titleCorrectnessCheck(items[i].Title, Name) && items[i].Price != 0 &&
+			items[i].Price < desiredPrice {
 			distance, distStr, err := ValidateDistance(items[i].Condition, homeLat,
 				homeLong, maxDistance)
 			if err != nil || !distance {
@@ -121,6 +121,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 			items[i].Condition += " " + distStr
 			items[i].URL = strings.Split(items[i].URL, "?ref")[0]
 			items[i].Date = crawlDate
+			items[i].Duration = 0
 			fmt.Println("appending facebook listing for", items[i].Title, items[i].Condition)
 			retArr = append(retArr, items[i])
 		} else {

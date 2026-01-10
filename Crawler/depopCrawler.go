@@ -69,6 +69,7 @@ func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
 				Condition: Name,
 				URL:       productURL,
 				Date:      crawlDate,
+				Duration:  0,
 			}
 			logger.Info("listing", slog.Any("depop listing information", Listing))
 			retArr = append(retArr, Listing)

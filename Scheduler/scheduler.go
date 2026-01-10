@@ -96,9 +96,9 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Pric
 
 func handleEbayListingsUpdate(Name string, Price int, Type string, Channel database.Channel, Suppress bool) {
 	oldEbayListings, _ := database.GetEbayListings(Name, Channel.ChannelID)
-	ListingsMap := map[string]types.EbayListing{} // maps titles to price for checking if price exists or was updated
+	ListingsMap := map[string]*types.EbayListing{} // maps titles to price for checking if price exists or was updated
 	for _, Listing := range oldEbayListings {
-		ListingsMap[Listing.URL] = Listing
+		ListingsMap[Listing.URL] = &Listing
 	}
 	ebayListings, err := crawler.GetSecondHandListings(Name, Price,
 		Channel.Lat, Channel.Long, Channel.Distance, Type, Channel.LocationCode)

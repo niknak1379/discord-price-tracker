@@ -157,8 +157,8 @@ func formatSecondHandField(Listing types.EbayListing, Message string) []*discord
 		Inline: false,
 	}
 	durationField := discordgo.MessageEmbedField{
-		Value: strconv.Itoa(int(Listing.Duration/24)) + " Days and " +
-			strconv.Itoa(int(Listing.Duration%24)) + " Hours",
+		Value: strconv.Itoa(int(Listing.Duration.Hours()/24)) + " Days and " +
+			strconv.Itoa(int(Listing.Duration.Hours())%24) + " Hours",
 		Name:   "Listing Online For:",
 		Inline: false,
 	}

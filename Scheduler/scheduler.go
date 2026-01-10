@@ -105,22 +105,22 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 	if err != nil {
 		discord.CrawlErrorAlert(Name, "Second Hand Listings", err, Channel.ChannelID)
 	}
-	for _, newListing := range ebayListings {
-		oldListing, ok := ListingsMap[newListing.URL]
+	for i := range ebayListings {
+		oldListing, ok := ListingsMap[ebayListings[i].URL]
 		// if listing not found in the old list, or if price changed
 		// ping discord
 		//
 		// update how long the listing has been online for
 		if ok {
 			fmt.Println("old duration, new Duration", oldListing.Duration, oldListing.Duration + 4*time.Hour)
-			newListing.Duration = oldListing.Duration + 4*time.Hour
+			ebayListings[i].Duration = oldListing.Duration + 4*time.Hour
 		}
-		if !Suppress && (!ok || oldListing.Price != newListing.Price) {
-			if ok && newListing.Price != oldListing.Price {
-				fmt.Println("calling new ebay listing with old price of and new price of", oldListing.Price, newListing.Price)
-				discord.EbayListingPriceChangeAlert(newListing, oldListing.Price, Channel.ChannelID)
+		if !Suppress && (!ok || oldListing.Price != ebayListings[i].Price) {
+			if ok && ebayListings[i].Price != oldListing.Price {
+				fmt.Println("calling new ebay listing with old price of and new price of", oldListing.Price, ebayListings[i].Price)
+				discord.EbayListingPriceChangeAlert(ebayListings[i], oldListing.Price, Channel.ChannelID)
 			} else {
-				discord.NewEbayListingAlert(newListing, Channel.ChannelID)
+				discord.NewEbayListingAlert(ebayListings[i], Channel.ChannelID)
 			}
 		}
 	}

@@ -161,10 +161,10 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 		}
 	}
 	// exludes titles that have these key words
-	excludeArr := [12]string{
+	excludeArr := [13]string{
 		`\bfor parts\b`, `\bbroken\b`, `\baccessories\b`,
-		`\bbox only\b`, `\bempty box\b`, `\bcable\b`, `\bdongle\b`,
-		`\bkids\b`, `\bjunior\b`, `\bread\b`, `\bstand\b`, `\badapter\b`,
+		`\bbox\b`, `\bempty box\b`, `\bcable\b`, `\bdongle\b`,
+		`\bkids\b`, `\bjunior\b`, `\bread\b`, `\bstand\b`, `\badapter\b`, `\bdefective\b`,
 	}
 	for _, excludeQuery := range excludeArr {
 		query, _ := regexp.MatchString(excludeQuery, listingTitle)

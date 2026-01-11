@@ -465,11 +465,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 
 		for _, Item := range getRes {
 			em := setEmbed(Item)
-			/* _, err := discord.ChannelMessageSendEmbeds(i.ChannelID, em) */
-			_, err := discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-				Embeds: em,
-			})
-			fmt.Println("error from list", err)
+			for _, embed := range em {
+				discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+			}
 		}
 		if len(getRes) == 0 {
 			_, err := discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{

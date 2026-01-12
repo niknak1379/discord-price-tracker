@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"math"
 	"math/rand/v2"
 	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
+	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 	"time"
 
@@ -18,13 +20,13 @@ func SetChannelScheduler(ctx context.Context) {
 	// -------------------- set timer for daily scrapping -------------//
 	println("printing tables:", database.Tables)
 	now := time.Now()
-	fmt.Println("first crawl start time", now)
+	logger.Logger.Info("first crawl start time", slog.Any("start time", now))
 	for _, Channel := range database.Coordinates {
 		updateAllPrices(Channel)
 	}
 	finishTime := time.Since(now)
-	log.Printf("first crawl took %.2f hours and %.2f minutes", finishTime.Hours(), finishTime.Minutes())
-
+	s := fmt.Sprintf("first crawl took %.2f hours and %.2f minutes", finishTime.Hours(), finishTime.Minutes())
+	logger.Logger.Debug(s)
 	ticker := time.NewTicker(4 * time.Hour)
 	log.Println("setting ticker in crawler")
 	defer ticker.Stop()
@@ -112,12 +114,10 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 		//
 		// update how long the listing has been online for
 		if ok {
-			fmt.Println("old duration, new Duration", oldListing.Duration, oldListing.Duration + 4*time.Hour)
 			ebayListings[i].Duration = oldListing.Duration + 4*time.Hour
 		}
 		if !Suppress && (!ok || oldListing.Price != ebayListings[i].Price) {
 			if ok && ebayListings[i].Price != oldListing.Price {
-				fmt.Println("calling new ebay listing with old price of and new price of", oldListing.Price, ebayListings[i].Price)
 				discord.EbayListingPriceChangeAlert(ebayListings[i], oldListing.Price, Channel.ChannelID)
 			} else {
 				discord.NewEbayListingAlert(ebayListings[i], Channel.ChannelID)
@@ -126,7 +126,8 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 	}
 	err = database.UpdateEbayListings(Name, ebayListings, Channel.ChannelID)
 	if err != nil {
-		log.Print("error updaing DB in ebay listing", err, Name)
+		logger.Logger.Error("error updaing DB in ebay listing", 
+			slog.Any("Error", err), slog.String("Name", Name))
 		discord.CrawlErrorAlert(Name, "www.ebay.com/DBError", err, Channel.ChannelID)
 		return
 	}

@@ -1,11 +1,11 @@
 package discord
 
 import (
-	"fmt"
 	"log"
 	"math"
 	"os"
 	database "priceTracker/Database"
+	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 	"strings"
 	"time"
@@ -14,7 +14,7 @@ import (
 )
 
 func ready(discord *discordgo.Session, ready *discordgo.Ready) {
-	fmt.Println("Logged in")
+	logger.Logger.Info("Discord Logged in")
 	discord.UpdateGameStatus(1, "stonks")
 }
 
@@ -63,7 +63,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	var Fields []*discordgo.MessageEmbedField
 	Fields = append(Fields, &nameField, &urlField, &errField)
 	// <--------------- send screenshots of failed crawl --------->
-	fmt.Println("logging ebay existance", strings.Contains(err.Error(), "ebay"))
+	
 	if strings.Contains(err.Error(), "facebook") {
 		reader, err := os.Open("second.png")
 		reader2, err := os.Open("first.png")
@@ -80,18 +80,14 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		Discord.ChannelFileSend(ChannelID, "failoverSS.png", reader)
 
 	}
-	_, err = Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
+	Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
 		Title:  "Error",
 		Fields: Fields,
 		Color:  10038562, // red
 	})
-	if err != nil {
-		fmt.Println(err.Error())
-	}
 }
 
 func SendGraphPng(discord *discordgo.Session, ChannelID string) {
-	// content := fmt.Sprintf("Chart for Product named %s for the last %d months", productName, months)
 	reader, err := os.Open("my-chart.png")
 	if err != nil {
 		log.Fatal(err)
@@ -101,7 +97,6 @@ func SendGraphPng(discord *discordgo.Session, ChannelID string) {
 
 func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *discordgo.Session) {
 	var choices []*discordgo.ApplicationCommandOptionChoice
-	fmt.Println("auto being run", Name)
 	var items []string
 	// t int value 0 maps to name type, 1 to url type, 2 to css
 	switch t {
@@ -118,7 +113,6 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 					Name:  "item too long" + item[8:20],
 					Value: "place holder",
 				}
-				log.Println("printing from auto complete", item)
 				choices = append(choices, &choice)
 				continue
 			}
@@ -127,7 +121,6 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 				Name:  item,
 				Value: item,
 			}
-			log.Println("printing from auto complete", item, len(item))
 			choices = append(choices, &choice)
 		}
 		err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -182,7 +175,6 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int, ChannelID string) {
 	colorCode := 1752220 // aqua
 	if oldPrice < newListing.Price {
-		fmt.Print("new price higher than old price")
 		colorCode = 12745742 // dark gold
 	}
 	newFields := formatSecondHandField(newListing, "New Price")

@@ -3,11 +3,10 @@ package database
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"log/slog"
-	"os"
 	crawler "priceTracker/Crawler"
+	logger "priceTracker/Logger"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -25,7 +24,6 @@ type Channel struct {
 var (
 	Tables      = make(map[string]*mongo.Collection)
 	Coordinates = make(map[string]Channel)
-	logger      = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 )
 
 func loadDBTables() {
@@ -39,7 +37,7 @@ func loadDBTables() {
 	if err != nil {
 		log.Panic("could not read ChannelID results")
 	}
-	logger.Info("channels", slog.Any("IDs:", ChannelsArr))
+	logger.Logger.Info("channels", slog.Any("IDs:", ChannelsArr))
 	for _, IDString := range ChannelsArr {
 		table := Client.Database("tracker").Collection(IDString.ChannelID)
 		Tables[IDString.ChannelID] = table
@@ -133,7 +131,9 @@ func ChannelDeleteHandler(ChannelID string) {
 func loadChannelTable(ChannelID string) (*mongo.Collection, error) {
 	Table, ok := Tables[ChannelID]
 	if !ok {
-		fmt.Println("channel does not exist have to call setup first")
+		logger.Logger.Error("failed load Channel, channel has to be setup", 
+			slog.String("ChannelID", ChannelID),
+		)
 		//<------ make this a specific error that propogates
 		// that forces the crawl thing to send error?
 		err := errors.New("channel not found in db, call setup function first")

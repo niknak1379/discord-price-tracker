@@ -2,11 +2,12 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"log/slog"
 	"net/url"
 	"os"
 	crawler "priceTracker/Crawler"
+	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 	"slices"
 	"time"
@@ -127,10 +128,12 @@ func EditName(oldName string, newName string, ChannelID string) (Item, error) {
 	}).SetReturnDocument(options.After)
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
 	if err != nil {
-		fmt.Println("error changing name of item, ", oldName)
+		logger.Logger.Error("failed to change name of title", 
+			slog.String("Name", oldName),
+			slog.Any("value", err),
+		)
 		return Item{}, err
 	}
-	fmt.Println("logging res", res)
 	return res, err
 }
 
@@ -464,7 +467,7 @@ func InitDB(context context.Context) {
 		panic(err)
 	}
 	loadDBTables()
-	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
+	logger.Logger.Info("DB Successfully Pinged")
 }
 
 func validateURI(uri string, querySelector string) (Price, TrackingInfo, error) {

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 	"strings"
 	"time"
@@ -21,7 +22,6 @@ import (
 func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong float64,
 	maxDistance int, itemType string, LocationCode string,
 ) ([]types.EbayListing, error) {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	var depop []types.EbayListing
 	var err3 error
 	if itemType == "Clothes" {
@@ -32,12 +32,14 @@ func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong flo
 	ebay, err := GetEbayListings(Name, Price)
 
 	if err != nil || err2 != nil || err3 != nil {
-		fmt.Println("errors from getting second hand listing", err, err2)
+		logger.Logger.Error("errors from getting second hand listing", 
+			slog.Any("Ebay error", err),
+			slog.Any("Facebook Marketplace Error", err2),
+			slog.Any("Depop Error", err3),
+		)
 	}
 	retArr := append(ebay, fb...)
 	retArr = append(retArr, depop...)
-
-	logger.Info("listing", slog.Any("Listing Values", retArr))
 	return retArr, errors.Join(err, err2)
 }
 
@@ -54,7 +56,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 ) ([]types.EbayListing, error) {
 	crawlDate := time.Now()
 	url := FacebookURLGenerator(Name, desiredPrice, LocationCode)
-	fmt.Println("crawling ", url)
+	logger.Logger.Info("crawling facebook marketplace URL", slog.String("URL", url))
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
@@ -102,7 +104,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 
 	var retArr []types.EbayListing
 	if err != nil {
-		fmt.Println(err)
+		logger.Logger.Error("Error in marketplace", slog.Any("error value", err))
 		return retArr, err
 	} else if len(items) == 0 {
 		return retArr, errors.New("no items returned from facebook, check screenshots for sanity check")
@@ -114,7 +116,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 			distance, distStr, err := ValidateDistance(items[i].Condition, homeLat,
 				homeLong, maxDistance)
 			if err != nil || !distance {
-				fmt.Println("skipping url distance too long", items[i].URL)
+				logger.Logger.Info("skipping url distance too long", slog.String("url", items[i].URL))
 				continue
 			}
 			items[i].ItemName = Name
@@ -122,18 +124,15 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 			items[i].URL = strings.Split(items[i].URL, "?ref")[0]
 			items[i].Date = crawlDate
 			items[i].Duration = 0
-			fmt.Println("appending facebook listing for", items[i].Title, items[i].Condition)
 			retArr = append(retArr, items[i])
-		} else {
-			fmt.Println("skipping title, criteria not met", items[i].Title)
-		}
+		} 
 	}
 	return retArr, err
 }
 
 func GetCoordinates(Location string) (float64, float64, error) {
 	base := "https://api.geoapify.com/v1/geocode/search?text="
-	// logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	
 	api := "&format=json&apiKey=" + os.Getenv("GEO_API_KEY")
 	query := url.PathEscape(Location)
 	url := base + query + api
@@ -143,31 +142,35 @@ func GetCoordinates(Location string) (float64, float64, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
-		fmt.Println("forming first request err", err)
+		logger.Logger.Error("forming first request err", slog.Any("value", err))
 		return 0, 0, err
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println("faild first request", err)
+		logger.Logger.Error("failed to execute first request", 
+			slog.Any("value", err))
 		return 0, 0, err
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println("reading first body", err)
+		logger.Logger.Error("failed to read first request", 
+			slog.Any("value", err))
 		return 0, 0, err
 	}
 
 	// fmt.Println(string(body))
 	var result GeocodeResponse
 	if err := json.Unmarshal(body, &result); err != nil {
-		fmt.Println("unmarshaling into result object for first request", err)
+		logger.Logger.Error("failed to unmarshal into json first request", 
+			slog.Any("value", err))
 		return 0, 0, err
 	}
 	// logger.Info("listing", slog.Any("Listing marshalled respone from first req", result))
 	if len(result.Results) == 0 {
-		fmt.Println("result is empty")
+		logger.Logger.Error("json result is empty in coordinate", 
+			slog.Any("value", err))
 		return 0, 0, fmt.Errorf("no results found")
 	}
 
@@ -184,6 +187,8 @@ func ValidateDistance(location string, homeLat float64, homeLong float64, maxDis
 
 	targetLat, targetLong, err := GetCoordinates(location)
 	if err != nil {
+		logger.Logger.Error("failed to get coordinates", 
+			slog.Any("value", err))
 		return false, "", err
 	}
 	t := coordinates{
@@ -200,33 +205,36 @@ func ValidateDistance(location string, homeLat float64, homeLong float64, maxDis
 	}
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
-		fmt.Println("converting to json", err)
+		logger.Logger.Error("failed to convert to json", 
+			slog.Any("value", err))
 		return false, "", err
 	}
 	req, err := http.NewRequest(method, url, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		fmt.Println("forming second request", err)
+		logger.Logger.Error("failed to make new request to distance matrix", 
+			slog.Any("value", err))
 		return false, "", err
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println("second request err", err)
+		logger.Logger.Error("failed to execute second request", 
+			slog.Any("value", err))
 		return false, "", err
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println("reading second request err", err)
+		logger.Logger.Error("failed to read first request", 
+			slog.Any("value", err))
 		return false, "", err
 	}
-	// logger.Info("req", slog.Any("req", string(jsonBody)))
-	// fmt.Println("printing second body", string(body))
 	var d distanceRes
 	if err := json.Unmarshal(body, &d); err != nil {
-		fmt.Println("unmarshaling into result object for first request", err)
+		logger.Logger.Error("failed to unmarshal second request", 
+			slog.Any("value", err))
 		return false, "", err
 	}
 	if len(d.Sources_to_targets) == 0 {
@@ -241,7 +249,8 @@ func ValidateDistance(location string, homeLat float64, homeLong float64, maxDis
 	if Distance < float64(maxDistance) {
 		// format time and distance format to be displayed in the discord message
 		retStr := fmt.Sprintf("%.1f miles, currently %d min ETA", Distance, TimeMin)
-		fmt.Println("formatted distance", retStr)
+		logger.Logger.Info("formatted distance and time", 
+			slog.String("format", retStr))
 		return true, retStr, err
 	}
 	return false, "", err

@@ -33,8 +33,6 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 	fields = append(fields, priceFields...)
 	fields = append(fields, lowestPriceField...)
 
-	fmt.Println("total field length for", Item.Name, len(fields))
-
 	// Split fields into embeds based on Discord limits
 	currentFields := []*discordgo.MessageEmbedField{}
 	currentSize := 0
@@ -59,7 +57,6 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 				Type:   discordgo.EmbedTypeRich,
 			}
 			retArr = append(retArr, em)
-			fmt.Printf("Created embed with %d fields, %d chars\n", len(currentFields), currentSize)
 
 			// Reset for next embed
 			currentFields = []*discordgo.MessageEmbedField{}
@@ -84,7 +81,6 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 			Type:   discordgo.EmbedTypeRich,
 		}
 		retArr = append(retArr, em)
-		fmt.Printf("Created final embed with %d fields, %d chars\n", len(currentFields), currentSize)
 	}
 
 	return retArr
@@ -250,7 +246,6 @@ func setPriceField(p *database.Price, message string) []*discordgo.MessageEmbedF
 		Value:  p.Date.Format("2006-01-02"),
 		Inline: false,
 	}
-	fmt.Println(p.Date.Format("2006-01-02"))
 
 	var fields []*discordgo.MessageEmbedField
 	fields = append(fields, &priceField, &urlField, &dateField)

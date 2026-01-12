@@ -8,6 +8,7 @@ import (
 	"os"
 	charts "priceTracker/Charts"
 	database "priceTracker/Database"
+	logger "priceTracker/Logger"
 	"sync"
 	"syscall"
 	"time"
@@ -363,7 +364,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Embeds:  em,
 			})
 			if err != nil {
-				fmt.Println("add took too long, sending separate message", err)
 				for _, embed := range em {
 					discord.ChannelMessageSendEmbed(i.ChannelID, embed)
 				}
@@ -417,7 +417,12 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				// set up response to discord client
 				for _, embed := range em {
 					_, err = discord.ChannelMessageSendEmbed(i.ChannelID, embed)
-					fmt.Println(err)
+					if err != nil{
+						logger.Logger.Error("failed to send embed", 
+							slog.Any("Embed", embed),
+							slog.Any("value", err),
+						)
+					}
 				}
 			}
 		}
@@ -448,9 +453,11 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 
 			for _, embed := range embedArr {
 				_, err = discord.ChannelMessageSendEmbed(i.ChannelID, embed)
-				fmt.Println(err)
 				if err != nil {
-					fmt.Println("err in edit_name", err)
+					logger.Logger.Error("failed to send embed", 
+							slog.Any("Embed", embed),
+							slog.Any("value", err),
+						)
 				}
 			}
 		}
@@ -473,7 +480,11 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			_, err := discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 				Content: "No Items Are Being Tracked in This Channel",
 			})
-			fmt.Println("error from list", err)
+			if err != nil {
+					logger.Logger.Error("Could not send response", 	
+						slog.Any("value", err),
+					)
+				}
 		}
 	},
 	"remove": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -571,8 +582,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
 			// get command inputs from discord
-			logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-			logger.Info("options", slog.Any("optoin", options))
 			err := charts.PriceHistoryChart([]string{options[0].StringValue()}, int(options[1].IntValue()), i.ChannelID)
 			if err != nil {
 				log.Print(err)
@@ -593,22 +602,23 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 					Files: []*discordgo.File{&File},
 				})
 				if err != nil {
-					fmt.Printf("Error sending follow-up message: %v\n", err)
+					if err != nil {
+					logger.Logger.Error("failed to send graph", 
+							slog.Any("value", err),
+						)
+				}
 				}
 			}
 		}
 	},
 	"graph-compare": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
-		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-
 		// handle autocomplete for name and normal request
 		switch i.Type {
 
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			switch {
 			case options[0].Focused:
-				logger.Info("auto complete interaction coming in", slog.Any("option", options))
 				autoComplete(options[0].StringValue(), 0, i, discord)
 			case options[1].Focused:
 				autoComplete(options[1].StringValue(), 0, i, discord)
@@ -620,9 +630,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
 			// get command inputs from discord
-			logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-			logger.Info("options", slog.Any("optoin", options))
-			err := charts.PriceHistoryChart([]string{options[0].StringValue(), options[1].StringValue()}, int(options[2].IntValue()), i.ChannelID)
+			err := charts.PriceHistoryChart([]string{options[0].StringValue(), 
+				options[1].StringValue()}, int(options[2].IntValue()), i.ChannelID)
 			if err != nil {
 				log.Print(err)
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
@@ -642,7 +651,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 					Files: []*discordgo.File{&File},
 				})
 				if err != nil {
-					fmt.Printf("Error sending follow-up message: %v\n", err)
+					logger.Logger.Error("failed to send comparison graph")
 				}
 			}
 		}
@@ -698,7 +707,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 }
 
 func channelDeleteHandler(discord *discordgo.Session, i *discordgo.ChannelDelete) {
-	fmt.Println("Channel being deleted with id: ", i.Channel.ID)
+	logger.Logger.Info("Channel being deleted with id: ", slog.String("ChannelID", i.Channel.ID))
 	database.ChannelDeleteHandler(i.Channel.ID)
 }
 

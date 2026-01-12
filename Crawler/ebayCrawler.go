@@ -6,7 +6,6 @@ import (
 	"log"
 	"log/slog"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	// "log/slog"
 
 	// "os"
+	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 
 	"github.com/gocolly/colly/v2"
@@ -23,7 +23,6 @@ type GeocodeResponse struct {
 	Results []Location `json:"results"`
 }
 
-var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 type Location struct {
 	Lat float64 `json:"lat"`
@@ -71,7 +70,7 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 
 		// check to see if listing is viable
 		if !titleCorrectnessCheck(title, Name) {
-			fmt.Println("skipping title criteria not met", title)
+			logger.Logger.Info("skipping title criteria not met", slog.String("Title", title))
 			return
 		}
 		condition := e.ChildText("div.s-card__subtitle")
@@ -105,11 +104,11 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 		link := e.ChildAttr("a.s-card__link", "href")
 		// skip item if any errors are met
 		if basePrice == 0 || err != nil {
-			log.Print("price 0 something is wrong for", err, basePrice+shippingCost, link)
+			logger.Logger.Warn("price 0 something is wrong for", slog.Any("Error", err), 
+				slog.Int("baseprice", basePrice), slog.String("URL", link))
 			return
-		}
-		if basePrice+shippingCost >= desiredPrice {
-			fmt.Println("price too high skipping")
+		} else if basePrice+shippingCost >= desiredPrice {
+			logger.Logger.Info("price too high skipping title", slog.String("Title", title))
 			return
 		}
 
@@ -123,7 +122,7 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 			Date:      crawlDate,
 			Duration:  0,
 		}
-		logger.Info("listing", slog.Any("ebay listing information", listing))
+		logger.Logger.Info("listing", slog.Any("ebay listing information", listing))
 		listingArr = append(listingArr, listing)
 	})
 	err := c.Visit(url)
@@ -181,16 +180,13 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 func getCanonicalURL(c *colly.Collector, url string) string {
 	retURL := url
 	parsed := false
-	fmt.Println("getting canonical url for", url)
 	c.OnHTML("link[rel='canonical']", func(e *colly.HTMLElement) {
 		retURL = e.Attr("href")
-		fmt.Println("got new link", retURL)
 		parsed = true
 	})
 	err := c.Visit(url)
 	if err != nil || !parsed {
 		// already have a url if it fails its fine
-		fmt.Println("error or not parsed in canonical", err, parsed)
 		return retURL
 	}
 	return retURL

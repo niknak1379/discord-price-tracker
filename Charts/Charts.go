@@ -2,10 +2,9 @@ package charts
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
-	"os"
 	database "priceTracker/Database"
+	logger "priceTracker/Logger"
 	"slices"
 	"strings"
 	"time"
@@ -37,7 +36,7 @@ func getPriceHistory(Names []string, month int, ChannelID string) ([]*database.P
 
 func PriceHistoryChart(Names []string, month int, ChannelID string) error {
 	line := charts.NewLine()
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	
 
 	priceList, err := getPriceHistory(Names, month, ChannelID)
 	if err != nil || len(priceList) == 0 {
@@ -134,9 +133,9 @@ func PriceHistoryChart(Names []string, month int, ChannelID string) error {
 
 		result[url] = aligned
 	}
-	logger.Info("dates", slog.Any("dates", dates))
+	//logger.Logger.Info("dates", slog.Any("dates", dates))
 	for url, data := range result {
-		logger.Info("make chart, adding series data for", slog.Any(url, data))
+		logger.Logger.Info("make chart, adding series data for", slog.Any(url, data))
 		line.AddSeries(url, data)
 	}
 
@@ -155,12 +154,8 @@ func ExtractDomainName(url string) string {
 	// Remove protocol
 	url = strings.TrimPrefix(url, "https://")
 	url = strings.TrimPrefix(url, "http://")
-
-	fmt.Println(url)
 	// Remove www.
 	url = strings.TrimPrefix(url, "www.")
-
-	fmt.Println(url)
 	// Split by . and get first part
 	parts := strings.Split(url, ".")
 	return parts[0]

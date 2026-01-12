@@ -4,13 +4,13 @@ import (
 	// "context"
 
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"sync"
 
 	database "priceTracker/Database"
+	logger "priceTracker/Logger"
 	scheduler "priceTracker/Scheduler"
 
 	// crawler "priceTracker/Crawler"
@@ -39,7 +39,7 @@ func main() {
 	log.Println("graceful shutdown setup")
 
 	<-stop
-	fmt.Println("recieved signal, shutting down")
+	logger.Logger.Info("Shutdown")
 	cancel()
 	wg.Wait()
 }

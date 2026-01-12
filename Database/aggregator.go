@@ -1,8 +1,9 @@
 package database
 
 import (
-	"fmt"
 	"log"
+	"log/slog"
+	logger "priceTracker/Logger"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -325,7 +326,10 @@ func UpdateAggregateReport(Name, ChannelID string) error {
 	}
 	AggregateReport, err := GenerateSecondHandPriceReport(Name, time.Now(), 7, ChannelID)
 	if err != nil {
-		fmt.Println("error getting aggregate from generate", err)
+		logger.Logger.Error("failed to get second hand reports for", 
+			slog.Any("error value", err),
+			slog.String("Title", Name),
+		)
 		return err
 	}
 	result := Table.FindOneAndUpdate(ctx, bson.M{
@@ -336,7 +340,8 @@ func UpdateAggregateReport(Name, ChannelID string) error {
 		},
 	})
 	if result.Err() != nil {
-		fmt.Println("could not update item with new aggregate", err)
+		logger.Logger.Error("could not update new aggregate", 
+			slog.Any("value", err))
 		return err
 	}
 	return nil

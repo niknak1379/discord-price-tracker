@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"net/url"
+
+	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 	"time"
 
@@ -27,13 +29,15 @@ func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
 	crawlDate := time.Now()
 	retArr := []types.EbayListing{}
 	visited := false
-	fmt.Println("logging depop url: ", url)
+	logger.Logger.Info("logging depop url", slog.String("Url", url))
 	c.OnHTML("ol[class^='styles_productGrid__'] li", func(e *colly.HTMLElement) {
 		visited = true
 		price, _ := formatPrice(e.ChildText("p.styles_price__H8qdh"))
 		productURL := "https://depop.com" + e.ChildAttr("a", "href")
 		if price > Price {
-			fmt.Println("skipping depop item, price too high", price)
+			logger.Logger.Debug("skipping depop item, price too high", 
+			slog.Int("Desired Price", Price),
+			slog.Int("item price", price))
 			return
 		}
 
@@ -49,8 +53,6 @@ func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
 
 		productCollector.OnHTML("p.styles_textWrapper__v3kxJ", func(pe *colly.HTMLElement) {
 			condition = pe.Text
-			fmt.Println(condition)
-			fmt.Println(Name)
 			if titleCorrectnessCheck(condition, Name) {
 				approved = true
 			}
@@ -71,10 +73,11 @@ func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
 				Date:      crawlDate,
 				Duration:  0,
 			}
-			logger.Info("listing", slog.Any("depop listing information", Listing))
+			logger.Logger.Info("listing", slog.Any("depop listing information", Listing))
 			retArr = append(retArr, Listing)
 		} else {
-			fmt.Println("skipping depop item, title not matched", approved, productURL)
+			logger.Logger.Info("skipping depop item, title not matched or price too high", 
+			slog.String("URL", url))
 		}
 	})
 

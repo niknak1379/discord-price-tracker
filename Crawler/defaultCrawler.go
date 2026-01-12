@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	logger "priceTracker/Logger"
 	"strconv"
 	"strings"
 	"time"
@@ -127,7 +129,7 @@ func ChromeDPFailover(url string, selector string) (int, error) {
 		return 0, fmt.Errorf("selector '%s' not found for url %s, %w", selector, url, err)
 	}
 
-	fmt.Println("ChromeDP found Selector")
+	logger.Logger.Info("ChromeDP found Selector")
 	
 	// Parse price
 	priceText = strings.ReplaceAll(priceText, "$", "")
@@ -151,22 +153,25 @@ func GetOpenGraphPic(url string) string {
 	visited := false
 	imgURL := ""
 	log.Println("logging url", url)
-	if strings.Contains(url, "amazon.com") {
+	if strings.Contains(url, "amazon") {
 		c.OnHTML("img#landingImage", func(e *colly.HTMLElement) {
 			imgURL = e.Attr("src")
-			fmt.Println("OG Image:", imgURL)
 			visited = true
 		})
-	} else {
+	} else if strings.Contains(url, "bestbuy") {
+		c.OnHTML("div.VJYXIrZT4D0Zj6vQ img", func(e *colly.HTMLElement) {
+			imgURL = e.Attr("src")
+			visited = true
+		})
+	}else {
 		c.OnHTML("meta[property='og:image']", func(e *colly.HTMLElement) {
 			imgURL = e.Attr("content")
-			fmt.Println("OG Image:", imgURL)
 			visited = true
 		})
 	}
 	err := c.Visit(url)
 	if err != nil || !visited {
-		fmt.Println("could not get Open Graph picture", err, visited)
+		logger.Logger.Warn("could not get Open Graph picture", slog.Any("ERROR: ", err), slog.Any("Visited: ", visited))
 		return ""
 	}
 	c.Wait()

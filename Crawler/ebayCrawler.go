@@ -22,7 +22,6 @@ type GeocodeResponse struct {
 	Results []Location `json:"results"`
 }
 
-
 type Location struct {
 	Lat float64 `json:"lat"`
 	Lon float64 `json:"lon"`
@@ -103,7 +102,7 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 		link := e.ChildAttr("a.s-card__link", "href")
 		// skip item if any errors are met
 		if basePrice == 0 || err != nil {
-			slog.Warn("price 0 something is wrong for", slog.Any("Error", err), 
+			slog.Warn("price 0 something is wrong for", slog.Any("Error", err),
 				slog.Int("baseprice", basePrice), slog.String("URL", link))
 			return
 		} else if basePrice+shippingCost >= desiredPrice {
@@ -160,7 +159,7 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 	// exludes titles that have these key words
 	excludeArr := [13]string{
 		`\bfor parts\b`, `\bbroken\b`, `\baccessories\b`,
-		`\bbox\b`, `\bempty box\b`, `\bcable\b`, `\bdongle\b`,
+		`\bbox only\b`, `\bempty box\b`, `\bcable\b`, `\bdongle\b`,
 		`\bkids\b`, `\bjunior\b`, `\bread\b`, `\bstand\b`, `\badapter\b`, `\bdefective\b`,
 	}
 	for _, excludeQuery := range excludeArr {

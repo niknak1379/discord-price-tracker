@@ -40,6 +40,7 @@ type Item struct {
 	LowestPrice           Price               `bson:"LowestPrice"`
 	PriceHistory          []Price             `bson:"PriceHistory"`
 	CurrentLowestPrice    Price               `bson:"CurrentLowestPrice"`
+	Timer                 int                 `bson:"Timer"`
 	Type                  string              `bson:"Type"`
 	ImgURL                string              `bson:"ImgURL"`
 	EbayListings          []types.EbayListing `bson:"EbayListings"`
@@ -54,7 +55,7 @@ var (
 	ctx    context.Context
 )
 
-func AddItem(itemName string, uri string, query string, Type string, Channel Channel) (Item, error) {
+func AddItem(itemName string, uri string, query string, Type string, Timer int, Channel Channel) (Item, error) {
 	Table, err := loadChannelTable(Channel.ChannelID)
 	if err != nil {
 		slog.Error("couldnt load channel", slog.Any("Error", err))
@@ -81,6 +82,7 @@ func AddItem(itemName string, uri string, query string, Type string, Channel Cha
 		TrackingList:          arr,
 		PriceHistory:          PriceArr,
 		CurrentLowestPrice:    p,
+		Timer:                 Timer,
 		EbayListings:          ebayListings,
 		ListingsHistory:       ebayListings,
 		SuppressNotifications: false,
@@ -92,6 +94,21 @@ func AddItem(itemName string, uri string, query string, Type string, Channel Cha
 	UpdateAggregateReport(itemName, Channel.ChannelID)
 	i, err = GetItem(itemName, Channel.ChannelID)
 	return i, err
+}
+
+func EditTimer(Name string, NewTimer int, ChannelID string) error {
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		slog.Error("Could not load channel from db", slog.Any("Error", err))
+		return err
+	}
+	update := bson.M{
+		"$set": bson.M{
+			"Timer": NewTimer,
+		},
+	}
+	res := Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update)
+	return res.Err()
 }
 
 func EditSuppress(Name string, Suppress bool, ChannelID string) error {
@@ -124,7 +141,7 @@ func EditName(oldName string, newName string, ChannelID string) (Item, error) {
 	}).SetReturnDocument(options.After)
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
 	if err != nil {
-		slog.Error("failed to change name of title", 
+		slog.Error("failed to change name of title",
 			slog.String("Name", oldName),
 			slog.Any("value", err),
 		)
@@ -192,7 +209,6 @@ func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date 
 		}
 	}
 
-	
 	if newPrice < historicalLow {
 		UpdateLowestHistoricalPrice(Name, price, ChannelID)
 	}
@@ -263,7 +279,7 @@ func GetLowestPrice(Name string, ChannelID string) (Price, error) {
 	if err != nil {
 		return res.LowestPrice, err
 	}
-	
+
 	return res.LowestPrice, err
 }
 

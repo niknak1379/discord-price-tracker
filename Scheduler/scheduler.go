@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"math"
 	"math/rand/v2"
@@ -15,72 +14,90 @@ import (
 )
 
 func SetChannelScheduler(ctx context.Context) {
-	// -------------------- set timer for daily scrapping -------------//
-	now := time.Now()
-	slog.Info("first crawl start time", slog.Any("start time", now))
+	slog.Info("first crawl start time", slog.Any("start time", time.Now()))
+
 	for _, Channel := range database.Coordinates {
-		updateAllPrices(Channel)
+		itemsArr := database.GetAllItems(Channel.ChannelID)
+		for _, item := range itemsArr {
+			// Start goroutine for each item with staggered start
+			r := rand.IntN(120) + 60
+			time.Sleep(time.Duration(r) * time.Second)
+			go itemCrawlRoutine(ctx, *item, Channel)
+		}
 	}
-	finishTime := time.Since(now)
-	s := fmt.Sprintf("first crawl took %.2f hours and %.2f minutes", finishTime.Hours(), finishTime.Minutes())
-	slog.Debug(s)
-	ticker := time.NewTicker(4 * time.Hour)
-	slog.Info("setting ticker in crawler")
+
+	<-ctx.Done()
+	slog.Info("channel scheduler stopping")
+}
+
+func itemCrawlRoutine(ctx context.Context, item database.Item, Channel database.Channel) {
+	// Random delay before first crawl (60-180 seconds)
+	r := rand.IntN(120)
+	time.Sleep(time.Duration(r) * time.Second)
+
+	// Get item's timer or default to 8 hours
+	crawlInterval := time.Duration(item.Timer) * time.Hour
+	if crawlInterval == 0 {
+		crawlInterval = 8 * time.Hour
+	}
+
+	slog.Info("starting item crawl routine",
+		slog.String("item", item.Name),
+		slog.String("interval", crawlInterval.String()))
+
+	ticker := time.NewTicker(crawlInterval)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
+			slog.Info("stopping item crawl routine", slog.String("item", item.Name))
 			return
 		case <-ticker.C:
-			for _, Channel := range database.Coordinates {
-				updateAllPrices(Channel)
-			}
-			slog.Info("ticking")
+			updateSingleItem(item, Channel)
 		}
 	}
 }
 
-func updateAllPrices(Channel database.Channel) {
-	slog.Info("updateAllPrices being fired for channel", 
-		slog.String("ChannelID", Channel.ChannelID))
-	itemsArr := database.GetAllItems(Channel.ChannelID)
-	for _, v := range itemsArr {
-		date := time.Now()
-		currLow := database.Price{
-			Price: math.MaxInt,
-			Url:   "Unavailable From All Sources",
-		}
-		np := database.Price{}
-		for _, t := range v.TrackingList {
-			r := rand.IntN(120)
-			r += r + 60
-			time.Sleep(time.Duration(r) * time.Second)
+func updateSingleItem(item database.Item, Channel database.Channel) {
+	slog.Info("updating item",
+		slog.String("item", item.Name),
+		slog.String("channelID", Channel.ChannelID))
 
-			// updates the price from the price source in the pricearr list of
-			// the document
-			oldLow, err := database.GetLowestHistoricalPrice(v.Name, Channel.ChannelID)
-			if err != nil {
-				continue
-			}
-			np, err = updatePrice(v.Name, t.URI, t.HtmlQuery, oldLow, date, Channel.ChannelID, v.SuppressNotifications)
-			if currLow.Price > np.Price && err == nil {
-				currLow = np
-			}
-		}
-		// keeps track of current lowest price, if a new price has been found
-		// and no errors encountered
-		if currLow.Price != math.MaxInt32 {
-			database.UpdateLowestPrice(v.Name, currLow, Channel.ChannelID)
-		}
-		handleEbayListingsUpdate(v.Name, currLow.Price, v.Type, Channel, v.SuppressNotifications)
-		database.UpdateAggregateReport(v.Name, Channel.ChannelID)
+	date := time.Now()
+	currLow := database.Price{
+		Price: math.MaxInt,
+		Url:   "Unavailable From All Sources",
 	}
+
+	for _, t := range item.TrackingList {
+		// Random delay between sources (60-180 seconds)
+		r := rand.IntN(120) + 60
+		time.Sleep(time.Duration(r) * time.Second)
+
+		oldLow, err := database.GetLowestHistoricalPrice(item.Name, Channel.ChannelID)
+		if err != nil {
+			continue
+		}
+
+		np, err := updatePrice(item.Name, t.URI, t.HtmlQuery, oldLow, date, Channel.ChannelID, item.SuppressNotifications)
+		if currLow.Price > np.Price && err == nil {
+			currLow = np
+		}
+	}
+
+	if currLow.Price != math.MaxInt32 {
+		database.UpdateLowestPrice(item.Name, currLow, Channel.ChannelID)
+	}
+
+	handleEbayListingsUpdate(item.Name, currLow.Price, item.Type, Channel, item.SuppressNotifications)
+	database.UpdateAggregateReport(item.Name, Channel.ChannelID)
 }
 
 func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Price, date time.Time, ChannelID string, Suppress bool) (database.Price, error) {
 	newPrice, err := crawler.GetPrice(URI, HtmlQuery)
 	if err != nil || newPrice == 0 {
-		slog.Error("error getting price in updatePrice", slog.Any("Error", err), 
+		slog.Error("error getting price in updatePrice", slog.Any("Error", err),
 			slog.Int("Returned Price", newPrice))
 		discord.CrawlErrorAlert(Name, URI, err, ChannelID)
 		return database.Price{}, err
@@ -124,7 +141,7 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 	}
 	err = database.UpdateEbayListings(Name, ebayListings, Channel.ChannelID)
 	if err != nil {
-		slog.Error("error updaing DB in ebay listing", 
+		slog.Error("error updaing DB in ebay listing",
 			slog.Any("Error", err), slog.String("Name", Name))
 		discord.CrawlErrorAlert(Name, "www.ebay.com/DBError", err, Channel.ChannelID)
 		return

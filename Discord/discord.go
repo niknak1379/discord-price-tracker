@@ -67,6 +67,13 @@ var (
 					Autocomplete: true,
 				},
 				{
+					Name:         "timer",
+					Description:  "interval between scrapes, in hours",
+					Type:         discordgo.ApplicationCommandOptionInteger,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
 					Name:        "type",
 					Description: "Item Type",
 					Type:        discordgo.ApplicationCommandOptionString,
@@ -99,6 +106,25 @@ var (
 					Name:        "suppress",
 					Description: "bool, wether to suppress or not",
 					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "edit_timer",
+			Description: "Suppress notifications for this item",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "name",
+					Description:  "Add item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:        "timer",
+					Description: "New timer",
+					Type:        discordgo.ApplicationCommandOptionInteger,
 					Required:    true,
 				},
 			},
@@ -346,7 +372,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			// add tracker to database
 			addRes, err := database.AddItem(options[0].StringValue(),
 				options[1].StringValue(), options[2].StringValue(),
-				options[3].StringValue(), database.Coordinates[i.ChannelID])
+				options[4].StringValue(), int(options[3].IntValue()), database.Coordinates[i.ChannelID])
 			if err != nil {
 				content = fmt.Sprint(err)
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
@@ -369,7 +395,29 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 		}
 	},
-
+	"edit_timer": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoComplete(options[0].StringValue(), 0, i, discord)
+		default:
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
+			// add tracker to database
+			err := database.EditTimer(options[0].StringValue(), int(options[1].IntValue()), i.ChannelID)
+			content := ""
+			if err != nil {
+				content = err.Error()
+			} else {
+				content = fmt.Sprintf("Price Update Notification Timer: %d Hours", int(options[1].IntValue()))
+			}
+			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+				Content: content,
+			})
+		}
+	},
 	"suppress": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
@@ -392,7 +440,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Content: content,
 			})
 		}
-	}, "get": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	},
+	"get": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
 		// 0 is item name, 1 is uri, 2 is htmlqueryselector
@@ -416,8 +465,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				// set up response to discord client
 				for _, embed := range em {
 					_, err = discord.ChannelMessageSendEmbed(i.ChannelID, embed)
-					if err != nil{
-						slog.Error("failed to send embed", 
+					if err != nil {
+						slog.Error("failed to send embed",
 							slog.Any("Embed", embed),
 							slog.Any("value", err),
 						)
@@ -453,10 +502,10 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			for _, embed := range embedArr {
 				_, err = discord.ChannelMessageSendEmbed(i.ChannelID, embed)
 				if err != nil {
-					slog.Error("failed to send embed", 
-							slog.Any("Embed", embed),
-							slog.Any("value", err),
-						)
+					slog.Error("failed to send embed",
+						slog.Any("Embed", embed),
+						slog.Any("value", err),
+					)
 				}
 			}
 		}
@@ -480,10 +529,10 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Content: "No Items Are Being Tracked in This Channel",
 			})
 			if err != nil {
-					slog.Error("Could not send response", 	
-						slog.Any("value", err),
-					)
-				}
+				slog.Error("Could not send response",
+					slog.Any("value", err),
+				)
+			}
 		}
 	},
 	"remove": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -601,10 +650,10 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				})
 				if err != nil {
 					if err != nil {
-					slog.Error("failed to send graph", 
+						slog.Error("failed to send graph",
 							slog.Any("value", err),
 						)
-				}
+					}
 				}
 			}
 		}
@@ -628,8 +677,10 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
 			// get command inputs from discord
-			err := charts.PriceHistoryChart([]string{options[0].StringValue(), 
-				options[1].StringValue()}, int(options[2].IntValue()), i.ChannelID)
+			err := charts.PriceHistoryChart([]string{
+				options[0].StringValue(),
+				options[1].StringValue(),
+			}, int(options[2].IntValue()), i.ChannelID)
 			if err != nil {
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 					Content: fmt.Sprint(err),

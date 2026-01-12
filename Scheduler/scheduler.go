@@ -176,7 +176,7 @@ func updateSingleItem(item database.Item, Channel database.Channel) {
 		database.UpdateLowestPrice(item.Name, currLow, Channel.ChannelID)
 	}
 
-	handleEbayListingsUpdate(item.Name, currLow.Price, item.Type, Channel, item.SuppressNotifications)
+	handleEbayListingsUpdate(item.Name, currLow.Price, item.Type, Channel, item.SuppressNotifications, item.Timer)
 	database.UpdateAggregateReport(item.Name, Channel.ChannelID)
 }
 
@@ -197,7 +197,7 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Pric
 	return p, err
 }
 
-func handleEbayListingsUpdate(Name string, Price int, Type string, Channel database.Channel, Suppress bool) {
+func handleEbayListingsUpdate(Name string, Price int, Type string, Channel database.Channel, Suppress bool, timer int) {
 	oldEbayListings, _ := database.GetEbayListings(Name, Channel.ChannelID)
 	ListingsMap := map[string]*types.EbayListing{} // maps titles to price for checking if price exists or was updated
 	for i := range oldEbayListings {
@@ -215,7 +215,7 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 		//
 		// update how long the listing has been online for
 		if ok {
-			ebayListings[i].Duration = oldListing.Duration + 4*time.Hour
+			ebayListings[i].Duration = oldListing.Duration + time.Duration(timer)*time.Hour
 		}
 		if !Suppress && (!ok || oldListing.Price != ebayListings[i].Price) {
 			if ok && ebayListings[i].Price != oldListing.Price {

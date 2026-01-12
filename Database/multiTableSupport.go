@@ -6,7 +6,6 @@ import (
 	"log"
 	"log/slog"
 	crawler "priceTracker/Crawler"
-	logger "priceTracker/Logger"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -37,7 +36,7 @@ func loadDBTables() {
 	if err != nil {
 		log.Panic("could not read ChannelID results")
 	}
-	logger.Logger.Info("channels", slog.Any("IDs:", ChannelsArr))
+	slog.Info("channels", slog.Any("IDs:", ChannelsArr))
 	for _, IDString := range ChannelsArr {
 		table := Client.Database("tracker").Collection(IDString.ChannelID)
 		Tables[IDString.ChannelID] = table
@@ -131,7 +130,7 @@ func ChannelDeleteHandler(ChannelID string) {
 func loadChannelTable(ChannelID string) (*mongo.Collection, error) {
 	Table, ok := Tables[ChannelID]
 	if !ok {
-		logger.Logger.Error("failed load Channel, channel has to be setup", 
+		slog.Error("failed load Channel, channel has to be setup", 
 			slog.String("ChannelID", ChannelID),
 		)
 		//<------ make this a specific error that propogates

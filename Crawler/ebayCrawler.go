@@ -12,7 +12,7 @@ import (
 	// "log/slog"
 
 	// "os"
-	logger "priceTracker/Logger"
+
 	types "priceTracker/Types"
 
 	"github.com/gocolly/colly/v2"
@@ -58,7 +58,7 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
 
-	logger.Logger.Info(url)
+	slog.Info(url)
 	var listingArr []types.EbayListing
 	crawlDate := time.Now()
 	visited := false
@@ -69,7 +69,7 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 
 		// check to see if listing is viable
 		if !titleCorrectnessCheck(title, Name) {
-			logger.Logger.Info("skipping title criteria not met", slog.String("Title", title))
+			slog.Info("skipping title criteria not met", slog.String("Title", title))
 			return
 		}
 		condition := e.ChildText("div.s-card__subtitle")
@@ -103,11 +103,11 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 		link := e.ChildAttr("a.s-card__link", "href")
 		// skip item if any errors are met
 		if basePrice == 0 || err != nil {
-			logger.Logger.Warn("price 0 something is wrong for", slog.Any("Error", err), 
+			slog.Warn("price 0 something is wrong for", slog.Any("Error", err), 
 				slog.Int("baseprice", basePrice), slog.String("URL", link))
 			return
 		} else if basePrice+shippingCost >= desiredPrice {
-			logger.Logger.Info("price too high skipping title", slog.String("Title", title))
+			slog.Info("price too high skipping title", slog.String("Title", title))
 			return
 		}
 
@@ -121,7 +121,7 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 			Date:      crawlDate,
 			Duration:  0,
 		}
-		logger.Logger.Info("listing", slog.Any("ebay listing information", listing))
+		slog.Info("listing", slog.Any("ebay listing information", listing))
 		listingArr = append(listingArr, listing)
 	})
 	err := c.Visit(url)

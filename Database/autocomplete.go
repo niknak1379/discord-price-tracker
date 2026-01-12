@@ -3,7 +3,6 @@ package database
 import (
 	"log"
 	"log/slog"
-	logger "priceTracker/Logger"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -43,7 +42,7 @@ func FuzzyMatchName(Name string, ChannelID string) []string {
 
 	cursor, err := Table.Aggregate(ctx, pipeline)
 	if err != nil {
-		logger.Logger.Error("Error", slog.Any("Error", err))
+		slog.Error("Error", slog.Any("Error", err))
 	}
 	defer cursor.Close(ctx)
 	names := make([]string, 0)
@@ -51,7 +50,7 @@ func FuzzyMatchName(Name string, ChannelID string) []string {
 	for cursor.Next(ctx) {
 		var result bson.M
 		if err := cursor.Decode(&result); err != nil {
-			logger.Logger.Error("Error", slog.Any("Error", err))
+			slog.Error("Error", slog.Any("Error", err))
 			continue
 		}
 
@@ -61,7 +60,7 @@ func FuzzyMatchName(Name string, ChannelID string) []string {
 	}
 
 	if err := cursor.Err(); err != nil {
-		logger.Logger.Error("Error", slog.Any("Error", err))
+		slog.Error("Error", slog.Any("Error", err))
 	}
 
 	return names

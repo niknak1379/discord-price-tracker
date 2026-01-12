@@ -5,12 +5,12 @@ import (
 
 	"context"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
 
 	database "priceTracker/Database"
-	logger "priceTracker/Logger"
 	scheduler "priceTracker/Scheduler"
 
 	// crawler "priceTracker/Crawler"
@@ -36,10 +36,10 @@ func main() {
 	// make the program run unless sigINT is recieved
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
-	logger.Logger.Info("Graceful Shutdown setup")
+	slog.Info("Graceful Shutdown setup")
 
 	<-stop
-	logger.Logger.Info("Shutdown")
+	slog.Info("Shutdown")
 	cancel()
 	wg.Wait()
 }

@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	logger "priceTracker/Logger"
 	"strconv"
 	"strings"
 	"time"
@@ -56,7 +55,7 @@ func initCrawler() *colly.Collector {
 
 	c.OnError(func(r *colly.Response, err error) {
 		s := fmt.Sprintf("Error scraping %s: %v", r.Request.URL, err)
-		logger.Logger.Error(s)
+		slog.Error(s)
 	})
 	return c
 }
@@ -65,7 +64,7 @@ func GetPrice(uri string, querySelector string) (int, error) {
 	var err error
 	res := 0
 	crawled := false
-	logger.Logger.Info("logging url", slog.String("URI", uri))
+	slog.Info("logging url", slog.String("URI", uri))
 	c := initCrawler()
 	c.OnHTML(querySelector, func(h *colly.HTMLElement) {
 		crawled = true
@@ -79,7 +78,7 @@ func GetPrice(uri string, querySelector string) (int, error) {
 		err = errors.New("could not crawl, html element does not exist")
 	}
 	if err != nil {
-		logger.Logger.Error("error in getting price in crawler, triggering Chrome failover", 
+		slog.Error("error in getting price in crawler, triggering Chrome failover", 
 			slog.Any("Error", err))
 		res, err := ChromeDPFailover(uri, querySelector)
 		return res, err
@@ -119,7 +118,7 @@ func ChromeDPFailover(url string, selector string) (int, error) {
 		return 0, fmt.Errorf("selector '%s' not found for url %s, %w", selector, url, err)
 	}
 
-	logger.Logger.Info("ChromeDP found Selector")
+	slog.Info("ChromeDP found Selector")
 	
 	// Parse price
 	priceText = strings.ReplaceAll(priceText, "$", "")
@@ -160,7 +159,7 @@ func GetOpenGraphPic(url string) string {
 	}
 	err := c.Visit(url)
 	if err != nil || !visited {
-		logger.Logger.Warn("could not get Open Graph picture", slog.Any("ERROR: ", err), slog.Any("Visited: ", visited))
+		slog.Warn("could not get Open Graph picture", slog.Any("ERROR: ", err), slog.Any("Visited: ", visited))
 		return ""
 	}
 	c.Wait()

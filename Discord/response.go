@@ -6,7 +6,6 @@ import (
 	"math"
 	"os"
 	database "priceTracker/Database"
-	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 	"strings"
 	"time"
@@ -15,7 +14,7 @@ import (
 )
 
 func ready(discord *discordgo.Session, ready *discordgo.Ready) {
-	logger.Logger.Info("Discord Logged in")
+	slog.Info("Discord Logged in")
 	discord.UpdateGameStatus(1, "stonks")
 }
 
@@ -69,7 +68,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		reader, err := os.Open("second.png")
 		reader2, err2 := os.Open("first.png")
 		if err != nil || err2 != nil {
-			logger.Logger.Error("Could not load error images", slog.Any("Error", err),
+			slog.Error("Could not load error images", slog.Any("Error", err),
 				slog.Any("Error", err2))
 		}
 		Discord.ChannelFileSend(ChannelID, "second.png", reader)
@@ -77,7 +76,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	} else {
 		reader, err := os.Open("failoverSS.png")
 		if err != nil {
-			logger.Logger.Error("Could not send error image", slog.Any("Error", err))
+			slog.Error("Could not send error image", slog.Any("Error", err))
 		}
 		Discord.ChannelFileSend(ChannelID, "failoverSS.png", reader)
 
@@ -92,7 +91,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 func SendGraphPng(discord *discordgo.Session, ChannelID string) {
 	reader, err := os.Open("my-chart.png")
 	if err != nil {
-		logger.Logger.Error("Could not load graph image", slog.Any("Error", err))
+		slog.Error("Could not load graph image", slog.Any("Error", err))
 	}
 	discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
 }
@@ -132,7 +131,7 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 			},
 		})
 		if err != nil {
-			logger.Logger.Error("auto complete error", slog.Any("Error", err))
+			slog.Error("auto complete error", slog.Any("Error", err))
 		}
 	} else {
 		err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -147,7 +146,7 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 			},
 		})
 		if err != nil {
-			logger.Logger.Error("auto complete error", slog.Any("Error", err))
+			slog.Error("auto complete error", slog.Any("Error", err))
 		}
 	}
 }
@@ -169,7 +168,7 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 		},
 	})
 	if err != nil {
-			logger.Logger.Error("auto complete error for query select", slog.Any("Error", err))
+			slog.Error("auto complete error for query select", slog.Any("Error", err))
 		}
 }
 

@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"os"
 	crawler "priceTracker/Crawler"
-	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 	"slices"
 	"time"
@@ -89,7 +88,7 @@ func AddItem(itemName string, uri string, query string, Type string, Channel Cha
 	}
 	_, err = Table.InsertOne(ctx, i)
 	if err != nil {
-		logger.Logger.Error("Error", slog.Any("Error", err))
+		slog.Error("Error", slog.Any("Error", err))
 	}
 	UpdateAggregateReport(itemName, Channel.ChannelID)
 	i, err = GetItem(itemName, Channel.ChannelID)
@@ -99,7 +98,7 @@ func AddItem(itemName string, uri string, query string, Type string, Channel Cha
 func EditSuppress(Name string, Suppress bool, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		logger.Logger.Error("Could not load channel from db", slog.Any("Error", err))
+		slog.Error("Could not load channel from db", slog.Any("Error", err))
 		return err
 	}
 	update := bson.M{
@@ -114,7 +113,7 @@ func EditSuppress(Name string, Suppress bool, ChannelID string) error {
 func EditName(oldName string, newName string, ChannelID string) (Item, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		logger.Logger.Error("Could not load channel from db", slog.Any("Error", err))
+		slog.Error("Could not load channel from db", slog.Any("Error", err))
 		return Item{}, err
 	}
 	var res Item
@@ -126,7 +125,7 @@ func EditName(oldName string, newName string, ChannelID string) (Item, error) {
 	}).SetReturnDocument(options.After)
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
 	if err != nil {
-		logger.Logger.Error("failed to change name of title", 
+		slog.Error("failed to change name of title", 
 			slog.String("Name", oldName),
 			slog.Any("value", err),
 		)
@@ -188,7 +187,7 @@ func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date 
 	if len(results) > 0 && len(results[0].PriceHistory) > 0 {
 		for _, p := range results[0].PriceHistory {
 			if p.Price == newPrice {
-				logger.Logger.Info("Price Same, Skipping todays update")
+				slog.Info("Price Same, Skipping todays update")
 				return price, nil
 			}
 		}
@@ -464,7 +463,7 @@ func InitDB(context context.Context) {
 		panic(err)
 	}
 	loadDBTables()
-	logger.Logger.Info("DB Successfully Pinged")
+	slog.Info("DB Successfully Pinged")
 }
 
 func validateURI(uri string, querySelector string) (Price, TrackingInfo, error) {

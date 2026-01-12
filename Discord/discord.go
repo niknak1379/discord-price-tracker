@@ -8,7 +8,6 @@ import (
 	"os"
 	charts "priceTracker/Charts"
 	database "priceTracker/Database"
-	logger "priceTracker/Logger"
 	"sync"
 	"syscall"
 	"time"
@@ -418,7 +417,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				for _, embed := range em {
 					_, err = discord.ChannelMessageSendEmbed(i.ChannelID, embed)
 					if err != nil{
-						logger.Logger.Error("failed to send embed", 
+						slog.Error("failed to send embed", 
 							slog.Any("Embed", embed),
 							slog.Any("value", err),
 						)
@@ -454,7 +453,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			for _, embed := range embedArr {
 				_, err = discord.ChannelMessageSendEmbed(i.ChannelID, embed)
 				if err != nil {
-					logger.Logger.Error("failed to send embed", 
+					slog.Error("failed to send embed", 
 							slog.Any("Embed", embed),
 							slog.Any("value", err),
 						)
@@ -481,7 +480,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Content: "No Items Are Being Tracked in This Channel",
 			})
 			if err != nil {
-					logger.Logger.Error("Could not send response", 	
+					slog.Error("Could not send response", 	
 						slog.Any("value", err),
 					)
 				}
@@ -591,7 +590,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			} else {
 				reader, err := os.Open("my-chart.png")
 				if err != nil {
-					logger.Logger.Error("Could not open file", slog.Any("Error", err))
+					slog.Error("Could not open file", slog.Any("Error", err))
 				}
 				File := discordgo.File{
 					Name:        "chart.png",
@@ -603,7 +602,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				})
 				if err != nil {
 					if err != nil {
-					logger.Logger.Error("failed to send graph", 
+					slog.Error("failed to send graph", 
 							slog.Any("value", err),
 						)
 				}
@@ -640,7 +639,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			} else {
 				reader, err := os.Open("my-chart.png")
 				if err != nil {
-					logger.Logger.Error("Could not open file", slog.Any("Error", err))
+					slog.Error("Could not open file", slog.Any("Error", err))
 				}
 				File := discordgo.File{
 					Name:        "chart.png",
@@ -651,7 +650,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 					Files: []*discordgo.File{&File},
 				})
 				if err != nil {
-					logger.Logger.Error("failed to send comparison graph")
+					slog.Error("failed to send comparison graph")
 				}
 			}
 		}
@@ -707,7 +706,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 }
 
 func channelDeleteHandler(discord *discordgo.Session, i *discordgo.ChannelDelete) {
-	logger.Logger.Info("Channel being deleted with id: ", slog.String("ChannelID", i.Channel.ID))
+	slog.Info("Channel being deleted with id: ", slog.String("ChannelID", i.Channel.ID))
 	database.ChannelDeleteHandler(i.Channel.ID)
 }
 
@@ -741,11 +740,11 @@ func Run(ctx context.Context) {
 		}
 		registeredCommands[index] = cmd
 	}
-	logger.Logger.Info("all commands added")
+	slog.Info("all commands added")
 
 	// keep the bot open until sigint is recieved from ctx in main
 	<-ctx.Done()
-	logger.Logger.Info("Removing commands...")
+	slog.Info("Removing commands...")
 	registeredCommands, err = Discord.ApplicationCommands(Discord.State.User.ID, "")
 	if err != nil {
 		log.Panicf("Cannot get application registered command list")
@@ -758,5 +757,5 @@ func Run(ctx context.Context) {
 	}
 	shutDownWG.Wait()
 	Discord.Close()
-	logger.Logger.Info("Discord Shutdown")
+	slog.Info("Discord Shutdown")
 }

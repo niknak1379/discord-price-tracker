@@ -9,7 +9,6 @@ import (
 	"math/rand/v2"
 	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
-	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 	"time"
 
@@ -19,15 +18,15 @@ import (
 func SetChannelScheduler(ctx context.Context) {
 	// -------------------- set timer for daily scrapping -------------//
 	now := time.Now()
-	logger.Logger.Info("first crawl start time", slog.Any("start time", now))
+	slog.Info("first crawl start time", slog.Any("start time", now))
 	for _, Channel := range database.Coordinates {
 		updateAllPrices(Channel)
 	}
 	finishTime := time.Since(now)
 	s := fmt.Sprintf("first crawl took %.2f hours and %.2f minutes", finishTime.Hours(), finishTime.Minutes())
-	logger.Logger.Debug(s)
+	slog.Debug(s)
 	ticker := time.NewTicker(4 * time.Hour)
-	logger.Logger.Info("setting ticker in crawler")
+	slog.Info("setting ticker in crawler")
 	defer ticker.Stop()
 	for {
 		select {
@@ -37,13 +36,14 @@ func SetChannelScheduler(ctx context.Context) {
 			for _, Channel := range database.Coordinates {
 				updateAllPrices(Channel)
 			}
-			logger.Logger.Info("ticking")
+			slog.Info("ticking")
 		}
 	}
 }
 
 func updateAllPrices(Channel database.Channel) {
-	logger.Logger.Info("updateAllPrices being fired for channel", Channel.ChannelID)
+	slog.Info("updateAllPrices being fired for channel", 
+		slog.String("ChannelID", Channel.ChannelID))
 	itemsArr := database.GetAllItems(Channel.ChannelID)
 	for _, v := range itemsArr {
 		date := time.Now()
@@ -125,7 +125,7 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 	}
 	err = database.UpdateEbayListings(Name, ebayListings, Channel.ChannelID)
 	if err != nil {
-		logger.Logger.Error("error updaing DB in ebay listing", 
+		slog.Error("error updaing DB in ebay listing", 
 			slog.Any("Error", err), slog.String("Name", Name))
 		discord.CrawlErrorAlert(Name, "www.ebay.com/DBError", err, Channel.ChannelID)
 		return

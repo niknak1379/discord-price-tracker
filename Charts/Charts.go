@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log/slog"
 	database "priceTracker/Database"
-	logger "priceTracker/Logger"
 	"slices"
 	"strings"
 	"time"
@@ -133,9 +132,9 @@ func PriceHistoryChart(Names []string, month int, ChannelID string) error {
 
 		result[url] = aligned
 	}
-	//logger.Logger.Info("dates", slog.Any("dates", dates))
+	//slog.Info("dates", slog.Any("dates", dates))
 	for url, data := range result {
-		logger.Logger.Info("make chart, adding series data for", slog.Any(url, data))
+		slog.Info("make chart, adding series data for", slog.Any(url, data))
 		line.AddSeries(url, data)
 	}
 

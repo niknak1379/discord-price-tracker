@@ -4,13 +4,13 @@ import (
 	// "context"
 
 	"context"
-	"log"
 	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
 
 	database "priceTracker/Database"
+	logger "priceTracker/Logger"
 	scheduler "priceTracker/Scheduler"
 
 	// crawler "priceTracker/Crawler"
@@ -20,7 +20,7 @@ import (
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	slog.SetDefault(logger.Logger)
 	var wg sync.WaitGroup
 	godotenv.Load()
 	// crawler.GetPrice("https://www.bhphotovideo.com/c/product/1752177-REG/fractal_design_fd_c_nor1c_02_north_mid_tower_atx_case.html", "span[class^='price_']")

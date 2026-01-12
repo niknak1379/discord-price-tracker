@@ -15,23 +15,109 @@ import (
 
 func SetChannelScheduler(ctx context.Context) {
 	slog.Info("first crawl start time", slog.Any("start time", time.Now()))
-
+	
+	// Check for new/deleted items every hour
+	refreshTicker := time.NewTicker(30 * time.Minute)
+	defer refreshTicker.Stop()
+	
+	var activeRoutines = make(map[string]context.CancelFunc) // Track running goroutines
+	var itemTimers = make(map[string]time.Duration)          // Track current timers
+	
 	for _, Channel := range database.Coordinates {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
 		for _, item := range itemsArr {
-			// Start goroutine for each item with staggered start
-			r := rand.IntN(120) + 60
-			time.Sleep(time.Duration(r) * time.Second)
-			go itemCrawlRoutine(ctx, *item, Channel)
+			updateSingleItem(*item, Channel)
 		}
 	}
+	// Initial load for scheduler this runs after the timers hit tho not immediately
+	loadAndStartItems(ctx, activeRoutines, itemTimers)
+	
+	for {
+		select {
+		case <-ctx.Done():
+			slog.Info("channel scheduler stopping")
+			// Cancel all item routines
+			for _, cancel := range activeRoutines {
+				cancel()
+			}
+			return
+		case <-refreshTicker.C:
+			slog.Info("refreshing item list")
+			loadAndStartItems(ctx, activeRoutines, itemTimers)
+		}
+	}
+}
 
-	<-ctx.Done()
-	slog.Info("channel scheduler stopping")
+func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.CancelFunc, itemTimers map[string]time.Duration) {
+	for _, Channel := range database.Coordinates {
+		itemsArr := database.GetAllItems(Channel.ChannelID)
+		for _, item := range itemsArr {
+			itemKey := item.Name + "_" + Channel.ChannelID
+			
+			// Get new timer value
+			newTimer := time.Duration(item.Timer) * time.Hour
+			if newTimer == 0 {
+				newTimer = 8 * time.Hour
+			}
+			
+			// Check if item already running
+			if cancel, ok := activeRoutines[itemKey]; ok {
+				// Item exists, check if timer changed
+				if oldTimer, ok := itemTimers[itemKey]; ok && oldTimer != newTimer {
+					slog.Info("timer changed for item, restarting",
+						slog.String("item", item.Name),
+						slog.String("old_timer", oldTimer.String()),
+						slog.String("new_timer", newTimer.String()))
+					cancel()
+					delete(activeRoutines, itemKey)
+					delete(itemTimers, itemKey)
+				} else {
+					continue // Timer unchanged, skip
+				}
+			}
+			
+			// Start new routine for this item
+			r := rand.IntN(120) + 60
+			time.Sleep(time.Duration(r) * time.Second)
+			
+			// Create cancel context for this item
+			itemCtx, cancel := context.WithCancel(ctx)
+			activeRoutines[itemKey] = cancel
+			itemTimers[itemKey] = newTimer
+			slog.Info("Initializing Crawler Schedule",
+						slog.String("item", item.Name),
+						slog.String("timer", newTimer.String()))
+			go func(itemCtx context.Context, itemKey string) {
+				itemCrawlRoutine(itemCtx, *item, Channel)
+				// Clean up when routine exits
+				delete(activeRoutines, itemKey)
+				delete(itemTimers, itemKey)
+			}(itemCtx, itemKey)
+		}
+	}
+	
+	// Stop routines for deleted items
+	currentItems := make(map[string]bool)
+	for _, Channel := range database.Coordinates {
+		itemsArr := database.GetAllItems(Channel.ChannelID)
+		for _, item := range itemsArr {
+			itemKey := item.Name + "_" + Channel.ChannelID
+			currentItems[itemKey] = true
+		}
+	}
+	//delete if not found in current items
+	for itemKey, cancel := range activeRoutines {
+		if _, ok := currentItems[itemKey]; ok {
+			slog.Info("stopping routine for deleted item", slog.String("item", itemKey))
+			cancel()
+			delete(activeRoutines, itemKey)
+			delete(itemTimers, itemKey)
+		}
+	}
 }
 
 func itemCrawlRoutine(ctx context.Context, item database.Item, Channel database.Channel) {
-	// Random delay before first crawl (60-180 seconds)
+	// Random delay before first crawl
 	r := rand.IntN(120)
 	time.Sleep(time.Duration(r) * time.Second)
 

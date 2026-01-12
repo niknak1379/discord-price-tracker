@@ -21,7 +21,9 @@ type Channel struct {
 }
 
 var (
-	Tables      = make(map[string]*mongo.Collection)
+	// has the mongo table stored
+	Tables = make(map[string]*mongo.Collection)
+	// has the distance, lat, long, and other facebook info stored
 	Coordinates = make(map[string]Channel)
 )
 
@@ -90,9 +92,7 @@ func CreateChannelItemTableIfMissing(ChannelID string, Location string, Location
 	Client.Database("tracker").Collection("ChannelIDs").InsertOne(ctx, Channel)
 
 	Table := Client.Database("tracker").Collection(ChannelID)
-	// Sets the index name and type to "search"
 	opts := options.SearchIndexes().SetName(ChannelID).SetType("search")
-	// Defines the index definition
 	searchIndexModel := mongo.SearchIndexModel{
 		Definition: bson.D{
 			{Key: "mappings", Value: bson.D{
@@ -130,7 +130,7 @@ func ChannelDeleteHandler(ChannelID string) {
 func loadChannelTable(ChannelID string) (*mongo.Collection, error) {
 	Table, ok := Tables[ChannelID]
 	if !ok {
-		slog.Error("failed load Channel, channel has to be setup", 
+		slog.Error("failed load Channel, channel has to be setup",
 			slog.String("ChannelID", ChannelID),
 		)
 		//<------ make this a specific error that propogates

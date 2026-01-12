@@ -583,7 +583,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			// get command inputs from discord
 			err := charts.PriceHistoryChart([]string{options[0].StringValue()}, int(options[1].IntValue()), i.ChannelID)
 			if err != nil {
-				log.Print(err)
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 					Content: fmt.Sprint(err),
 				})
@@ -632,7 +631,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			err := charts.PriceHistoryChart([]string{options[0].StringValue(), 
 				options[1].StringValue()}, int(options[2].IntValue()), i.ChannelID)
 			if err != nil {
-				log.Print(err)
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 					Content: fmt.Sprint(err),
 				})

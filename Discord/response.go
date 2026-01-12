@@ -1,7 +1,7 @@
 package discord
 
 import (
-	"log"
+	"fmt"
 	"log/slog"
 	"math"
 	"os"
@@ -39,8 +39,9 @@ func LowestPriceAlert(itemName string, newPrice int, oldPrice database.Price, UR
 }
 
 func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
-	log.Printf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
+	s := fmt.Sprintf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
 		itemName, URL, err.Error())
+	slog.Error(s)
 	nameField := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter("Problematic Item", 42),
 		Value:  itemName,

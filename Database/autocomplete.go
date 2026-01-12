@@ -1,7 +1,6 @@
 package database
 
 import (
-	"log"
 	"log/slog"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -10,7 +9,7 @@ import (
 func FuzzyMatchName(Name string, ChannelID string) []string {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return make([]string, 0)
 	}
 

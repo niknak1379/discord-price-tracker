@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"net/url"
 	"os"
@@ -58,12 +57,12 @@ var (
 func AddItem(itemName string, uri string, query string, Type string, Channel Channel) (Item, error) {
 	Table, err := loadChannelTable(Channel.ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return Item{}, err
 	}
 	p, t, err := validateURI(uri, query)
 	if err != nil {
-		log.Print("invalid url", err)
+		slog.Error("invalid url for add", slog.Any("Error", err))
 		return Item{}, err
 	}
 	imgURL := crawler.GetOpenGraphPic(uri)
@@ -138,7 +137,7 @@ func EditName(oldName string, newName string, ChannelID string) (Item, error) {
 func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date time.Time, ChannelID string) (Price, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return Price{}, err
 	}
 	price := Price{
@@ -193,8 +192,7 @@ func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date 
 		}
 	}
 
-	// Check for lowest historical price
-	log.Printf("%d old price, %d new price", historicalLow, newPrice)
+	
 	if newPrice < historicalLow {
 		UpdateLowestHistoricalPrice(Name, price, ChannelID)
 	}
@@ -208,18 +206,16 @@ func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date 
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil {
-		log.Print("error in addingnewprice", err)
+		slog.Error("couldnt add new price", slog.Any("Error", err))
 		return price, err
 	}
-
-	log.Printf("adding new price for %s with price %d for url %s", Name, newPrice, uri)
 	return price, nil
 }
 
 func GetLowestHistoricalPrice(Name string, ChannelID string) (Price, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return Price{}, err
 	}
 	filter := bson.M{"Name": Name}
@@ -229,14 +225,13 @@ func GetLowestHistoricalPrice(Name string, ChannelID string) (Price, error) {
 	if err != nil {
 		return res.LowestPrice, err
 	}
-	log.Printf("getting lowest price of %d for %s", res.LowestPrice.Price, res.LowestPrice.Url)
 	return res.LowestPrice, err
 }
 
 func UpdateLowestHistoricalPrice(Name string, newLow Price, ChannelID string) (Item, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return Item{}, err
 	}
 	filter := bson.M{"Name": Name}
@@ -249,17 +244,16 @@ func UpdateLowestHistoricalPrice(Name string, newLow Price, ChannelID string) (I
 	var res Item
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
 	if err != nil {
-		log.Print("error in updating lowest price", err)
+		slog.Error("error updating DB", slog.Any("Error", err))
 		return res, err
 	}
-	log.Printf("updating lowest price of %d for %s", newLow.Price, Name)
 	return res, err
 }
 
 func GetLowestPrice(Name string, ChannelID string) (Price, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return Price{}, err
 	}
 	filter := bson.M{"Name": Name}
@@ -269,14 +263,14 @@ func GetLowestPrice(Name string, ChannelID string) (Price, error) {
 	if err != nil {
 		return res.LowestPrice, err
 	}
-	log.Printf("getting lowest current price of %d for %s", res.LowestPrice.Price, res.LowestPrice.Url)
+	
 	return res.LowestPrice, err
 }
 
 func UpdateLowestPrice(Name string, newLow Price, ChannelID string) (Item, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return Item{}, err
 	}
 	filter := bson.M{"Name": bson.M{"$regex": "^" + Name + "$", "$options": "i"}}
@@ -289,17 +283,16 @@ func UpdateLowestPrice(Name string, newLow Price, ChannelID string) (Item, error
 	var res Item
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&res)
 	if err != nil {
-		log.Print("error in updating lowest price", err)
+		slog.Error("could not update lowest price", slog.Any("Error", err))
 		return res, err
 	}
-	log.Printf("updating lowest price of %d for %s", newLow.Price, Name)
 	return res, err
 }
 
 func GetAllItems(ChannelID string) []*Item {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return []*Item{}
 	}
 	opts := options.Find().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
@@ -319,7 +312,7 @@ func GetAllItems(ChannelID string) []*Item {
 func GetEbayListings(itemName string, ChannelID string) ([]types.EbayListing, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return []types.EbayListing{}, err
 	}
 	var res Item
@@ -335,7 +328,7 @@ func GetEbayListings(itemName string, ChannelID string) ([]types.EbayListing, er
 func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return err
 	}
 	filter := bson.M{"Name": itemName}
@@ -372,7 +365,7 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 func GetItem(itemName string, ChannelID string) (Item, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return Item{}, err
 	}
 	var res Item
@@ -388,13 +381,13 @@ func GetItem(itemName string, ChannelID string) (Item, error) {
 func RemoveItem(itemName string, ChannelID string) int64 {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return 0
 	}
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
 	results, err := Table.DeleteOne(ctx, filter)
 	if err != nil {
-		log.Print("err in remove item", err)
+		slog.Error("couldnt remove from DB", slog.Any("Error", err))
 	}
 	return results.DeletedCount
 }
@@ -402,7 +395,7 @@ func RemoveItem(itemName string, ChannelID string) int64 {
 func AddTrackingInfo(itemName string, uri string, querySelector string, ChannelID string) (Item, Price, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return Item{}, Price{}, err
 	}
 	p, t, err := validateURI(uri, querySelector)
@@ -427,7 +420,7 @@ func AddTrackingInfo(itemName string, uri string, querySelector string, ChannelI
 func RemoveTrackingInfo(itemName string, uri string, ChannelID string) (Item, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return Item{}, err
 	}
 	filter := bson.M{
@@ -469,13 +462,11 @@ func InitDB(context context.Context) {
 func validateURI(uri string, querySelector string) (Price, TrackingInfo, error) {
 	_, err := url.ParseRequestURI(uri)
 	if err != nil {
-		log.Print("invalid url", err)
+		slog.Error("Invalid url")
 		return Price{}, TrackingInfo{}, err
 	}
 	pr, err := crawler.GetPrice(uri, querySelector)
-	log.Print("price of from validated int", pr)
 	if err != nil {
-		log.Print("invalid url", err)
 		return Price{}, TrackingInfo{}, err
 	}
 	tracking := TrackingInfo{

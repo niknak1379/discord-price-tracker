@@ -3,7 +3,6 @@ package scheduler
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"math"
 	"math/rand/v2"
@@ -61,7 +60,6 @@ func updateAllPrices(Channel database.Channel) {
 			// the document
 			oldLow, err := database.GetLowestHistoricalPrice(v.Name, Channel.ChannelID)
 			if err != nil {
-				log.Print(err)
 				continue
 			}
 			np, err = updatePrice(v.Name, t.URI, t.HtmlQuery, oldLow, date, Channel.ChannelID, v.SuppressNotifications)
@@ -82,7 +80,8 @@ func updateAllPrices(Channel database.Channel) {
 func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Price, date time.Time, ChannelID string, Suppress bool) (database.Price, error) {
 	newPrice, err := crawler.GetPrice(URI, HtmlQuery)
 	if err != nil || newPrice == 0 {
-		log.Print("error getting price in updatePrice", err, newPrice)
+		slog.Error("error getting price in updatePrice", slog.Any("Error", err), 
+			slog.Int("Returned Price", newPrice))
 		discord.CrawlErrorAlert(Name, URI, err, ChannelID)
 		return database.Price{}, err
 	}

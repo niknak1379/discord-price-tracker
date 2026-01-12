@@ -1,7 +1,6 @@
 package database
 
 import (
-	"log"
 	"log/slog"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB", err)
+		slog.Error("Could not load Channel from DB", slog.Any("Error", err))
 		return []*Price{}, err
 	}
 	var newRes []*Price
@@ -39,11 +38,11 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 	}
 	cursor, err := Table.Aggregate(ctx, pipeline)
 	if err != nil {
-		log.Print("error aggregating price history", err)
+		slog.Error("Error aggregating price history", slog.Any("Error", err))
 		return newRes, err
 	}
 	if err = cursor.All(ctx, &newRes); err != nil {
-		log.Print("error aggregating price history from cursor", err)
+		slog.Error("Error getting price history from cursor", slog.Any("Error", err))
 		return newRes, err
 	}
 
@@ -112,11 +111,11 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 	}
 	cursor, err = Table.Aggregate(ctx, usedAvgPipeline)
 	if err != nil {
-		log.Print("error aggregating used avg price history", err)
+		slog.Error("error aggregating price history", slog.Any("Error", err))
 		return newRes, err
 	}
 	if err = cursor.All(ctx, &usedAvgRes); err != nil {
-		log.Print("error aggregating used avg price history from cursor", err)
+		slog.Error("Error getting from cursor", slog.Any("Error", err))
 		return newRes, err
 	}
 	newRes = append(newRes, usedAvgRes...)
@@ -184,11 +183,11 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 	}
 	cursor, err = Table.Aggregate(ctx, usedLowestPipeline)
 	if err != nil {
-		log.Print("error aggregating used min price history", err)
+		slog.Error("couldnt aggregate", slog.Any("Error", err))
 		return newRes, err
 	}
 	if err = cursor.All(ctx, &usedLowestRes); err != nil {
-		log.Print("error aggregating used min price history from cursor", err)
+		slog.Error("couldnt aggregate", slog.Any("Error", err))
 		return newRes, err
 	}
 	defer cursor.Close(ctx)
@@ -199,7 +198,7 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 func GenerateSecondHandPriceReport(Name string, endDate time.Time, Days int, ChannelID string) (AggregateReport, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB", err)
+		slog.Error("couldnt aggregate", slog.Any("Error", err))
 		return AggregateReport{}, err
 	}
 	pipeline := mongo.Pipeline{
@@ -304,11 +303,11 @@ func GenerateSecondHandPriceReport(Name string, endDate time.Time, Days int, Cha
 	var res []*AggregateReport
 	cursor, err := Table.Aggregate(ctx, pipeline)
 	if err != nil {
-		log.Print("error aggregate report from runnign pipeline", err)
+		slog.Error("couldnt aggregate", slog.Any("Error", err))
 		return AggregateReport{}, err
 	}
 	if err = cursor.All(ctx, &res); err != nil {
-		log.Print("error aggregate report after decode", err)
+		slog.Error("couldnt aggregate", slog.Any("Error", err))
 		return AggregateReport{}, err
 	}
 	if len(res) == 0 {
@@ -320,7 +319,7 @@ func GenerateSecondHandPriceReport(Name string, endDate time.Time, Days int, Cha
 func UpdateAggregateReport(Name, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		slog.Error("couldnt load table", slog.Any("Error", err))
 		return err
 	}
 	AggregateReport, err := GenerateSecondHandPriceReport(Name, time.Now(), 7, ChannelID)

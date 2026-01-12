@@ -2,6 +2,7 @@ package discord
 
 import (
 	"log"
+	"log/slog"
 	"math"
 	"os"
 	database "priceTracker/Database"
@@ -66,16 +67,17 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	
 	if strings.Contains(err.Error(), "facebook") {
 		reader, err := os.Open("second.png")
-		reader2, err := os.Open("first.png")
-		if err != nil {
-			log.Println("could not send face book image", err)
+		reader2, err2 := os.Open("first.png")
+		if err != nil || err2 != nil {
+			logger.Logger.Error("Could not load error images", slog.Any("Error", err),
+				slog.Any("Error", err2))
 		}
 		Discord.ChannelFileSend(ChannelID, "second.png", reader)
 		Discord.ChannelFileSend(ChannelID, "first.png", reader2)
 	} else {
 		reader, err := os.Open("failoverSS.png")
 		if err != nil {
-			log.Println("could not send ebay picture", err)
+			logger.Logger.Error("Could not send error image", slog.Any("Error", err))
 		}
 		Discord.ChannelFileSend(ChannelID, "failoverSS.png", reader)
 
@@ -90,7 +92,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 func SendGraphPng(discord *discordgo.Session, ChannelID string) {
 	reader, err := os.Open("my-chart.png")
 	if err != nil {
-		log.Fatal(err)
+		logger.Logger.Error("Could not load graph image", slog.Any("Error", err))
 	}
 	discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
 }
@@ -130,7 +132,7 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 			},
 		})
 		if err != nil {
-			log.Println(err)
+			logger.Logger.Error("auto complete error", slog.Any("Error", err))
 		}
 	} else {
 		err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -145,7 +147,7 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 			},
 		})
 		if err != nil {
-			log.Println(err)
+			logger.Logger.Error("auto complete error", slog.Any("Error", err))
 		}
 	}
 }
@@ -158,7 +160,6 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 			Name:  name,
 			Value: query,
 		}
-		log.Println("printing from auto complete query", name, query)
 		choices = append(choices, &choice)
 	}
 	err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -168,8 +169,8 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 		},
 	})
 	if err != nil {
-		log.Println(err)
-	}
+			logger.Logger.Error("auto complete error for query select", slog.Any("Error", err))
+		}
 }
 
 func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int, ChannelID string) {

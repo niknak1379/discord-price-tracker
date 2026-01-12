@@ -591,7 +591,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			} else {
 				reader, err := os.Open("my-chart.png")
 				if err != nil {
-					log.Println(err)
+					logger.Logger.Error("Could not open file", slog.Any("Error", err))
 				}
 				File := discordgo.File{
 					Name:        "chart.png",
@@ -640,7 +640,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			} else {
 				reader, err := os.Open("my-chart.png")
 				if err != nil {
-					log.Println(err)
+					logger.Logger.Error("Could not open file", slog.Any("Error", err))
 				}
 				File := discordgo.File{
 					Name:        "chart.png",
@@ -733,7 +733,6 @@ func Run(ctx context.Context) {
 			h(s, i)
 		}
 	})
-	log.Println("Adding commands...")
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(commandList))
 	for index, command := range commandList {
 		cmd, err := Discord.ApplicationCommandCreate(Discord.State.User.ID, "", command)
@@ -742,11 +741,11 @@ func Run(ctx context.Context) {
 		}
 		registeredCommands[index] = cmd
 	}
-	log.Println("all commands added")
+	logger.Logger.Info("all commands added")
 
 	// keep the bot open until sigint is recieved from ctx in main
 	<-ctx.Done()
-	log.Println("Removing commands...")
+	logger.Logger.Info("Removing commands...")
 	registeredCommands, err = Discord.ApplicationCommands(Discord.State.User.ID, "")
 	if err != nil {
 		log.Panicf("Cannot get application registered command list")
@@ -759,5 +758,5 @@ func Run(ctx context.Context) {
 	}
 	shutDownWG.Wait()
 	Discord.Close()
-	log.Println("shut down discord")
+	logger.Logger.Info("Discord Shutdown")
 }

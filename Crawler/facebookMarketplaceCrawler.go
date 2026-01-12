@@ -160,14 +160,12 @@ func GetCoordinates(Location string) (float64, float64, error) {
 		return 0, 0, err
 	}
 
-	// fmt.Println(string(body))
 	var result GeocodeResponse
 	if err := json.Unmarshal(body, &result); err != nil {
 		logger.Logger.Error("failed to unmarshal into json first request", 
 			slog.Any("value", err))
 		return 0, 0, err
 	}
-	// logger.Info("listing", slog.Any("Listing marshalled respone from first req", result))
 	if len(result.Results) == 0 {
 		logger.Logger.Error("json result is empty in coordinate", 
 			slog.Any("value", err))

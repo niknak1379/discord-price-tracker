@@ -87,12 +87,10 @@ func AddItem(itemName string, uri string, query string, Type string, Channel Cha
 		ListingsHistory:       ebayListings,
 		SuppressNotifications: false,
 	}
-	result, err := Table.InsertOne(ctx, i)
+	_, err = Table.InsertOne(ctx, i)
 	if err != nil {
-		log.Print(err)
+		logger.Logger.Error("Error", slog.Any("Error", err))
 	}
-	log.Println("added new item with mongodb logs:", result)
-	log.Println("lowest price being passed on", i.LowestPrice.Price, i.LowestPrice.Url)
 	UpdateAggregateReport(itemName, Channel.ChannelID)
 	i, err = GetItem(itemName, Channel.ChannelID)
 	return i, err
@@ -101,7 +99,7 @@ func AddItem(itemName string, uri string, query string, Type string, Channel Cha
 func EditSuppress(Name string, Suppress bool, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		logger.Logger.Error("Could not load channel from db", slog.Any("Error", err))
 		return err
 	}
 	update := bson.M{
@@ -116,7 +114,7 @@ func EditSuppress(Name string, Suppress bool, ChannelID string) error {
 func EditName(oldName string, newName string, ChannelID string) (Item, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
-		log.Print("Could not load Channel from DB")
+		logger.Logger.Error("Could not load channel from db", slog.Any("Error", err))
 		return Item{}, err
 	}
 	var res Item
@@ -190,7 +188,7 @@ func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date 
 	if len(results) > 0 && len(results[0].PriceHistory) > 0 {
 		for _, p := range results[0].PriceHistory {
 			if p.Price == newPrice {
-				log.Println("price for todays crawl has not changed, skipping db update")
+				logger.Logger.Info("Price Same, Skipping todays update")
 				return price, nil
 			}
 		}
@@ -316,7 +314,6 @@ func GetAllItems(ChannelID string) []*Item {
 	if err != nil {
 		panic(err)
 	}
-	log.Println("getting all items", result)
 	return result
 }
 

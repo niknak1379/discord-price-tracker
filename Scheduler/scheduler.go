@@ -18,7 +18,6 @@ import (
 
 func SetChannelScheduler(ctx context.Context) {
 	// -------------------- set timer for daily scrapping -------------//
-	println("printing tables:", database.Tables)
 	now := time.Now()
 	logger.Logger.Info("first crawl start time", slog.Any("start time", now))
 	for _, Channel := range database.Coordinates {
@@ -28,7 +27,7 @@ func SetChannelScheduler(ctx context.Context) {
 	s := fmt.Sprintf("first crawl took %.2f hours and %.2f minutes", finishTime.Hours(), finishTime.Minutes())
 	logger.Logger.Debug(s)
 	ticker := time.NewTicker(4 * time.Hour)
-	log.Println("setting ticker in crawler")
+	logger.Logger.Info("setting ticker in crawler")
 	defer ticker.Stop()
 	for {
 		select {
@@ -38,13 +37,13 @@ func SetChannelScheduler(ctx context.Context) {
 			for _, Channel := range database.Coordinates {
 				updateAllPrices(Channel)
 			}
-			log.Println("ticking")
+			logger.Logger.Info("ticking")
 		}
 	}
 }
 
 func updateAllPrices(Channel database.Channel) {
-	log.Println("updateAllPrices being fired for channel", Channel.ChannelID)
+	logger.Logger.Info("updateAllPrices being fired for channel", Channel.ChannelID)
 	itemsArr := database.GetAllItems(Channel.ChannelID)
 	for _, v := range itemsArr {
 		date := time.Now()

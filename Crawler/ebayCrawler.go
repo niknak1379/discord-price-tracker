@@ -3,7 +3,6 @@ package crawler
 import (
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/url"
 	"regexp"
@@ -59,7 +58,7 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
 
-	log.Println("visiting ebay url ", url)
+	logger.Logger.Info(url)
 	var listingArr []types.EbayListing
 	crawlDate := time.Now()
 	visited := false
@@ -128,7 +127,6 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 	err := c.Visit(url)
 	c.Wait()
 	if err != nil || !visited {
-		log.Println("error in getting ebay listings, no items were visited or an err occured", err, visited)
 		if !visited && err == nil {
 			err = errors.New("no items were visited from ebay.com")
 		}

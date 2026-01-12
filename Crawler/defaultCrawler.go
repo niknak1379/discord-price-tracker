@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -19,7 +18,6 @@ import (
 )
 
 func initCrawler() *colly.Collector {
-	log.Println("initalizing crawler")
 	// --------------------------- initiaize scrapper headers and settings ------- //
 	var c *colly.Collector
 	c = colly.NewCollector(
@@ -56,15 +54,9 @@ func initCrawler() *colly.Collector {
 		DisableCompression: false,
 	})
 
-	c.OnResponse(func(r *colly.Response) {
-		log.Printf("Content-Encoding: %s", r.Headers.Get("Content-Encoding"))
-		log.Printf("Status Code: %d", r.StatusCode)
-		log.Printf("Content-Type: %s", r.Headers.Get("Content-Type"))
-		log.Printf("Body length: %d", len(r.Body))
-		// log.Printf("Body: %s", r.Body)
-	})
 	c.OnError(func(r *colly.Response, err error) {
-		log.Printf("Error scraping %s: %v", r.Request.URL, err)
+		s := fmt.Sprintf("Error scraping %s: %v", r.Request.URL, err)
+		logger.Logger.Error(s)
 	})
 	return c
 }
@@ -73,10 +65,9 @@ func GetPrice(uri string, querySelector string) (int, error) {
 	var err error
 	res := 0
 	crawled := false
-	log.Println("logging url", uri, querySelector)
+	logger.Logger.Info("logging url", slog.String("URI", uri))
 	c := initCrawler()
 	c.OnHTML(querySelector, func(h *colly.HTMLElement) {
-		log.Println(querySelector, h.Text)
 		crawled = true
 		res, err = formatPrice(h.Text)
 		c.OnHTMLDetach(querySelector)
@@ -88,12 +79,11 @@ func GetPrice(uri string, querySelector string) (int, error) {
 		err = errors.New("could not crawl, html element does not exist")
 	}
 	if err != nil {
-		log.Println("error in getting price in crawler, triggering Chrome failover", err)
+		logger.Logger.Error("error in getting price in crawler, triggering Chrome failover", 
+			slog.Any("Error", err))
 		res, err := ChromeDPFailover(uri, querySelector)
-		log.Println("price", res, err)
 		return res, err
 	}
-	log.Println("price", res, err)
 	return res, err
 }
 
@@ -152,7 +142,6 @@ func GetOpenGraphPic(url string) string {
 	c := initCrawler()
 	visited := false
 	imgURL := ""
-	log.Println("logging url", url)
 	if strings.Contains(url, "amazon") {
 		c.OnHTML("img#landingImage", func(e *colly.HTMLElement) {
 			imgURL = e.Attr("src")

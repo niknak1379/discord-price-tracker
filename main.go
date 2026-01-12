@@ -36,7 +36,7 @@ func main() {
 	// make the program run unless sigINT is recieved
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
-	log.Println("graceful shutdown setup")
+	logger.Logger.Info("Graceful Shutdown setup")
 
 	<-stop
 	logger.Logger.Info("Shutdown")

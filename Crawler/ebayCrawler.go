@@ -82,6 +82,7 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 			case 0:
 				// get base price
 				basePrice, err = formatPrice(child.Text)
+				basePrice = int(float64(basePrice) * TaxRate)
 			case 1:
 				// skip bids, no need to add them to the return bid array
 				if strings.Contains(child.Text, "bid") {

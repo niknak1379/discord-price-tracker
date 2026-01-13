@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"net/url"
+	"time"
 
 	types "priceTracker/Types"
-	"time"
 
 	"github.com/gocolly/colly/v2"
 )
@@ -32,11 +32,12 @@ func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
 	c.OnHTML("ol[class^='styles_productGrid__'] li", func(e *colly.HTMLElement) {
 		visited = true
 		price, _ := formatPrice(e.ChildText("p.styles_price__H8qdh"))
+		price = int(float64(price) * TaxRate)
 		productURL := "https://depop.com" + e.ChildAttr("a", "href")
 		if price > Price {
-			slog.Debug("skipping depop item, price too high", 
-			slog.Int("Desired Price", Price),
-			slog.Int("item price", price))
+			slog.Debug("skipping depop item, price too high",
+				slog.Int("Desired Price", Price),
+				slog.Int("item price", price))
 			return
 		}
 
@@ -75,8 +76,8 @@ func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
 			slog.Info("listing", slog.Any("depop listing information", Listing))
 			retArr = append(retArr, Listing)
 		} else {
-			slog.Info("skipping depop item, title not matched or price too high", 
-			slog.String("URL", url))
+			slog.Info("skipping depop item, title not matched or price too high",
+				slog.String("URL", url))
 		}
 	})
 

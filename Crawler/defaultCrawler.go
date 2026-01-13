@@ -16,6 +16,8 @@ import (
 	"github.com/gocolly/colly/v2/extensions"
 )
 
+var TaxRate = 1.1
+
 func initCrawler() *colly.Collector {
 	// --------------------------- initiaize scrapper headers and settings ------- //
 	var c *colly.Collector
@@ -33,8 +35,8 @@ func initCrawler() *colly.Collector {
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
 		Parallelism: 2,
-		Delay:       2 * time.Second, 
-		RandomDelay: 1 * time.Second, 
+		Delay:       2 * time.Second,
+		RandomDelay: 1 * time.Second,
 	})
 	extensions.RandomUserAgent(c)
 	c.OnRequest(func(r *colly.Request) {
@@ -78,12 +80,12 @@ func GetPrice(uri string, querySelector string) (int, error) {
 		err = errors.New("could not crawl, html element does not exist")
 	}
 	if err != nil {
-		slog.Error("error in getting price in crawler, triggering Chrome failover", 
+		slog.Error("error in getting price in crawler, triggering Chrome failover",
 			slog.Any("Error", err))
 		res, err := ChromeDPFailover(uri, querySelector)
-		return res, err
+		return int(float64(res) * TaxRate), err
 	}
-	return res, err
+	return int(float64(res) * TaxRate), err
 }
 
 func ChromeDPFailover(url string, selector string) (int, error) {
@@ -119,7 +121,7 @@ func ChromeDPFailover(url string, selector string) (int, error) {
 	}
 
 	slog.Info("ChromeDP found Selector")
-	
+
 	// Parse price
 	priceText = strings.ReplaceAll(priceText, "$", "")
 	priceText = strings.ReplaceAll(priceText, ",", "")
@@ -151,7 +153,7 @@ func GetOpenGraphPic(url string) string {
 			imgURL = e.Attr("src")
 			visited = true
 		})
-	}else {
+	} else {
 		c.OnHTML("meta[property='og:image']", func(e *colly.HTMLElement) {
 			imgURL = e.Attr("content")
 			visited = true

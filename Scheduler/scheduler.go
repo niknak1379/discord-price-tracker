@@ -107,7 +107,7 @@ func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.Ca
 	}
 	//delete if not found in current items
 	for itemKey, cancel := range activeRoutines {
-		if _, ok := currentItems[itemKey]; ok {
+		if _, ok := currentItems[itemKey]; !ok {
 			slog.Info("stopping routine for deleted item", slog.String("item", itemKey))
 			cancel()
 			delete(activeRoutines, itemKey)

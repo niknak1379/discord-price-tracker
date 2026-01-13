@@ -15,14 +15,14 @@ import (
 
 func SetChannelScheduler(ctx context.Context) {
 	slog.Info("first crawl start time", slog.Any("start time", time.Now()))
-	
+
 	// Check for new/deleted items every hour
 	refreshTicker := time.NewTicker(30 * time.Minute)
 	defer refreshTicker.Stop()
-	
-	var activeRoutines = make(map[string]context.CancelFunc) // Track running goroutines
-	var itemTimers = make(map[string]time.Duration)          // Track current timers
-	
+
+	activeRoutines := make(map[string]context.CancelFunc) // Track running goroutines
+	itemTimers := make(map[string]time.Duration)          // Track current timers
+	itemSuppression := make(map[string]bool)              // trakc noti suppression
 	for _, Channel := range database.Coordinates {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
 		for _, item := range itemsArr {
@@ -30,8 +30,8 @@ func SetChannelScheduler(ctx context.Context) {
 		}
 	}
 	// Initial load for scheduler this runs after the timers hit tho not immediately
-	loadAndStartItems(ctx, activeRoutines, itemTimers)
-	
+	loadAndStartItems(ctx, activeRoutines, itemTimers, itemSuppression)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -43,27 +43,33 @@ func SetChannelScheduler(ctx context.Context) {
 			return
 		case <-refreshTicker.C:
 			slog.Info("refreshing item list")
-			loadAndStartItems(ctx, activeRoutines, itemTimers)
+			loadAndStartItems(ctx, activeRoutines, itemTimers, itemSuppression)
 		}
 	}
 }
 
-func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.CancelFunc, itemTimers map[string]time.Duration) {
+func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.CancelFunc,
+	itemTimers map[string]time.Duration,
+	itemSuppression map[string]bool,
+) {
 	for _, Channel := range database.Coordinates {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
 		for _, item := range itemsArr {
 			itemKey := item.Name + "_" + Channel.ChannelID
-			
+
 			// Get new timer value
 			newTimer := time.Duration(item.Timer) * time.Hour
 			if newTimer == 0 {
 				newTimer = 8 * time.Hour
 			}
-			
+
 			// Check if item already running
 			if cancel, ok := activeRoutines[itemKey]; ok {
-				// Item exists, check if timer changed
-				if oldTimer, ok := itemTimers[itemKey]; ok && oldTimer != newTimer {
+				// Item exists, check if timer or suppression have changed
+				oldSuppression, ok := itemSuppression[itemKey]
+				if oldTimer, ok2 := itemTimers[itemKey]; ok &&
+					ok2 && oldTimer != newTimer &&
+					oldSuppression != item.SuppressNotifications {
 					slog.Info("timer changed for item, restarting",
 						slog.String("item", item.Name),
 						slog.String("old_timer", oldTimer.String()),
@@ -71,31 +77,34 @@ func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.Ca
 					cancel()
 					delete(activeRoutines, itemKey)
 					delete(itemTimers, itemKey)
+					delete(itemSuppression, itemKey)
 				} else {
 					continue // Timer unchanged, skip
 				}
 			}
-			
+
 			// Start new routine for this item
 			r := rand.IntN(120) + 60
 			time.Sleep(time.Duration(r) * time.Second)
-			
+
 			// Create cancel context for this item
 			itemCtx, cancel := context.WithCancel(ctx)
 			activeRoutines[itemKey] = cancel
 			itemTimers[itemKey] = newTimer
+			itemSuppression[itemKey] = item.SuppressNotifications
 			slog.Info("Initializing Crawler Schedule",
-						slog.String("item", item.Name),
-						slog.String("timer", newTimer.String()))
+				slog.String("item", item.Name),
+				slog.String("timer", newTimer.String()))
 			go func(itemCtx context.Context, itemKey string) {
 				itemCrawlRoutine(itemCtx, *item, Channel)
 				// Clean up when routine exits
 				delete(activeRoutines, itemKey)
 				delete(itemTimers, itemKey)
+				delete(itemSuppression, itemKey)
 			}(itemCtx, itemKey)
 		}
 	}
-	
+
 	// Stop routines for deleted items
 	currentItems := make(map[string]bool)
 	for _, Channel := range database.Coordinates {
@@ -105,7 +114,7 @@ func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.Ca
 			currentItems[itemKey] = true
 		}
 	}
-	//delete if not found in current items
+	// delete if not found in current items
 	for itemKey, cancel := range activeRoutines {
 		if _, ok := currentItems[itemKey]; !ok {
 			slog.Info("stopping routine for deleted item", slog.String("item", itemKey))

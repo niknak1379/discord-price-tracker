@@ -68,8 +68,8 @@ func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.Ca
 				// Item exists, check if timer or suppression have changed
 				oldSuppression, ok := itemSuppression[itemKey]
 				if oldTimer, ok2 := itemTimers[itemKey]; ok &&
-					ok2 && oldTimer != newTimer &&
-					oldSuppression != item.SuppressNotifications {
+					ok2 && (oldTimer != newTimer ||
+					oldSuppression != item.SuppressNotifications) {
 					slog.Info("timer changed for item, restarting",
 						slog.String("item", item.Name),
 						slog.String("old_timer", oldTimer.String()),

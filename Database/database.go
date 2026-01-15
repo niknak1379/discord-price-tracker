@@ -400,6 +400,8 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 	}
 	var update bson.M
 
+	slog.Info("listingHistory objects", slog.Any("returned Array", listingsArr),
+		slog.Any("filtered array", filteredListigArr))
 	if len(filteredListigArr) != 0 {
 		update = bson.M{
 			"$set": bson.M{

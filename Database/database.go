@@ -356,15 +356,15 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 	var filteredListigArr []types.EbayListing // filtered array
 	// pipeline to see if price is duplicate
 	pipeline := mongo.Pipeline{
-		bson.D{{Key: "$match", Value: bson.M{"Name": itemName}}},
-		bson.D{{Key: "$project", Value: bson.M{
-			"ListingsHistory": bson.M{
+		bson.D{{Key: "$match", Value: bson.D{{Key: "Name", Value: itemName}}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "ListingsHistory", Value: bson.M{
 				"$filter": bson.M{
 					"input": "$ListingsHistory",
 					"as":    "Listing",
-					"cond":  bson.M{"$gte": []interface{}{"$$Listing.Date", startOfDay}},
+					"cond":  bson.M{"$gte": bson.A{"$$Listing.Date", startOfDay}},
 				},
-			},
+			}},
 		}}},
 	}
 	cursor, err := Table.Aggregate(ctx, pipeline)

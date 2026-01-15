@@ -5,10 +5,11 @@ import (
 	"log/slog"
 	"math"
 	"math/rand/v2"
+	"time"
+
 	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
 	types "priceTracker/Types"
-	"time"
 
 	discord "priceTracker/Discord"
 )
@@ -63,22 +64,28 @@ func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.Ca
 				newTimer = 8 * time.Hour
 			}
 
-			// Check if item already running
+			// Check if item already running and wether timer and suppression
+			// status have changed
 			if cancel, ok := activeRoutines[itemKey]; ok {
 				// Item exists, check if timer or suppression have changed
+				slog.Info("cancel function found for item", slog.String("itemName", item.Name))
 				oldSuppression, ok := itemSuppression[itemKey]
-				if oldTimer, ok2 := itemTimers[itemKey]; ok &&
-					ok2 && (oldTimer != newTimer ||
-					oldSuppression != item.SuppressNotifications) {
-					slog.Info("timer changed for item, restarting",
+				oldTimer, ok2 := itemTimers[itemKey]
+
+				if (ok2 && oldTimer != newTimer) ||
+					(ok && oldSuppression != item.SuppressNotifications) {
+					slog.Info("timer changed or suppression changed for item, restarting",
 						slog.String("item", item.Name),
 						slog.String("old_timer", oldTimer.String()),
-						slog.String("new_timer", newTimer.String()))
+						slog.String("new_timer", newTimer.String()),
+						slog.Bool("oldSuppression", oldSuppression),
+						slog.Bool("itemSuppression", item.SuppressNotifications))
 					cancel()
 					delete(activeRoutines, itemKey)
 					delete(itemTimers, itemKey)
 					delete(itemSuppression, itemKey)
 				} else {
+					slog.Info("suppression and timer unchanged skipping")
 					continue // Timer unchanged, skip
 				}
 			}

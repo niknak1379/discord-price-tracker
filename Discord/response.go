@@ -5,10 +5,11 @@ import (
 	"log/slog"
 	"math"
 	"os"
-	database "priceTracker/Database"
-	types "priceTracker/Types"
 	"strings"
 	"time"
+
+	database "priceTracker/Database"
+	types "priceTracker/Types"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -64,8 +65,9 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	var Fields []*discordgo.MessageEmbedField
 	Fields = append(Fields, &nameField, &urlField, &errField)
 	// <--------------- send screenshots of failed crawl --------->
-	
-	if strings.Contains(err.Error(), "facebook") {
+
+	if strings.Contains(err.Error(), "facebook") ||
+		strings.Contains(err.Error(), "ebay") {
 		reader, err := os.Open("second.png")
 		reader2, err2 := os.Open("first.png")
 		if err != nil || err2 != nil {
@@ -169,8 +171,8 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 		},
 	})
 	if err != nil {
-			slog.Error("auto complete error for query select", slog.Any("Error", err))
-		}
+		slog.Error("auto complete error for query select", slog.Any("Error", err))
+	}
 }
 
 func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int, ChannelID string) {

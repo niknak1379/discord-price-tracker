@@ -9,8 +9,11 @@ import (
 	"os/signal"
 	"sync"
 
+	// database "priceTracker/Database"
+
 	database "priceTracker/Database"
 	logger "priceTracker/Logger"
+
 	scheduler "priceTracker/Scheduler"
 
 	// crawler "priceTracker/Crawler"
@@ -28,11 +31,13 @@ func main() {
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
+	// itemArr, err := crawler.EbayFailover("https://www.ebay.com/sch/i.html?_nkw=msi%20mpg%20321urx&LH_ItemCondition=3000|2020|2010|1500&_udhi=1034&rt=nc&LH_BIN=1", 1000, "MSI MPG")
+	// slog.Info("ebay test", slog.Any("itemArr", itemArr), slog.Any("err", err))
 	go scheduler.SetChannelScheduler(ctx)
 	wg.Go(func() {
 		discord.Run(ctx)
-	}) 
-	
+	})
+
 	// make the program run unless sigINT is recieved
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)

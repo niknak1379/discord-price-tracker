@@ -1,10 +1,12 @@
 package crawler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -15,6 +17,7 @@ import (
 
 	types "priceTracker/Types"
 
+	"github.com/chromedp/chromedp"
 	"github.com/gocolly/colly/v2"
 )
 
@@ -128,11 +131,109 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 	c.Wait()
 	if err != nil || !visited {
 		if !visited && err == nil {
-			err = errors.New("no items were visited from ebay.com")
+			slog.Warn("ebay failed, using failover")
+			listingArr, err = EbayFailover(url, desiredPrice, Name)
 		}
 		return listingArr, err
 	}
 	return listingArr, err
+}
+
+func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListing, error) {
+	crawlDate := time.Now()
+	slog.Info("chromedp failover for ebay", slog.String("URL", url))
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+		chromedp.Flag("disable-blink-features", "AutomationControlled"),
+		chromedp.Flag("log-level", "3"),
+	)
+
+	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer allocCancel()
+
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+
+	ctx, timeoutCancel := context.WithTimeout(ctx, 60*time.Second) // Increased timeout
+	defer timeoutCancel()
+	var first []byte
+	var second []byte
+	var items []types.EbayListing
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(url),
+		chromedp.Sleep(10*time.Second),
+		chromedp.WaitReady("body", chromedp.ByQuery),
+		chromedp.FullScreenshot(&first, 90), // 90 = JPEG quality
+		chromedp.Sleep(3*time.Second),
+		chromedp.FullScreenshot(&second, 90), // 90 = JPEG quality
+		chromedp.Evaluate(`
+		Array.from(document.querySelectorAll('ul.srp-results > li')).map(e => {
+				const rows = e.querySelectorAll('div.s-card__attribute-row');
+				let basePrice = 0;
+				let shippingCost = 0;
+				
+				// Format price function (converted from Go)
+				const formatPrice = (priceStr) => {
+						if (!priceStr) return 0;
+						let ret = priceStr.replace(/\$/g, '');
+						ret = ret.replace(/,/g, '');
+						ret = ret.trim();
+						ret = ret.split('.')[0];
+						return parseInt(ret) || 0;
+				};
+				
+				for (let i = 0; i < Math.min(3, rows.length); i++) {
+						if (i === 0) {
+								basePrice = formatPrice(rows[i].innerText);
+						}
+						if (i === 1 && rows[i].innerText.includes('bid')) {
+								return null;
+						}
+						if (i === 2) {
+								if (rows[i].innerText.includes('Free delivery')) {
+										shippingCost = 0;
+								} else {
+										shippingCost = formatPrice(rows[i].innerText);
+								}
+						}
+				}
+				
+				return {
+						Title: e.querySelector('.s-card__title span.primary')?.innerText || '',
+						Condition: e.querySelector('div.s-card__subtitle')?.innerText || '',
+						URL: e.querySelector('a.s-card__link')?.href || '',
+						Price: shippingCost + basePrice
+				};
+		}).filter(item => item !== null)
+		`, &items),
+
+		// Price: parseInt((e.querySelector('span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.xlh3980.xvmahel.x1n0sxbx.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.x4zkp8e.x676frb.x1lkfr7t.x1lbecb7.x1s688f.xzsf02u')?.innerText || '0' ).replace('$', '').replaceAll(',', '')),
+		//                                        x193iq5w xeuugli x13faqbe x1vvkbs xlh3980 xvmahel x1n0sxbx x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x4zkp8e x3x7a5m x1lkfr7t x1lbecb7 x1s688f xzsf02u
+	)
+
+	os.WriteFile("first.png", first, 0o644)
+	os.WriteFile("second.png", second, 0o644)
+
+	var retArr []types.EbayListing
+	if err != nil {
+		slog.Error("Error in ebay failover", slog.Any("error value", err))
+		return retArr, err
+	} else if len(items) == 0 {
+		return retArr, errors.New("no items returned from ebay chromeDP, check screenshots for sanity check")
+	}
+	// <------------------ sanitize the list ------------>
+	for i := range items {
+		if titleCorrectnessCheck(items[i].Title, Name) && items[i].Price != 0 &&
+			items[i].Price < desiredPrice {
+			items[i].ItemName = Name
+			items[i].URL = strings.Split(items[i].URL, "?_skw")[0]
+			items[i].Price = int(float64(items[i].Price) * TaxRate)
+			items[i].Date = crawlDate
+			items[i].Duration = 0
+			retArr = append(retArr, items[i])
+		}
+	}
+	return retArr, err
 }
 
 // checks the title to make sure the name is in the title and

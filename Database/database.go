@@ -5,10 +5,11 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
-	crawler "priceTracker/Crawler"
-	types "priceTracker/Types"
 	"slices"
 	"time"
+
+	crawler "priceTracker/Crawler"
+	types "priceTracker/Types"
 
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -351,22 +352,69 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 	slices.SortFunc(listingsArr, func(a, b types.EbayListing) int {
 		return b.Price - a.Price
 	})
-	var update bson.M
-	if len(listingsArr) == 0 {
-		update = bson.M{
-			"$set": bson.M{
-				"EbayListings": listingsArr,
+	startOfDay := time.Now().Truncate(24 * time.Hour)
+	var filteredListigArr []types.EbayListing // filtered array
+	// pipeline to see if price is duplicate
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.M{"Name": itemName}}},
+		bson.D{{Key: "$project", Value: bson.M{
+			"ListingsHistory": bson.M{
+				"$filter": bson.M{
+					"input": "$ListingsHistory",
+					"as":    "Listing",
+					"cond":  bson.M{"$gte": []interface{}{"$$Listing.Date", startOfDay}},
+				},
 			},
+		}}},
+	}
+	cursor, err := Table.Aggregate(ctx, pipeline)
+	if err != nil {
+		return err
+	}
+	defer cursor.Close(ctx)
+
+	type Result struct {
+		ListingHistory []types.EbayListing `bson:"ListingsHistory"`
+	}
+
+	var results []Result
+	if err = cursor.All(ctx, &results); err != nil {
+		return err
+	}
+	listingMap := make(map[string]types.EbayListing) // maps url to item
+	if len(results) != 0 {
+		for _, Listing := range results[0].ListingHistory {
+			listingMap[Listing.URL] = Listing
 		}
-	} else {
+	}
+	for _, Listing := range listingsArr {
+		if oldListing, ok := listingMap[Listing.URL]; ok {
+			if oldListing.Price == Listing.Price {
+				continue
+			} else {
+				filteredListigArr = append(filteredListigArr, Listing)
+			}
+		} else {
+			filteredListigArr = append(filteredListigArr, Listing)
+		}
+	}
+	var update bson.M
+
+	if len(filteredListigArr) != 0 {
 		update = bson.M{
 			"$set": bson.M{
 				"EbayListings": listingsArr,
 			},
 			"$push": bson.M{
 				"ListingsHistory": bson.M{
-					"$each": listingsArr,
+					"$each": filteredListigArr,
 				},
+			},
+		}
+	} else {
+		update = bson.M{
+			"$set": bson.M{
+				"EbayListings": listingsArr,
 			},
 		}
 	}

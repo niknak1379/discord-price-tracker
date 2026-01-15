@@ -361,8 +361,8 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 			{Key: "ListingsHistory", Value: bson.M{
 				"$filter": bson.M{
 					"input": "$ListingsHistory",
-					"as":    "Listing",
-					"cond":  bson.M{"$gte": bson.A{"$$Listing.Date", startOfDay}},
+					"as":    "listing",
+					"cond":  bson.M{"$gte": bson.A{"$$listing.Date", startOfDay}},
 				},
 			}},
 		}}},

@@ -205,7 +205,7 @@ func NewEbayListingAlert(newListing types.EbayListing, ChannelID string) {
 
 // for functions that will take too long(more than the 15 min resposne time
 // required)
-func customAcknowledge(i *discordgo.InteractionCreate) error {
+func customAcknowledge(discord *discordgo.Session, i *discordgo.InteractionCreate) error {
 	em := discordgo.MessageEmbed{}
 	data := i.ApplicationCommandData().Options
 	for _, option := range data {
@@ -215,6 +215,10 @@ func customAcknowledge(i *discordgo.InteractionCreate) error {
 		}
 		em.Fields = append(em.Fields, &field)
 	}
-	_, err := Discord.ChannelMessageSendEmbed(i.ChannelID, &em)
+	err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Data: &discordgo.InteractionResponseData{
+			Embeds: []*discordgo.MessageEmbed{&em},
+		},
+	})
 	return err
 }

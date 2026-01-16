@@ -361,7 +361,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoCompleteQuerySelector(i, discord)
 		default:
-			err := customAcknowledge(i)
+			err := customAcknowledge(discord, i)
 			if err != nil {
 				slog.Error("ack error", slog.Any("error value", err))
 			}
@@ -450,7 +450,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
-			err := customAcknowledge(i)
+			err := customAcknowledge(discord, i)
 			if err != nil {
 				slog.Error("ack error", slog.Any("error value", err))
 			}
@@ -512,7 +512,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		}
 	},
 	"list": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
-		err := customAcknowledge(i)
+		err := customAcknowledge(discord, i)
 		if err != nil {
 			slog.Error("ack error", slog.Any("error value", err))
 		}

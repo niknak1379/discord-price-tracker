@@ -228,20 +228,25 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 		oldListing, ok := ListingsMap[ebayListings[i].URL]
 		// if listing not found in the old list, or if price changed
 		// ping discord
-		//
 		// update how long the listing has been online for
 		if ok {
 			if oldListing.Duration == 0 {
 				oldListing.Duration = 8
 			}
 			ebayListings[i].Duration = oldListing.Duration + time.Duration(timer)*time.Hour
-		}
-		if !Suppress && (!ok || oldListing.Price != ebayListings[i].Price) {
-			if ok && ebayListings[i].Price != oldListing.Price {
-				discord.EbayListingPriceChangeAlert(ebayListings[i], oldListing.Price, Channel.ChannelID)
-			} else {
-				discord.NewEbayListingAlert(ebayListings[i], Channel.ChannelID)
+			if ebayListings[i].Price != oldListing.Price {
+				// update count for how many times price was increased
+				if ebayListings[i].Price > oldListing.Price {
+					ebayListings[i].PriceIncreaseNum += 1
+				} else {
+					ebayListings[i].PriceDecreaseNum += 1
+				}
+				if !Suppress {
+					discord.EbayListingPriceChangeAlert(ebayListings[i], oldListing.Price, Channel.ChannelID)
+				}
 			}
+		} else if !Suppress {
+			discord.NewEbayListingAlert(ebayListings[i], Channel.ChannelID)
 		}
 	}
 	err = database.UpdateEbayListings(Name, ebayListings, Channel.ChannelID)

@@ -2,9 +2,10 @@ package discord
 
 import (
 	"fmt"
+	"strconv"
+
 	database "priceTracker/Database"
 	types "priceTracker/Types"
-	"strconv"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -158,7 +159,16 @@ func formatSecondHandField(Listing types.EbayListing, Message string) []*discord
 		Name:   "Listing Online For:",
 		Inline: false,
 	}
-
+	priceDecField := discordgo.MessageEmbedField{
+		Name:   "Number Of Time Price Has Decreased",
+		Value:  strconv.Itoa(Listing.PriceDecreaseNum),
+		Inline: false,
+	}
+	priceIncField := discordgo.MessageEmbedField{
+		Name:   "Number Of Time Price Has Increased",
+		Value:  strconv.Itoa(Listing.PriceIncreaseNum),
+		Inline: false,
+	}
 	separatorField := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter("", 44),
 		Value:  "",
@@ -166,7 +176,8 @@ func formatSecondHandField(Listing types.EbayListing, Message string) []*discord
 	}
 
 	var ret []*discordgo.MessageEmbedField
-	return append(ret, &currOrOld, &priceField, &conditionField, &urlField, &durationField, &separatorField)
+	return append(ret, &currOrOld, &priceField, &conditionField, &urlField,
+		&durationField, &priceDecField, &priceIncField, &separatorField)
 }
 
 func formatAggregateFields(Aggregate database.AggregateReport, message string) []*discordgo.MessageEmbedField {

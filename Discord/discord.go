@@ -6,11 +6,12 @@ import (
 	"log"
 	"log/slog"
 	"os"
-	charts "priceTracker/Charts"
-	database "priceTracker/Database"
 	"sync"
 	"syscall"
 	"time"
+
+	charts "priceTracker/Charts"
+	database "priceTracker/Database"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -360,10 +361,10 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoCompleteQuerySelector(i, discord)
 		default:
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			})
-
+			err := customAcknowledge(i)
+			if err != nil {
+				slog.Error("ack error", slog.Any("error value", err))
+			}
 			// get command inputs from discord
 			options := i.ApplicationCommandData().Options
 			// 0 is item name, 1 is uri, 2 is htmlqueryselector
@@ -449,10 +450,10 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			})
-			// add tracker to database
+			err := customAcknowledge(i)
+			if err != nil {
+				slog.Error("ack error", slog.Any("error value", err))
+			}
 			getRes, err := database.GetItem(options[0].StringValue(), i.ChannelID)
 			if err != nil {
 				content := err.Error()
@@ -511,10 +512,10 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		}
 	},
 	"list": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
-		// add tracker to database
-		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		})
+		err := customAcknowledge(i)
+		if err != nil {
+			slog.Error("ack error", slog.Any("error value", err))
+		}
 		getRes := database.GetAllItems(i.ChannelID)
 		// returnstr, _ := json.Marshal(getRes)
 

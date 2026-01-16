@@ -18,13 +18,14 @@ type Channel struct {
 	Long         float64 `bson:"Long"`
 	Distance     int     `bson:"Distance"`
 	LocationCode string  `bson:"LocationCode"`
+	TotalItems   int     `bson:"TotalItems"`
 }
 
 var (
 	// has the mongo table stored
 	Tables = make(map[string]*mongo.Collection)
 	// has the distance, lat, long, and other facebook info stored
-	Coordinates = make(map[string]Channel)
+	ChannelMap = make(map[string]Channel)
 )
 
 func loadDBTables() {
@@ -42,12 +43,13 @@ func loadDBTables() {
 	for _, IDString := range ChannelsArr {
 		table := Client.Database("tracker").Collection(IDString.ChannelID)
 		Tables[IDString.ChannelID] = table
-		Coordinates[IDString.ChannelID] = Channel{
+		ChannelMap[IDString.ChannelID] = Channel{
 			ChannelID:    IDString.ChannelID,
 			Lat:          IDString.Lat,
 			Long:         IDString.Long,
 			Distance:     IDString.Distance,
 			LocationCode: IDString.LocationCode,
+			TotalItems:   IDString.TotalItems,
 		}
 		if IDString.Lat == 0 || IDString.Long == 0 || IDString.Distance == 0 {
 			log.Panic("Could not load Channel, lat, long or distance empty")
@@ -66,10 +68,11 @@ func CreateChannelItemTableIfMissing(ChannelID string, Location string, Location
 		Long:         Long,
 		Distance:     maxDistance,
 		LocationCode: LocationCode,
+		TotalItems:   0,
 	}
 	// if channelID already exists, just update the Coordinates in DB and memory
 	if table, ok := Tables[ChannelID]; ok {
-		Coordinates[ChannelID] = Channel
+		ChannelMap[ChannelID] = Channel
 		update := bson.M{
 			"$set": bson.M{
 				"Distance":     maxDistance,
@@ -113,7 +116,7 @@ func CreateChannelItemTableIfMissing(ChannelID string, Location string, Location
 	}
 	table := Client.Database("tracker").Collection(ChannelID)
 	Tables[ChannelID] = table
-	Coordinates[ChannelID] = Channel
+	ChannelMap[ChannelID] = Channel
 
 	return err
 }
@@ -123,7 +126,7 @@ func ChannelDeleteHandler(ChannelID string) {
 		ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
 		ChannelTable.FindOneAndDelete(ctx, bson.M{"ChannelID": ChannelID})
 		delete(Tables, ChannelID)
-		delete(Coordinates, ChannelID)
+		delete(ChannelMap, ChannelID)
 	}
 }
 
@@ -139,4 +142,30 @@ func loadChannelTable(ChannelID string) (*mongo.Collection, error) {
 		return Table, err
 	}
 	return Table, nil
+}
+
+func getChannelLength(ChannelID string) (int, error) {
+	Channel, ok := ChannelMap[ChannelID]
+	if !ok {
+		return 0, errors.New("Channel Not found")
+	}
+	return Channel.TotalItems, nil
+}
+
+func updateChannelLength(ChannelID string, Diff int) error {
+	Len, err := getChannelLength(ChannelID)
+	if err != nil {
+		return err
+	}
+	update := bson.M{
+		"$set": bson.M{
+			"TotalItems": Diff + Len,
+		},
+	}
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		return err
+	}
+	res := Table.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
+	return res.Err()
 }

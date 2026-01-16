@@ -24,7 +24,7 @@ func SetChannelScheduler(ctx context.Context) {
 	activeRoutines := make(map[string]context.CancelFunc) // Track running goroutines
 	itemTimers := make(map[string]time.Duration)          // Track current timers
 	itemSuppression := make(map[string]bool)              // trakc noti suppression
-	for _, Channel := range database.Coordinates {
+	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
 		for _, item := range itemsArr {
 			updateSingleItem(*item, Channel)
@@ -53,7 +53,7 @@ func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.Ca
 	itemTimers map[string]time.Duration,
 	itemSuppression map[string]bool,
 ) {
-	for _, Channel := range database.Coordinates {
+	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
 		for _, item := range itemsArr {
 			itemKey := item.Name + "_" + Channel.ChannelID
@@ -114,7 +114,7 @@ func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.Ca
 
 	// Stop routines for deleted items
 	currentItems := make(map[string]bool)
-	for _, Channel := range database.Coordinates {
+	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
 		for _, item := range itemsArr {
 			itemKey := item.Name + "_" + Channel.ChannelID

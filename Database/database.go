@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/url"
 	"os"
@@ -62,6 +63,10 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return Item{}, err
 	}
+	if Channel.TotalItems >= 25 {
+		return Item{}, errors.New("Channel Capacity Reached, add to a separate channel")
+	}
+	updateChannelLength(Channel.ChannelID, 1)
 	p, t, err := validateURI(uri, query)
 	if err != nil {
 		slog.Error("invalid url for add", slog.Any("Error", err))
@@ -455,6 +460,7 @@ func RemoveItem(itemName string, ChannelID string) int64 {
 	if err != nil {
 		slog.Error("couldnt remove from DB", slog.Any("Error", err))
 	}
+	updateChannelLength(ChannelID, -1)
 	return results.DeletedCount
 }
 

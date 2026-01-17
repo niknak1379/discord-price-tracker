@@ -64,12 +64,20 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	}
 	var Fields []*discordgo.MessageEmbedField
 	Fields = append(Fields, &nameField, &urlField, &errField)
+	//
 	// <--------------- send screenshots of failed crawl --------->
-
-	if strings.Contains(err.Error(), "facebook") ||
-		strings.Contains(err.Error(), "ebay") {
-		reader, err := os.Open("second.png")
-		reader2, err2 := os.Open("first.png")
+	if strings.Contains(err.Error(), "facebook") {
+		reader, err := os.Open("facebookSecond.png")
+		reader2, err2 := os.Open("facebookFirst.png")
+		if err != nil || err2 != nil {
+			slog.Error("Could not load error images", slog.Any("Error", err),
+				slog.Any("Error", err2))
+		}
+		Discord.ChannelFileSend(ChannelID, "second.png", reader)
+		Discord.ChannelFileSend(ChannelID, "first.png", reader2)
+	} else if strings.Contains(err.Error(), "ebay") {
+		reader, err := os.Open("ebaySecond.png")
+		reader2, err2 := os.Open("ebayFirst.png")
 		if err != nil || err2 != nil {
 			slog.Error("Could not load error images", slog.Any("Error", err),
 				slog.Any("Error", err2))

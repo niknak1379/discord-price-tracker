@@ -211,13 +211,13 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
 		//                                        x193iq5w xeuugli x13faqbe x1vvkbs xlh3980 xvmahel x1n0sxbx x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x4zkp8e x3x7a5m x1lkfr7t x1lbecb7 x1s688f xzsf02u
 	)
 
-	os.WriteFile("first.png", first, 0o644)
-	os.WriteFile("second.png", second, 0o644)
+	os.WriteFile("ebayFirst.png", first, 0o644)
+	os.WriteFile("ebaySecond.png", second, 0o644)
 
 	var retArr []types.EbayListing
 	if err != nil {
 		slog.Error("Error in ebay failover", slog.Any("error value", err))
-		return retArr, err
+		return retArr, errors.Join(err, errors.New("Problem in Ebay chromeDP Failover"))
 	} else if len(items) == 0 {
 		return retArr, errors.New("no items returned from ebay chromeDP, check screenshots for sanity check")
 	}

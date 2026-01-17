@@ -180,9 +180,9 @@ func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int, Cha
 	if oldPrice < newListing.Price {
 		colorCode = 12745742 // dark gold
 	}
-	newFields := formatSecondHandField(newListing, "New Price")
+	newFields := formatSecondHandField(newListing, "New Price", true)
 	newListing.Price = oldPrice
-	oldFields := formatSecondHandField(newListing, "Old Price")
+	oldFields := formatSecondHandField(newListing, "Old Price", false)
 	em := discordgo.MessageEmbed{
 		Title:  "Second Hand Listing Price Change For " + newListing.ItemName,
 		Color:  colorCode,
@@ -193,7 +193,7 @@ func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int, Cha
 }
 
 func NewEbayListingAlert(newListing types.EbayListing, ChannelID string) {
-	fields := formatSecondHandField(newListing, "Price")
+	fields := formatSecondHandField(newListing, "Price", true)
 	em := discordgo.MessageEmbed{
 		Title:  "New Second Hand Listing Found For " + newListing.ItemName,
 		Color:  15277667, // pink

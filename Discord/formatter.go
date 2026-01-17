@@ -126,13 +126,16 @@ func setSecondHandField(ebayArr []types.EbayListing) []*discordgo.MessageEmbedFi
 	res = append(res, &HeaderField)
 
 	for _, Listing := range ebayArr {
-		listFields := formatSecondHandField(Listing, "Price")
+		listFields := formatSecondHandField(Listing, "Price", true)
 		res = append(res, listFields...)
 	}
 	return res
 }
 
-func formatSecondHandField(Listing types.EbayListing, Message string) []*discordgo.MessageEmbedField {
+// new listing is there so that it  doesnt return duplicate fields in discord.response
+// for alerts
+func formatSecondHandField(Listing types.EbayListing, Message string, newListing bool) []*discordgo.MessageEmbedField {
+	var ret []*discordgo.MessageEmbedField
 	currOrOld := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter(Message, 43),
 		Value:  "",
@@ -153,31 +156,34 @@ func formatSecondHandField(Listing types.EbayListing, Message string) []*discord
 		Value:  truncateString(Listing.URL, MaxFieldValueLen),
 		Inline: false,
 	}
-	durationField := discordgo.MessageEmbedField{
-		Value: strconv.Itoa(int(Listing.Duration.Hours()/24)) + " Days and " +
-			strconv.Itoa(int(Listing.Duration.Hours())%24) + " Hours",
-		Name:   "Listing Online For:",
-		Inline: false,
-	}
-	priceDecField := discordgo.MessageEmbedField{
-		Name:   "Number Of Time Price Has Decreased",
-		Value:  strconv.Itoa(Listing.PriceDecreaseNum),
-		Inline: false,
-	}
-	priceIncField := discordgo.MessageEmbedField{
-		Name:   "Number Of Time Price Has Increased",
-		Value:  strconv.Itoa(Listing.PriceIncreaseNum),
-		Inline: false,
-	}
 	separatorField := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter("", 44),
 		Value:  "",
 		Inline: false,
 	}
+	if newListing {
+		durationField := discordgo.MessageEmbedField{
+			Value: strconv.Itoa(int(Listing.Duration.Hours()/24)) + " Days and " +
+				strconv.Itoa(int(Listing.Duration.Hours())%24) + " Hours",
+			Name:   "Listing Online For:",
+			Inline: false,
+		}
+		priceDecField := discordgo.MessageEmbedField{
+			Name:   "Number Of Time Price Has Decreased",
+			Value:  strconv.Itoa(Listing.PriceDecreaseNum),
+			Inline: false,
+		}
+		priceIncField := discordgo.MessageEmbedField{
+			Name:   "Number Of Time Price Has Increased",
+			Value:  strconv.Itoa(Listing.PriceIncreaseNum),
+			Inline: false,
+		}
+		return append(ret, &currOrOld, &priceField, &conditionField, &urlField,
+			&durationField, &priceDecField, &priceIncField, &separatorField)
+	}
 
-	var ret []*discordgo.MessageEmbedField
 	return append(ret, &currOrOld, &priceField, &conditionField, &urlField,
-		&durationField, &priceDecField, &priceIncField, &separatorField)
+		&separatorField)
 }
 
 func formatAggregateFields(Aggregate database.AggregateReport, message string) []*discordgo.MessageEmbedField {

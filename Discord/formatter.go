@@ -165,16 +165,16 @@ func formatSecondHandField(Listing types.EbayListing, Message string, newListing
 		durationField := discordgo.MessageEmbedField{
 			Value: strconv.Itoa(int(Listing.Duration.Hours()/24)) + " Days and " +
 				strconv.Itoa(int(Listing.Duration.Hours())%24) + " Hours",
-			Name:   "Listing Online For:",
+			Name:   "Listing Duration:",
 			Inline: false,
 		}
 		priceDecField := discordgo.MessageEmbedField{
-			Name:   "Number Of Time Price Has Decreased",
+			Name:   "# of Price Decreases:",
 			Value:  strconv.Itoa(Listing.PriceDecreaseNum),
 			Inline: false,
 		}
 		priceIncField := discordgo.MessageEmbedField{
-			Name:   "Number Of Time Price Has Increased",
+			Name:   "# of Price Increases:",
 			Value:  strconv.Itoa(Listing.PriceIncreaseNum),
 			Inline: false,
 		}

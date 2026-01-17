@@ -188,10 +188,11 @@ func updateSingleItem(item *database.Item, Channel database.Channel) {
 		}
 	}
 
-	if currLow.Price != math.MaxInt32 {
-		database.UpdateLowestPrice(item.Name, currLow, Channel.ChannelID)
+	if currLow.Price == math.MaxInt {
+		currLow.Price = item.CurrentLowestPrice.Price
 	}
 
+	database.UpdateLowestPrice(item.Name, currLow, Channel.ChannelID)
 	handleEbayListingsUpdate(item.Name, item.CurrentLowestPrice.Price, item.Type, Channel, item.SuppressNotifications, item.Timer)
 	database.UpdateAggregateReport(item.Name, Channel.ChannelID)
 }

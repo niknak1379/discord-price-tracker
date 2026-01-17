@@ -216,6 +216,7 @@ func customAcknowledge(discord *discordgo.Session, i *discordgo.InteractionCreat
 		em.Fields = append(em.Fields, &field)
 	}
 	err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Embeds: []*discordgo.MessageEmbed{&em},
 		},

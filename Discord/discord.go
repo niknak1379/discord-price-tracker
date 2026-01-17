@@ -322,7 +322,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		err := database.CreateChannelItemTableIfMissing(i.ChannelID,
 			options[0].StringValue(),
 			options[1].StringValue(),
-			int(options[1].IntValue()))
+			int(options[2].IntValue()))
 		if err != nil {
 			content := err.Error()
 			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{

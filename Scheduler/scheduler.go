@@ -27,7 +27,7 @@ func SetChannelScheduler(ctx context.Context) {
 	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
 		for _, item := range itemsArr {
-			updateSingleItem(*item, Channel)
+			updateSingleItem(item, Channel)
 		}
 	}
 	// Initial load for scheduler this runs after the timers hit tho not immediately
@@ -103,7 +103,7 @@ func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.Ca
 				slog.String("item", item.Name),
 				slog.String("timer", newTimer.String()))
 			go func(itemCtx context.Context, itemKey string) {
-				itemCrawlRoutine(itemCtx, *item, Channel)
+				itemCrawlRoutine(itemCtx, item, Channel)
 				// Clean up when routine exits
 				delete(activeRoutines, itemKey)
 				delete(itemTimers, itemKey)
@@ -132,7 +132,7 @@ func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.Ca
 	}
 }
 
-func itemCrawlRoutine(ctx context.Context, item database.Item, Channel database.Channel) {
+func itemCrawlRoutine(ctx context.Context, item *database.Item, Channel database.Channel) {
 	// Random delay before first crawl
 	r := rand.IntN(120)
 	time.Sleep(time.Duration(r) * time.Second)
@@ -161,7 +161,7 @@ func itemCrawlRoutine(ctx context.Context, item database.Item, Channel database.
 	}
 }
 
-func updateSingleItem(item database.Item, Channel database.Channel) {
+func updateSingleItem(item *database.Item, Channel database.Channel) {
 	slog.Info("updating item",
 		slog.String("item", item.Name),
 		slog.String("channelID", Channel.ChannelID))
@@ -192,7 +192,7 @@ func updateSingleItem(item database.Item, Channel database.Channel) {
 		database.UpdateLowestPrice(item.Name, currLow, Channel.ChannelID)
 	}
 
-	handleEbayListingsUpdate(item.Name, currLow.Price, item.Type, Channel, item.SuppressNotifications, item.Timer)
+	handleEbayListingsUpdate(item.Name, item.CurrentLowestPrice.Price, item.Type, Channel, item.SuppressNotifications, item.Timer)
 	database.UpdateAggregateReport(item.Name, Channel.ChannelID)
 }
 

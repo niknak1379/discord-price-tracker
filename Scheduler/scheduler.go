@@ -238,9 +238,9 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 			if ebayListings[i].Price != oldListing.Price {
 				// update count for how many times price was increased
 				if ebayListings[i].Price > oldListing.Price {
-					ebayListings[i].PriceIncreaseNum += 1
+					ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum + 1
 				} else {
-					ebayListings[i].PriceDecreaseNum += 1
+					ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum + 1
 				}
 				if !Suppress {
 					discord.EbayListingPriceChangeAlert(ebayListings[i], oldListing.Price, Channel.ChannelID)

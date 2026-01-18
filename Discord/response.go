@@ -216,6 +216,10 @@ func NewEbayListingAlert(newListing types.EbayListing, ChannelID string) {
 func customAcknowledge(discord *discordgo.Session, i *discordgo.InteractionCreate) error {
 	em := discordgo.MessageEmbed{}
 	data := i.ApplicationCommandData().Options
+	Name := discordgo.MessageEmbedField{
+		Name: i.ApplicationCommandData().Name,
+	}
+	em.Fields = append(em.Fields, &Name)
 	for _, option := range data {
 		field := discordgo.MessageEmbedField{
 			Name:  option.Name,

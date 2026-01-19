@@ -43,3 +43,4 @@ services:
       - OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
       - FREE_ONLY=on
       - SERVER_COUNTRIES=United States
+      - FIREWALL_OUTBOUND_SUBNETS=0.0.0.0/0

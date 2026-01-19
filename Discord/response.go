@@ -75,7 +75,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		}
 		Discord.ChannelFileSend(ChannelID, "second.png", reader)
 		Discord.ChannelFileSend(ChannelID, "first.png", reader2)
-	} else if strings.Contains(err.Error(), "ebay") {
+	} else if strings.Contains(err.Error(), "Ebay") {
 		reader, err := os.Open("ebaySecond.png")
 		reader2, err2 := os.Open("ebayFirst.png")
 		if err != nil || err2 != nil {

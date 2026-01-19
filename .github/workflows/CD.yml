@@ -54,6 +54,8 @@ jobs:
           GEO_API_KEY=${{ secrets.GEO_API_KEY }}
           HOME_LAT=${{ secrets.HOME_LAT }}
           HOME_LONG=${{ secrets.HOME_LONG }}
+          OPENVPN_USER=${{secrets.OPENVPN_USER}}
+          OPENVPN_PASSWORD=${{secrets.OPENVPN_PASSWORD}}
           EOL
           cd ..
           scp -r -o "StrictHostKeyChecking no" price-tracker ${{ secrets.RASPBERRYPI_USER }}@${{ secrets.RASPBERRYPI_TAILSCALE_IP }}:~/

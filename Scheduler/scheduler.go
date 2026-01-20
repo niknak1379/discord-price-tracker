@@ -174,7 +174,7 @@ func updateSingleItem(item *database.Item, Channel database.Channel) {
 
 	for _, t := range item.TrackingList {
 		// Random delay between sources (60-180 seconds)
-		r := rand.IntN(120) + 60
+		r := rand.IntN(180)
 		time.Sleep(time.Duration(r) * time.Second)
 
 		oldLow, err := database.GetLowestHistoricalPrice(item.Name, Channel.ChannelID)

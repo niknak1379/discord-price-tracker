@@ -50,6 +50,6 @@ services:
       [
         "/bin/sh",
         "-c",
-        "while true; do sleep 86400; docker restart price-tracker-gluetun-1; done",
+        "while true; do sleep 21600; docker restart price-tracker-gluetun-1; done",
       ]
     restart: unless-stopped

@@ -146,8 +146,8 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
 		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 		chromedp.Flag("log-level", "3"),
+		chromedp.ProxyServer("http://gluetun:8888"),
 	)
-
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	defer allocCancel()
 

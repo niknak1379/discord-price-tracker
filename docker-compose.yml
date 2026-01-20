@@ -13,7 +13,6 @@ services:
       - GEO_API_KEY=${GEO_API_KEY}
       - HOME_LAT=${HOME_LAT}
       - HOME_LONG=${HOME_LONG}
-    network_mode: "service:gluetun"
     depends_on:
       - gluetun
 
@@ -28,8 +27,6 @@ services:
       - /dev/net/tun:/dev/net/tun
     ports:
       - 8888:8888/tcp # HTTP proxy
-      - 8388:8388/tcp # Shadowsocks
-      - 8388:8388/udp # Shadowsocks
     volumes:
       - /yourpath:/gluetun
     environment:
@@ -43,7 +40,7 @@ services:
       - OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
       - FREE_ONLY=on
       - SERVER_COUNTRIES=United States
-      - FIREWALL_OUTBOUND_SUBNETS=89.192.90.0/24
+      - HTTPProxy=on
 
   restarter:
     image: docker:cli

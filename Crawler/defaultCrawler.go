@@ -54,7 +54,7 @@ func initCrawler() *colly.Collector {
 	c.WithTransport(&http.Transport{
 		DisableCompression: false,
 	})
-
+	c.SetProxy("http://gluetun:8888")
 	c.OnError(func(r *colly.Response, err error) {
 		s := fmt.Sprintf("Error scraping %s: %v", r.Request.URL, err)
 		slog.Error(s)

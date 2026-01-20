@@ -40,7 +40,7 @@ func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong flo
 	}
 	retArr := append(ebay, fb...)
 	retArr = append(retArr, depop...)
-	return retArr, errors.Join(err, err2)
+	return retArr, errors.Join(err, err2, err3)
 }
 
 func FacebookURLGenerator(Name string, Price int, LocationCode string) string {
@@ -105,6 +105,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 	var retArr []types.EbayListing
 	if err != nil {
 		slog.Error("Error in marketplace", slog.Any("error value", err))
+		err = errors.Join(errors.New("Error in facebook marketplace:"), err)
 		return retArr, err
 	} else if len(items) == 0 {
 		return retArr, errors.New("no items returned from facebook, check screenshots for sanity check")

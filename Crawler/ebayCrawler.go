@@ -131,10 +131,8 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 	err := c.Visit(url)
 	c.Wait()
 	if err != nil || !visited {
-		if !visited && err == nil {
-			slog.Warn("ebay failed, using failover")
-			listingArr, err = EbayFailover(url, desiredPrice, Name)
-		}
+		slog.Warn("ebay failed, using failover")
+		listingArr, err = EbayFailover(url, desiredPrice, Name)
 		return listingArr, err
 	}
 	return listingArr, err
@@ -221,7 +219,7 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
 		slog.Error("Error in ebay failover", slog.Any("error value", err))
 		return retArr, errors.Join(err, errors.New("Problem in Ebay chromeDP Failover"))
 	} else if len(items) == 0 {
-		return retArr, errors.New("no items returned from ebay chromeDP, check screenshots for sanity check")
+		return retArr, errors.New("no items returned from Ebay chromeDP, check screenshots for sanity check")
 	}
 	// <------------------ sanitize the list ------------>
 	for i := range items {

@@ -40,8 +40,8 @@ services:
       - OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
       - FREE_ONLY=on
       - SERVER_COUNTRIES=United States
-      - HTTPProxy=on
-
+      - HTTPPROXY=on
+      - HTTPPROXY_STEALTH=on
   restarter:
     image: docker:cli
     volumes: ["/var/run/docker.sock:/var/run/docker.sock"]

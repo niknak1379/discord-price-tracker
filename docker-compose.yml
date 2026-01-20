@@ -41,6 +41,7 @@ services:
       - FREE_ONLY=on
       - SERVER_COUNTRIES=United States
       - HTTPPROXY=on
+      - UPDATER_PERIOD=12h
       - HTTPPROXY_STEALTH=on
   restarter:
     image: docker:cli

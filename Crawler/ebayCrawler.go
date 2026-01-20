@@ -51,7 +51,8 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 	usedQuery := "&LH_ItemCondition=3000|2020|2010|1500"
 	priceQuery := fmt.Sprintf("&_udhi=%d&rt=nc", newPrice)
 	noAuction := "&LH_BIN=1"
-	return baseURL + url.PathEscape(Name) + usedQuery + priceQuery + noAuction
+	location := "&_stpos=90274&_fcid=1"
+	return baseURL + url.PathEscape(Name) + usedQuery + priceQuery + noAuction + location
 }
 
 // returns a map of urls and prices + shipping cost
@@ -139,7 +140,7 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 	return listingArr, err
 }
 
-func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListing, error) {
+func EbayFailover(ura string, desiredPrice int, Name string) ([]types.EbayListing, error) {
 	crawlDate := time.Now()
 	slog.Info("chromedp failover for ebay", slog.String("URL", url))
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],

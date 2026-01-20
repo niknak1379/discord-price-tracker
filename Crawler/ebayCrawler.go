@@ -221,6 +221,7 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
 	} else if len(items) == 0 {
 		return retArr, errors.New("no items returned from Ebay chromeDP, check screenshots for sanity check")
 	}
+	slog.Info("Ebay Failover returned Items, its fine for now")
 	// <------------------ sanitize the list ------------>
 	for i := range items {
 		if titleCorrectnessCheck(items[i].Title, Name) && items[i].Price != 0 &&

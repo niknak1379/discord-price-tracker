@@ -12,4 +12,5 @@ type EbayListing struct {
 	Date             time.Time     `bson:"Date"`
 	PriceIncreaseNum int           `bson:"PriceIncreaseNum"`
 	PriceDecreaseNum int           `bson:"PriceDecreaseNum"`
+	TotalPriceChange int           `bson:"TotalPriceChange"`
 }

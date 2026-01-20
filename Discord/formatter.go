@@ -178,8 +178,13 @@ func formatSecondHandField(Listing types.EbayListing, Message string, newListing
 			Value:  strconv.Itoa(Listing.PriceIncreaseNum),
 			Inline: false,
 		}
+		totalPriceChange := discordgo.MessageEmbedField{
+			Name:   "Total Price Change $",
+			Value:  strconv.Itoa(Listing.TotalPriceChange),
+			Inline: false,
+		}
 		return append(ret, &currOrOld, &priceField, &conditionField, &urlField,
-			&durationField, &priceDecField, &priceIncField, &separatorField)
+			&durationField, &priceDecField, &priceIncField, &totalPriceChange, &separatorField)
 	}
 
 	return append(ret, &currOrOld, &priceField, &conditionField, &urlField,

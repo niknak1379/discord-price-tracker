@@ -68,11 +68,10 @@ var (
 					Autocomplete: true,
 				},
 				{
-					Name:         "timer",
-					Description:  "interval between scrapes, in hours",
-					Type:         discordgo.ApplicationCommandOptionInteger,
-					Required:     true,
-					Autocomplete: true,
+					Name:        "timer",
+					Description: "interval between scrapes, in hours",
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Required:    true,
 				},
 				{
 					Name:        "type",

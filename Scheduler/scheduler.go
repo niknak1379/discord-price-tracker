@@ -193,7 +193,7 @@ func updateSingleItem(item *database.Item, Channel database.Channel) {
 	}
 
 	database.UpdateLowestPrice(item.Name, currLow, Channel.ChannelID)
-	handleEbayListingsUpdate(item.Name, item.LowestPrice.Price, item.Type, Channel, item.SuppressNotifications, item.Timer)
+	handleEbayListingsUpdate(item.Name, item.CurrentLowestPrice.Price, item.Type, Channel, item.SuppressNotifications, item.Timer)
 	database.UpdateAggregateReport(item.Name, Channel.ChannelID)
 }
 

@@ -140,7 +140,7 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 	return listingArr, err
 }
 
-func EbayFailover(ura string, desiredPrice int, Name string) ([]types.EbayListing, error) {
+func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListing, error) {
 	crawlDate := time.Now()
 	slog.Info("chromedp failover for ebay", slog.String("URL", url))
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],

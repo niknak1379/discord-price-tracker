@@ -273,6 +273,7 @@ func GenerateSecondHandPriceReport(Name string, endDate time.Time, Days int, Cha
 						{Key: "timezone", Value: "America/Los_Angeles"},
 					}},
 				}},
+				{Key: "last", Value: "$last"},
 				{Key: "priceWhenSold", Value: "$priceWhenSold"},
 				{Key: "averagePrice", Value: "$averagePrice"},
 				{Key: "LowestPriceDuringTimePeriod", Value: "$LowestPriceDuringTimePeriod"},
@@ -282,7 +283,15 @@ func GenerateSecondHandPriceReport(Name string, endDate time.Time, Days int, Cha
 			{Key: "$group", Value: bson.D{
 				{Key: "_id", Value: nil},
 				{Key: "AverageDaysUP", Value: bson.D{{Key: "$avg", Value: "$DaysUp"}}},
-				{Key: "AveragePriceWhenSold", Value: bson.D{{Key: "$avg", Value: "$priceWhenSold"}}},
+				{Key: "AveragePriceWhenSold", Value: bson.D{
+					{Key: "$avg", Value: bson.D{
+						{Key: "$cond", Value: bson.A{
+							bson.D{{Key: "$lt", Value: bson.A{"$last", endDate}}},
+							"$priceWhenSold",
+							nil,
+						}},
+					}},
+				}},
 				{Key: "AveragePrice", Value: bson.D{{Key: "$avg", Value: "$averagePrice"}}},
 				{Key: "PriceSTDEV", Value: bson.D{{Key: "$stdDevSamp", Value: "$LowestPriceDuringTimePeriod"}}},
 				{Key: "UniqueListings", Value: bson.D{{Key: "$sum", Value: 1}}},
@@ -324,7 +333,7 @@ func UpdateAggregateReport(Name, ChannelID string) error {
 	}
 	AggregateReport, err := GenerateSecondHandPriceReport(Name, time.Now(), 7, ChannelID)
 	if err != nil {
-		slog.Error("failed to get second hand reports for", 
+		slog.Error("failed to get second hand reports for",
 			slog.Any("error value", err),
 			slog.String("Title", Name),
 		)
@@ -338,10 +347,9 @@ func UpdateAggregateReport(Name, ChannelID string) error {
 		},
 	})
 	if result.Err() != nil {
-		slog.Error("could not update new aggregate", 
+		slog.Error("could not update new aggregate",
 			slog.Any("value", err))
 		return err
 	}
 	return nil
 }
-

@@ -67,6 +67,9 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 		return Item{}, errors.New("Channel Capacity Reached, add to a separate channel")
 	}
 	updateChannelLength(Channel.ChannelID, 1)
+	if Timer >= 0 {
+		return Item{}, errors.New("Invalid Timer value")
+	}
 	p, t, err := validateURI(uri, query)
 	if err != nil {
 		slog.Error("invalid url for add", slog.Any("Error", err))
@@ -107,6 +110,9 @@ func EditTimer(Name string, NewTimer int, ChannelID string) error {
 	if err != nil {
 		slog.Error("Could not load channel from db", slog.Any("Error", err))
 		return err
+	}
+	if NewTimer >= 0 {
+		return errors.New("Invalid Timer value")
 	}
 	update := bson.M{
 		"$set": bson.M{

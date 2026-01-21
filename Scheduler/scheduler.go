@@ -245,7 +245,8 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 					ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum + 1
 					ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum
 				}
-				if !Suppress {
+				if !Suppress &&
+					math.Abs(float64(oldListing.Price)-float64(ebayListings[i].Price)) > 5 {
 					discord.EbayListingPriceChangeAlert(ebayListings[i], oldListing.Price, Channel.ChannelID)
 				}
 			} else {

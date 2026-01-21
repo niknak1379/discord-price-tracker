@@ -250,6 +250,7 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 					discord.EbayListingPriceChangeAlert(ebayListings[i], oldListing.Price, Channel.ChannelID)
 				}
 			} else {
+				// have to pass down the stats since im not doing a look up eachtime
 				ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum
 				ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum
 			}

@@ -125,6 +125,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 			items[i].URL = strings.Split(items[i].URL, "?ref")[0]
 			items[i].Date = crawlDate
 			items[i].Duration = 0
+			items[i].AcceptsOffers = true
 			retArr = append(retArr, items[i])
 		}
 	}

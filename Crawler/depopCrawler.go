@@ -65,13 +65,14 @@ func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
 		// Now approved and condition are set
 		if approved && price < Price {
 			Listing := types.EbayListing{
-				ItemName:  Name,
-				Title:     condition,
-				Price:     price,
-				Condition: Name,
-				URL:       productURL,
-				Date:      crawlDate,
-				Duration:  0,
+				ItemName:      Name,
+				Title:         condition,
+				Price:         price,
+				Condition:     Name,
+				URL:           productURL,
+				Date:          crawlDate,
+				Duration:      0,
+				AcceptsOffers: true,
 			}
 			slog.Info("listing", slog.Any("depop listing information", Listing))
 			retArr = append(retArr, Listing)

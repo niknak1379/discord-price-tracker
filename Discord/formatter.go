@@ -192,8 +192,8 @@ func formatSecondHandField(Listing types.EbayListing, Message string, newListing
 			Value:  strconv.Itoa(Listing.TotalPriceChange),
 			Inline: false,
 		}
-		return append(ret, &currOrOld, &priceField, &conditionField, &urlField,
-			&durationField, &priceDecField, &AcceptsOffer, &priceIncField, &totalPriceChange, &separatorField)
+		return append(ret, &currOrOld, &priceField, &AcceptsOffer, &conditionField, &urlField,
+			&durationField, &priceDecField, &priceIncField, &totalPriceChange, &separatorField)
 	}
 
 	return append(ret, &currOrOld, &priceField,

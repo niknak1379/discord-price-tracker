@@ -9,12 +9,14 @@ import (
 	"os/signal"
 	"sync"
 
-	// database "priceTracker/Database"
-
 	database "priceTracker/Database"
+	scheduler "priceTracker/Scheduler"
+
+	// crawler "priceTracker/Crawler"
+	// database "priceTracker/Database"
 	logger "priceTracker/Logger"
 
-	scheduler "priceTracker/Scheduler"
+	// scheduler "priceTracker/Scheduler"
 
 	// crawler "priceTracker/Crawler"
 	discord "priceTracker/Discord"
@@ -31,7 +33,7 @@ func main() {
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
-	// itemArr, err := crawler.EbayFailover("https://www.ebay.com/sch/i.html?_nkw=msi%20mpg%20321urx&LH_ItemCondition=3000|2020|2010|1500&_udhi=1034&rt=nc&LH_BIN=1", 1000, "MSI MPG")
+	// itemArr, err := crawler.EbayFailover("https://www.ebay.com/sch/i.html?_nkw=rtx%203060%20ti&LH_ItemCondition=3000|2020|2010|1500&_udhi=707&rt=nc&LH_BIN=1&_stpos=90274&_fcid=1", 1000, "rtx 3060 ti")
 	// slog.Info("ebay test", slog.Any("itemArr", itemArr), slog.Any("err", err))
 	go scheduler.SetChannelScheduler(ctx)
 	wg.Go(func() {

@@ -3,6 +3,7 @@ services:
     image: nikanostovan/price-tracker:latest
     container_name: price-tracker
     restart: unless-stopped
+    shm_size: "2gb"
     env_file:
       - .env
     environment:

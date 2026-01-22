@@ -136,6 +136,10 @@ func setSecondHandField(ebayArr []types.EbayListing) []*discordgo.MessageEmbedFi
 // for alerts
 func formatSecondHandField(Listing types.EbayListing, Message string, newListing bool) []*discordgo.MessageEmbedField {
 	var ret []*discordgo.MessageEmbedField
+	AcceptsOffer := "No"
+	if Listing.AcceptsOffers {
+		AcceptsOffer = "Yes"
+	}
 	currOrOld := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter(Message, 43),
 		Value:  "",
@@ -173,6 +177,11 @@ func formatSecondHandField(Listing types.EbayListing, Message string, newListing
 			Value:  strconv.Itoa(Listing.PriceDecreaseNum),
 			Inline: false,
 		}
+		AcceptsOffer := discordgo.MessageEmbedField{
+			Name:   "Does Listing Accept Offers",
+			Value:  AcceptsOffer,
+			Inline: false,
+		}
 		priceIncField := discordgo.MessageEmbedField{
 			Name:   "# of Price Increases:",
 			Value:  strconv.Itoa(Listing.PriceIncreaseNum),
@@ -184,10 +193,10 @@ func formatSecondHandField(Listing types.EbayListing, Message string, newListing
 			Inline: false,
 		}
 		return append(ret, &currOrOld, &priceField, &conditionField, &urlField,
-			&durationField, &priceDecField, &priceIncField, &totalPriceChange, &separatorField)
+			&durationField, &priceDecField, &AcceptsOffer, &priceIncField, &totalPriceChange, &separatorField)
 	}
 
-	return append(ret, &currOrOld, &priceField, &conditionField, &urlField,
+	return append(ret, &currOrOld, &priceField,
 		&separatorField)
 }
 

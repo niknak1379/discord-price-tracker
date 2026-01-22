@@ -13,4 +13,5 @@ type EbayListing struct {
 	PriceIncreaseNum int           `bson:"PriceIncreaseNum"`
 	PriceDecreaseNum int           `bson:"PriceDecreaseNum"`
 	TotalPriceChange int           `bson:"TotalPriceChange"`
+	AcceptsOffers    bool          `bson:"AcceptsOffers"`
 }

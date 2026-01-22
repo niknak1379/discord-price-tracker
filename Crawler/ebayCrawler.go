@@ -58,14 +58,17 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 // returns a map of urls and prices + shipping cost
 // it returns an error on items that are local pickup only
 // since they dont have a shipping fee div
-func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error) {
+func GetEbayListings(Name string, desiredPrice int, Proxy bool) ([]types.EbayListing, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
 
-	slog.Info(url)
+	slog.Info(url, slog.Bool("proxy", Proxy))
 	var listingArr []types.EbayListing
 	crawlDate := time.Now()
 	visited := false
 	c := initCrawler()
+	if !Proxy {
+		c.SetProxy("")
+	}
 	c.OnHTML("ul.srp-results > li", func(e *colly.HTMLElement) {
 		visited = true
 		title := e.ChildText(".s-card__title span.primary")
@@ -81,6 +84,7 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 		// thid is delivery price +$12.00 delivery in 2-4 days
 		var basePrice, shippingCost int
 		var err error
+		var acceptsOffers bool
 		e.ForEachWithBreak("div.s-card__attribute-row", func(i int, child *colly.HTMLElement) bool {
 			switch i {
 			case 0:
@@ -89,8 +93,8 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 				basePrice = int(float64(basePrice) * TaxRate)
 			case 1:
 				// skip bids, no need to add them to the return bid array
-				if strings.Contains(child.Text, "bid") {
-					return true
+				if strings.Contains(child.Text, "or Best Offer") {
+					acceptsOffers = true
 				}
 			case 2:
 				// get shipping price
@@ -119,11 +123,12 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 			ItemName: Name,
 			Price:    shippingCost + basePrice,
 			// it has metadata from search after url, this leans it up
-			URL:       strings.Split(link, "?_skw")[0],
-			Title:     title,
-			Condition: condition,
-			Date:      crawlDate,
-			Duration:  0,
+			URL:           strings.Split(link, "?_skw")[0],
+			Title:         title,
+			AcceptsOffers: acceptsOffers,
+			Condition:     condition,
+			Date:          crawlDate,
+			Duration:      0,
 		}
 		slog.Info("listing", slog.Any("ebay listing information", listing))
 		listingArr = append(listingArr, listing)
@@ -131,8 +136,13 @@ func GetEbayListings(Name string, desiredPrice int) ([]types.EbayListing, error)
 	err := c.Visit(url)
 	c.Wait()
 	if err != nil || !visited {
-		slog.Warn("ebay failed, using failover")
-		listingArr, err = EbayFailover(url, desiredPrice, Name)
+		if !Proxy {
+			slog.Warn("Colly failed even without proxy triggering chromeDP")
+			listingArr, err = EbayFailover(url, desiredPrice, Name)
+			return listingArr, err
+		}
+		slog.Warn("ebay failed, redoing request without proxy")
+		listingArr, err = GetEbayListings(Name, desiredPrice, false)
 		return listingArr, err
 	}
 	return listingArr, err
@@ -171,6 +181,7 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
 				const rows = e.querySelectorAll('div.s-card__attribute-row');
 				let basePrice = 0;
 				let shippingCost = 0;
+				let AcceptsOffer = false
 				
 				// Format price function (converted from Go)
 				const formatPrice = (priceStr) => {
@@ -186,8 +197,8 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
 						if (i === 0) {
 								basePrice = formatPrice(rows[i].innerText);
 						}
-						if (i === 1 && rows[i].innerText.includes('bid')) {
-								return null;
+						if (i === 1 && rows[i].innerText.includes('or Best Offer')) {
+								AcceptsOffer = true;
 						}
 						if (i === 2) {
 								if (rows[i].innerText.includes('Free delivery')) {
@@ -202,13 +213,11 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
 						Title: e.querySelector('.s-card__title span.primary')?.innerText || '',
 						Condition: e.querySelector('div.s-card__subtitle')?.innerText || '',
 						URL: e.querySelector('a.s-card__link')?.href || '',
+						AcceptsOffer: AcceptsOffer,
 						Price: shippingCost + basePrice
 				};
 		}).filter(item => item !== null)
 		`, &items),
-
-		// Price: parseInt((e.querySelector('span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.xlh3980.xvmahel.x1n0sxbx.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.x4zkp8e.x676frb.x1lkfr7t.x1lbecb7.x1s688f.xzsf02u')?.innerText || '0' ).replace('$', '').replaceAll(',', '')),
-		//                                        x193iq5w xeuugli x13faqbe x1vvkbs xlh3980 xvmahel x1n0sxbx x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x4zkp8e x3x7a5m x1lkfr7t x1lbecb7 x1s688f xzsf02u
 	)
 
 	os.WriteFile("ebayFirst.png", first, 0o644)

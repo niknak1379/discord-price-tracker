@@ -29,7 +29,7 @@ func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong flo
 		depop, err3 = CrawlDepop(Name, Price)
 	}
 	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong, maxDistance, LocationCode)
-	ebay, err := GetEbayListings(Name, Price)
+	ebay, err := GetEbayListings(Name, Price, true)
 
 	if err != nil || err2 != nil || err3 != nil {
 		slog.Error("errors from getting second hand listing",

@@ -67,7 +67,7 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool) ([]types.EbayLis
 	visited := false
 	c := initCrawler()
 	if !Proxy {
-		c.SetProxy("")
+		c.SetProxyFunc(nil)
 	}
 	c.OnHTML("ul.srp-results > li", func(e *colly.HTMLElement) {
 		visited = true

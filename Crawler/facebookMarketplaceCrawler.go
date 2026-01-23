@@ -99,12 +99,14 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 		//                                        x193iq5w xeuugli x13faqbe x1vvkbs xlh3980 xvmahel x1n0sxbx x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x4zkp8e x3x7a5m x1lkfr7t x1lbecb7 x1s688f xzsf02u
 	)
 
-	os.WriteFile("facebookFirst.png", first, 0o644)
-	os.WriteFile("facebookSecond.png", second, 0o644)
+	
 
 	var retArr []types.EbayListing
 	if err != nil {
-		slog.Error("Error in marketplace", slog.Any("error value", err))
+		fileErr1 := os.WriteFile("facebookFirst.png", first, 0o644)
+		fileErr2 := os.WriteFile("facebookSecond.png", second, 0o644)
+		slog.Error("Error in marketplace", slog.Any("error value", err), slog.Any("File error 1", fileErr1),
+			slog.Any("file error 2", fileErr2))
 		err = errors.Join(errors.New("Error in facebook marketplace:"), err)
 		return retArr, err
 	} else if len(items) == 0 {

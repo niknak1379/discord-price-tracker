@@ -63,14 +63,14 @@ func initCrawler() *colly.Collector {
 }
 
 func GetPrice(uri string, querySelector string) (int, error) {
-	var err error
+	var err, priceErr error
 	res := 0
 	crawled := false
 	slog.Info("logging url", slog.String("URI", uri))
 	c := initCrawler()
 	c.OnHTML(querySelector, func(h *colly.HTMLElement) {
 		crawled = true
-		res, err = formatPrice(h.Text)
+		res, priceErr = formatPrice(h.Text)
 		c.OnHTMLDetach(querySelector)
 	})
 	err = c.Visit(uri)
@@ -79,7 +79,7 @@ func GetPrice(uri string, querySelector string) (int, error) {
 	if !crawled {
 		err = errors.New("could not crawl, html element does not exist")
 	}
-	if err != nil {
+	if err != nil || priceErr != nil{
 		slog.Warn("error in getting price in crawler, triggering Chrome failover",
 			slog.Any("Error", err))
 		res, err := ChromeDPFailover(uri, querySelector)
@@ -116,22 +116,16 @@ func ChromeDPFailover(url string, selector string) (int, error) {
 		chromedp.Text(selector, &priceText, chromedp.ByQuery),
 	)
 	if err != nil {
-		os.WriteFile("failoverSS.png", htmlContent, 0o644)
+		err2 := os.WriteFile("failoverSS.png", htmlContent, 0o644)
+		slog.Error("error in default chromedp", slog.String("selector", selector),
+			slog.String("URL", url), slog.Any("ChromeDP Error", err), slog.Any("File Write Error", err2))
 		return 0, fmt.Errorf("selector '%s' not found for url %s, %w", selector, url, err)
 	}
 
 	slog.Info("ChromeDP found Selector")
 
 	// Parse price
-	priceText = strings.ReplaceAll(priceText, "$", "")
-	priceText = strings.ReplaceAll(priceText, ",", "")
-	priceText = strings.TrimSpace(priceText)
-
-	if strings.Contains(priceText, ".") {
-		priceText = strings.Split(priceText, ".")[0]
-	}
-
-	price, err := strconv.Atoi(priceText)
+	price, err := formatPrice(priceText)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse price '%s': %w", priceText, err)
 	}
@@ -170,6 +164,7 @@ func GetOpenGraphPic(url string) string {
 
 func formatPrice(priceStr string) (int, error) {
 	ret := strings.ReplaceAll(priceStr, "$", "")
+	ret = strings.ReplaceAll(ret, "\n", "")
 	ret = strings.ReplaceAll(ret, ",", "")
 	ret = strings.TrimSpace(ret)
 	ret = strings.Split(ret, ".")[0]

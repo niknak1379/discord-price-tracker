@@ -224,42 +224,43 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 		Channel.Lat, Channel.Long, Channel.Distance, Type, Channel.LocationCode)
 	if err != nil {
 		discord.CrawlErrorAlert(Name, "Second Hand Listings", err, Channel.ChannelID)
-	}
-	for i := range ebayListings {
-		oldListing, ok := ListingsMap[ebayListings[i].URL]
-		// if listing not found in the old list, or if price changed
-		// ping discord
-		// update how long the listing has been online for
-		if ok {
-			ebayListings[i].Duration = oldListing.Duration + time.Duration(timer)*time.Hour
-			if ebayListings[i].Price != oldListing.Price {
-				// update count for how many times price was increased
-				ebayListings[i].TotalPriceChange += ebayListings[i].Price - oldListing.Price
-				if ebayListings[i].Price > oldListing.Price {
-					ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum + 1
-					ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum
+	} else {
+		for i := range ebayListings {
+			oldListing, ok := ListingsMap[ebayListings[i].URL]
+			// if listing not found in the old list, or if price changed
+			// ping discord
+			// update how long the listing has been online for
+			if ok {
+				ebayListings[i].Duration = oldListing.Duration + time.Duration(timer)*time.Hour
+				if ebayListings[i].Price != oldListing.Price {
+					// update count for how many times price was increased
+					ebayListings[i].TotalPriceChange += ebayListings[i].Price - oldListing.Price
+					if ebayListings[i].Price > oldListing.Price {
+						ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum + 1
+						ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum
+					} else {
+						ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum + 1
+						ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum
+					}
+					if !Suppress &&
+						math.Abs(float64(oldListing.Price)-float64(ebayListings[i].Price)) > 5 {
+						discord.EbayListingPriceChangeAlert(ebayListings[i], oldListing.Price, Channel.ChannelID)
+					}
 				} else {
-					ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum + 1
+					// have to pass down the stats since im not doing a look up eachtime
+					ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum
 					ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum
 				}
-				if !Suppress &&
-					math.Abs(float64(oldListing.Price)-float64(ebayListings[i].Price)) > 5 {
-					discord.EbayListingPriceChangeAlert(ebayListings[i], oldListing.Price, Channel.ChannelID)
-				}
-			} else {
-				// have to pass down the stats since im not doing a look up eachtime
-				ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum
-				ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum
+			} else if !Suppress {
+				discord.NewEbayListingAlert(ebayListings[i], Channel.ChannelID)
 			}
-		} else if !Suppress {
-			discord.NewEbayListingAlert(ebayListings[i], Channel.ChannelID)
 		}
-	}
-	err = database.UpdateEbayListings(Name, ebayListings, Channel.ChannelID)
-	if err != nil {
-		slog.Error("error updaing DB in ebay listing",
-			slog.Any("Error", err), slog.String("Name", Name))
-		discord.CrawlErrorAlert(Name, "www.ebay.com/DBError", err, Channel.ChannelID)
-		return
+		err = database.UpdateEbayListings(Name, ebayListings, Channel.ChannelID)
+		if err != nil {
+			slog.Error("error updaing DB in ebay listing",
+				slog.Any("Error", err), slog.String("Name", Name))
+			discord.CrawlErrorAlert(Name, "www.ebay.com/DBError", err, Channel.ChannelID)
+			return
+		}
 	}
 }

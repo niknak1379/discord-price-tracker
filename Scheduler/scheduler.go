@@ -231,6 +231,9 @@ func handleEbayListingsUpdate(Name string, Price int, Type string, Channel datab
 			// ping discord
 			// update how long the listing has been online for
 			if ok {
+				if timer == 0 {
+					timer = 8
+				}
 				ebayListings[i].Duration = oldListing.Duration + time.Duration(timer)*time.Hour
 				if ebayListings[i].Price != oldListing.Price {
 					// update count for how many times price was increased

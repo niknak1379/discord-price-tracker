@@ -69,6 +69,8 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	if strings.Contains(err.Error(), "facebook") {
 		reader, err := os.Open("facebookSecond.png")
 		reader2, err2 := os.Open("facebookFirst.png")
+		defer reader.Close()
+		defer reader2.Close()
 		if err != nil || err2 != nil {
 			slog.Error("Could not load error images", slog.Any("Error", err),
 				slog.Any("Error", err2))
@@ -78,6 +80,8 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	} else if strings.Contains(err.Error(), "Ebay") {
 		reader, err := os.Open("ebaySecond.png")
 		reader2, err2 := os.Open("ebayFirst.png")
+		defer reader.Close()
+		defer reader2.Close()
 		if err != nil || err2 != nil {
 			slog.Error("Could not load error images", slog.Any("Error", err),
 				slog.Any("Error", err2))
@@ -86,6 +90,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		Discord.ChannelFileSend(ChannelID, "first.png", reader2)
 	} else {
 		reader, err := os.Open("failoverSS.png")
+		defer reader.Close()
 		if err != nil {
 			slog.Error("Could not send error image", slog.Any("Error", err))
 		}

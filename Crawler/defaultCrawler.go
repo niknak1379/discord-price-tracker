@@ -126,7 +126,8 @@ func ChromeDPFailover(url string, selector string) (int, error) {
 
 	// Parse price
 	price, err := formatPrice(priceText)
-	if err != nil {
+	if err != nil || price == 0 {
+		os.WriteFile("failoverSS.png", htmlContent, 0o644)
 		return 0, fmt.Errorf("failed to parse price '%s': %w", priceText, err)
 	}
 

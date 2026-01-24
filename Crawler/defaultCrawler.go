@@ -83,9 +83,13 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 		err = errors.New("could not crawl, html element does not exist")
 	}
 	if err != nil || priceErr != nil {
-		slog.Warn("error in getting price in crawler, triggering no proxy crawl",
-			slog.Any("Error", err), slog.Any("PriceErr", priceErr))
-		res, err := GetPrice(uri, querySelector, false)
+		var res int
+		var err error
+		if proxy {
+			slog.Warn("error in getting price in crawler, triggering no proxy crawl",
+				slog.Any("Error", err), slog.Any("PriceErr", priceErr))
+			res, err = GetPrice(uri, querySelector, false)
+		}
 		if err != nil {
 			slog.Warn("no proxy also failed, triggering chromeDPFailover crawl",
 				slog.Any("Error", err), slog.Any("PriceErr", priceErr))

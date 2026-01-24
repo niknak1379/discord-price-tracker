@@ -84,16 +84,16 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 	}
 	if err != nil || priceErr != nil {
 		var res int
-		var err error
+		var err2 error
 		if proxy {
 			slog.Warn("error in getting price in crawler, triggering no proxy crawl",
 				slog.Any("Error", err), slog.Any("PriceErr", priceErr))
-			res, err = GetPrice(uri, querySelector, false)
+			res, err2 = GetPrice(uri, querySelector, false)
 		}
-		if err != nil {
+		if err2 != nil || res == 0 {
 			slog.Warn("no proxy also failed, triggering chromeDPFailover crawl",
-				slog.Any("Error", err), slog.Any("PriceErr", priceErr))
-			res, err = ChromeDPFailover(uri, querySelector)
+				slog.Any("Error", err2), slog.Any("PriceErr", priceErr))
+			res, err2 = ChromeDPFailover(uri, querySelector)
 		}
 		return int(float64(res) * TaxRate), err
 	}

@@ -77,8 +77,8 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
 		chromedp.Sleep(10*time.Second),
-		chromedp.WaitReady("body", chromedp.ByQuery),
 		chromedp.FullScreenshot(&first, 90), // 90 = JPEG quality
+		chromedp.WaitReady("body", chromedp.ByQuery),
 		chromedp.Click("div.xdg88n9.x10l6tqk.x1tk7jg1.x1vjfegm"),
 		chromedp.Sleep(3*time.Second),
 		chromedp.FullScreenshot(&second, 90), // 90 = JPEG quality
@@ -98,8 +98,6 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 		// Price: parseInt((e.querySelector('span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.xlh3980.xvmahel.x1n0sxbx.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.x4zkp8e.x676frb.x1lkfr7t.x1lbecb7.x1s688f.xzsf02u')?.innerText || '0' ).replace('$', '').replaceAll(',', '')),
 		//                                        x193iq5w xeuugli x13faqbe x1vvkbs xlh3980 xvmahel x1n0sxbx x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x4zkp8e x3x7a5m x1lkfr7t x1lbecb7 x1s688f xzsf02u
 	)
-
-	
 
 	var retArr []types.EbayListing
 	if err != nil {

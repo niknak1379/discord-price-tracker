@@ -172,8 +172,8 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
 		chromedp.Sleep(10*time.Second),
-		chromedp.WaitReady("body", chromedp.ByQuery),
 		chromedp.FullScreenshot(&first, 90), // 90 = JPEG quality
+		chromedp.WaitReady("body", chromedp.ByQuery),
 		chromedp.Sleep(3*time.Second),
 		chromedp.FullScreenshot(&second, 90), // 90 = JPEG quality
 		chromedp.Evaluate(`
@@ -220,7 +220,7 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
 		`, &items),
 	)
 	var retArr []types.EbayListing
-	
+
 	if err != nil {
 		fileErr1 := os.WriteFile("ebayFirst.png", first, 0o644)
 		fileErr2 := os.WriteFile("ebaySecond.png", second, 0o644)

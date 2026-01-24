@@ -79,7 +79,7 @@ func GetPrice(uri string, querySelector string) (int, error) {
 	if !crawled {
 		err = errors.New("could not crawl, html element does not exist")
 	}
-	if err != nil || priceErr != nil{
+	if err != nil || priceErr != nil {
 		slog.Warn("error in getting price in crawler, triggering Chrome failover",
 			slog.Any("Error", err))
 		res, err := ChromeDPFailover(uri, querySelector)
@@ -111,8 +111,8 @@ func ChromeDPFailover(url string, selector string) (int, error) {
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
 		chromedp.Sleep(10*time.Second),
-		chromedp.WaitReady("body", chromedp.ByQuery),
 		chromedp.FullScreenshot(&htmlContent, 90),
+		chromedp.WaitReady("body", chromedp.ByQuery),
 		chromedp.Text(selector, &priceText, chromedp.ByQuery),
 	)
 	if err != nil {

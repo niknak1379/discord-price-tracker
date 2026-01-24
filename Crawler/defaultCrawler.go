@@ -62,12 +62,15 @@ func initCrawler() *colly.Collector {
 	return c
 }
 
-func GetPrice(uri string, querySelector string) (int, error) {
+func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 	var err, priceErr error
 	res := 0
 	crawled := false
-	slog.Info("logging url", slog.String("URI", uri))
+	slog.Info("logging url", slog.String("URI", uri), slog.Bool("proxy", proxy))
 	c := initCrawler()
+	if !proxy {
+		c.SetProxyFunc(nil)
+	}
 	c.OnHTML(querySelector, func(h *colly.HTMLElement) {
 		crawled = true
 		res, priceErr = formatPrice(h.Text)
@@ -80,9 +83,14 @@ func GetPrice(uri string, querySelector string) (int, error) {
 		err = errors.New("could not crawl, html element does not exist")
 	}
 	if err != nil || priceErr != nil {
-		slog.Warn("error in getting price in crawler, triggering Chrome failover",
-			slog.Any("Error", err))
-		res, err := ChromeDPFailover(uri, querySelector)
+		slog.Warn("error in getting price in crawler, triggering no proxy crawl",
+			slog.Any("Error", err), slog.Any("PriceErr", priceErr))
+		res, err := GetPrice(uri, querySelector, false)
+		if err != nil {
+			slog.Warn("no proxy also failed, triggering chromeDPFailover crawl",
+				slog.Any("Error", err), slog.Any("PriceErr", priceErr))
+			res, err = ChromeDPFailover(uri, querySelector)
+		}
 		return int(float64(res) * TaxRate), err
 	}
 	return int(float64(res) * TaxRate), err
@@ -107,7 +115,6 @@ func ChromeDPFailover(url string, selector string) (int, error) {
 	var priceText string
 	var htmlContent []byte
 
-	// Split into separate runs to debug where it fails
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
 		chromedp.Sleep(10*time.Second),

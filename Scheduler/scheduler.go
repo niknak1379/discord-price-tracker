@@ -198,7 +198,7 @@ func updateSingleItem(item *database.Item, Channel database.Channel) {
 }
 
 func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Price, date time.Time, ChannelID string, Suppress bool) (database.Price, error) {
-	newPrice, err := crawler.GetPrice(URI, HtmlQuery)
+	newPrice, err := crawler.GetPrice(URI, HtmlQuery, true)
 	if err != nil || newPrice == 0 {
 		slog.Error("error getting price in updatePrice", slog.Any("Error", err),
 			slog.Int("Returned Price", newPrice))

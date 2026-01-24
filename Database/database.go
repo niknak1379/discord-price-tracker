@@ -543,7 +543,7 @@ func validateURI(uri string, querySelector string) (Price, TrackingInfo, error) 
 		slog.Error("Invalid url")
 		return Price{}, TrackingInfo{}, err
 	}
-	pr, err := crawler.GetPrice(uri, querySelector)
+	pr, err := crawler.GetPrice(uri, querySelector, true)
 	if err != nil {
 		return Price{}, TrackingInfo{}, err
 	}

@@ -50,7 +50,8 @@ func SetChannelScheduler(ctx context.Context) {
 	}
 }
 
-func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.CancelFunc,
+func loadAndStartItems(ctx context.Context,
+	activeRoutines map[string]context.CancelFunc,
 	itemTimers map[string]time.Duration,
 	itemSuppression map[string]bool,
 	itemTrackingList map[string][]database.TrackingInfo,
@@ -152,7 +153,7 @@ func loadAndStartItems(ctx context.Context, activeRoutines map[string]context.Ca
 	}
 }
 
-func itemCrawlRoutine(ctx context.Context, item *database.Item, Channel database.Channel) {
+func itemCrawlRoutine(ctx context.Context, item *database.Item, Channel *database.Channel) {
 	// Random delay before first crawl
 	r := rand.IntN(120)
 	time.Sleep(time.Duration(r) * time.Second)
@@ -181,7 +182,7 @@ func itemCrawlRoutine(ctx context.Context, item *database.Item, Channel database
 	}
 }
 
-func updateSingleItem(item *database.Item, Channel database.Channel) {
+func updateSingleItem(item *database.Item, Channel *database.Channel) {
 	slog.Info("updating item",
 		slog.String("item", item.Name),
 		slog.String("channelID", Channel.ChannelID))
@@ -235,7 +236,7 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Pric
 	return p, err
 }
 
-func handleSecondHandListingsUpdate(Name string, Price int, Type string, Channel database.Channel, Suppress bool, timer int) {
+func handleSecondHandListingsUpdate(Name string, Price int, Type string, Channel *database.Channel, Suppress bool, timer int) {
 	oldEbayListings, _ := database.GetEbayListings(Name, Channel.ChannelID)
 	ListingsMap := map[string]*types.EbayListing{} // maps titles to price for checking if price exists or was updated
 	for i := range oldEbayListings {

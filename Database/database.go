@@ -58,7 +58,7 @@ var (
 	ctx    context.Context
 )
 
-func AddItem(itemName string, uri string, query string, Type string, Timer int, Channel Channel) (Item, error) {
+func AddItem(itemName string, uri string, query string, Type string, Timer int, Channel *Channel) (Item, error) {
 	Table, err := loadChannelTable(Channel.ChannelID)
 	if err != nil {
 		slog.Error("couldnt load channel", slog.Any("Error", err))

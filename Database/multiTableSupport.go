@@ -26,7 +26,7 @@ var (
 	// has the mongo table stored
 	Tables = make(map[string]*mongo.Collection)
 	// has the distance, lat, long, and other facebook info stored
-	ChannelMap = make(map[string]Channel)
+	ChannelMap = make(map[string]*Channel)
 )
 
 func loadDBTables() {
@@ -44,7 +44,7 @@ func loadDBTables() {
 	for _, IDString := range ChannelsArr {
 		table := Client.Database("tracker").Collection(IDString.ChannelID)
 		Tables[IDString.ChannelID] = table
-		ChannelMap[IDString.ChannelID] = Channel{
+		ChannelMap[IDString.ChannelID] = &Channel{
 			ChannelID:    IDString.ChannelID,
 			Lat:          IDString.Lat,
 			Long:         IDString.Long,
@@ -73,7 +73,7 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 	}
 	// if channelID already exists, just update the Coordinates in DB and memory
 	if _, ok := Tables[ChannelID]; ok {
-		ChannelMap[ChannelID] = Channel
+		ChannelMap[ChannelID] = &Channel
 		update := bson.M{
 			"$set": bson.M{
 				"Distance":     maxDistance,
@@ -82,7 +82,7 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 				"LocationCode": LocationCode,
 			},
 		}
-		ChannelMap[ChannelID] = Channel
+		ChannelMap[ChannelID] = &Channel
 		ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
 		ChannelTable.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
 		return nil
@@ -117,7 +117,7 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 	}
 	table := Client.Database("tracker").Collection(ChannelID)
 	Tables[ChannelID] = table
-	ChannelMap[ChannelID] = Channel
+	ChannelMap[ChannelID] = &Channel
 
 	return err
 }

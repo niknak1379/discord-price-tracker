@@ -86,7 +86,8 @@ func AutoCompleteQuery() map[string]string {
 		"NewEgg":       "div.price-current>strong",
 		"MicroCenter":  "#options-pricing2022",
 		"BHPhotoVideo": "span[class^='price_']",
-		"BestBuy":      "div[data-component-name='LargePrice'] div[data-testid='price-block-customer-price']",
+		// "BestBuy":      "div[data-component-name='LargePrice'] div[data-testid='price-block-customer-price']",
+		"BestBuy": "div[data-testid='price-block-customer-price']",
 	}
 	return ret
 }

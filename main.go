@@ -20,6 +20,7 @@ func main() {
 	slog.SetDefault(logger.Logger)
 	godotenv.Load()
 	// amazonTest()
+	// BestBuyTest()
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
@@ -43,6 +44,12 @@ func main() {
 func amazonTest() {
 	i, err := crawler.GetPrice("https://www.amazon.com/dp/B0B3F8V4JG?ref=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&ref_=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&social_share=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&language=en-US",
 		"form#addToCart span.a-price-whole", true)
+	slog.Info("price", slog.Int("int", i), slog.Any("error", err))
+}
+
+func BestBuyTest() {
+	i, err := crawler.GetPrice("https://www.bestbuy.com/product/msi-mpg-322urx-qd-oled-32-quantum-dot-oled-uhd-240hz-0-03ms-gaming-monitor-with-hdr400-displayport-2-1a-hdmi-usb-black/J3P7TX99VT/sku/6614908?sb_share_source=PDP&ref=app_pdp&loc=pdp_page",
+		"div[data-testid='price-block-customer-price']", true)
 	slog.Info("price", slog.Int("int", i), slog.Any("error", err))
 }
 

@@ -148,7 +148,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	} else {
 		err = chromedp.Run(ctx,
 			chromedp.Navigate(url),
-			chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
+			chromedp.Sleep(time.Duration(rand.IntN(10)+30)*time.Second),
 			chromedp.FullScreenshot(&screenShot, 90),
 			chromedp.OuterHTML("body", &HTMLContent),
 			chromedp.Evaluate(js, &priceText),
@@ -166,7 +166,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 			slog.Error("error in default chromedp", slog.String("selector", selector),
 				slog.String("URL", url), slog.Any("ChromeDP Error", err),
 				slog.Any("ScreenShot Write Error", err2), slog.Any("HTML Write Error", err3))
-			return 0, fmt.Errorf("selector '%s' not found for url %s, %w", selector, url, err)
+			return 0, fmt.Errorf("selector %s not found for url %s, %w", selector, url, err)
 		}
 	}
 

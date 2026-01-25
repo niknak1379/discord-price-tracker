@@ -137,11 +137,11 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 		err = chromedp.Run(ctx,
 			chromedp.Navigate(url),
 			chromedp.Sleep(10*time.Second),
+			chromedp.FullScreenshot(&screenShot, 90),
+			chromedp.OuterHTML("body", &HTMLContent),
 			chromedp.WaitReady("body", chromedp.ByQuery),
 			chromedp.Evaluate(`document.querySelector('button.a-button-text[alt="Continue shopping"]')?.click()`, nil),
 			chromedp.Sleep(5*time.Second),
-			chromedp.FullScreenshot(&screenShot, 90),
-			chromedp.OuterHTML("body", &HTMLContent),
 			// chromedp.Text(selector, &priceText, chromedp.ByQuery),
 			chromedp.Evaluate(js, &priceText),
 		)

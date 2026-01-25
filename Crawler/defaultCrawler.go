@@ -137,6 +137,47 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	if strings.Contains(url, "amazon") {
 		err = chromedp.Run(ctx,
 			chromedp.Navigate(url),
+			chromedp.Evaluate(`
+					// Webdriver
+					Object.defineProperty(navigator, 'webdriver', {
+							get: () => undefined
+					});
+					
+					// Plugins
+					Object.defineProperty(navigator, 'plugins', {
+							get: () => [
+									{name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer'},
+									{name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai'},
+									{name: 'Native Client', filename: 'internal-nacl-plugin'}
+							]
+					});
+					
+					// Languages
+					Object.defineProperty(navigator, 'languages', {
+							get: () => ['en-US', 'en']
+					});
+					
+					// Chrome runtime
+					window.chrome = {
+							runtime: {
+									connect: () => {},
+									sendMessage: () => {}
+							}
+					};
+					
+					// Permissions
+					const originalQuery = window.navigator.permissions.query;
+					window.navigator.permissions.query = (parameters) => (
+							parameters.name === 'notifications' ?
+									Promise.resolve({ state: Notification.permission }) :
+									originalQuery(parameters)
+					);
+					
+					// Hardware
+					Object.defineProperty(navigator, 'hardwareConcurrency', {
+							get: () => 8
+					});
+			`, nil),
 			chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
 			chromedp.FullScreenshot(&screenShot, 90),
 			chromedp.OuterHTML("body", &HTMLContent),

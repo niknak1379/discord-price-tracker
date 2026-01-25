@@ -171,6 +171,47 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
 	var items []types.EbayListing
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
+		chromedp.Evaluate(`
+        // Webdriver
+        Object.defineProperty(navigator, 'webdriver', {
+            get: () => undefined
+        });
+        
+        // Plugins
+        Object.defineProperty(navigator, 'plugins', {
+            get: () => [
+                {name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer'},
+                {name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai'},
+                {name: 'Native Client', filename: 'internal-nacl-plugin'}
+            ]
+        });
+        
+        // Languages
+        Object.defineProperty(navigator, 'languages', {
+            get: () => ['en-US', 'en']
+        });
+        
+        // Chrome runtime
+        window.chrome = {
+            runtime: {
+                connect: () => {},
+                sendMessage: () => {}
+            }
+        };
+        
+        // Permissions
+        const originalQuery = window.navigator.permissions.query;
+        window.navigator.permissions.query = (parameters) => (
+            parameters.name === 'notifications' ?
+                Promise.resolve({ state: Notification.permission }) :
+                originalQuery(parameters)
+        );
+        
+        // Hardware
+        Object.defineProperty(navigator, 'hardwareConcurrency', {
+            get: () => 8
+        });
+    `, nil),
 		chromedp.Sleep(10*time.Second),
 		chromedp.FullScreenshot(&first, 90), // 90 = JPEG quality
 		chromedp.WaitReady("body", chromedp.ByQuery),

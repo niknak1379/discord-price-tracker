@@ -610,11 +610,13 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				}
 			}
 
-			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			_, err := discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 				Content: content,
 				Embeds:  embeds,
 			})
-
+			if err != nil {
+				slog.Error("Error in sending edit tracking response", slog.Any("Error", err))
+			}
 		}
 	},
 	"graph": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {

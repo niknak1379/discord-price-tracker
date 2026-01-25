@@ -128,7 +128,7 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 			if len(item) > 100 {
 				choice := discordgo.ApplicationCommandOptionChoice{
 					Name:  "item too long" + item[8:20],
-					Value: "place holder",
+					Value: item,
 				}
 				choices = append(choices, &choice)
 				continue

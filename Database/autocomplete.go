@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
+
 func FuzzyMatchName(Name string, ChannelID string) []string {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -81,11 +82,11 @@ func AutoCompleteURL(Name string, ChannelID string) []string {
 
 func AutoCompleteQuery() map[string]string {
 	ret := map[string]string{
-		"Amazon":       "form#addToCart span.a-price-whole",
+		"Amazon":       "h5 span.a-price-whole",
 		"NewEgg":       "div.price-current>strong",
 		"MicroCenter":  "#options-pricing2022",
 		"BHPhotoVideo": "span[class^='price_']",
-		"BestBuy": "div[data-testid='price-block-customer-price']",
+		"BestBuy":      "div[data-testid='price-block-customer-price']",
 	}
 	return ret
 }

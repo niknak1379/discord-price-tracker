@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"log/slog"
+
 	crawler "priceTracker/Crawler"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -57,7 +58,7 @@ func loadDBTables() {
 	}
 }
 
-func CreateChannelItemTableIfMissing(ChannelID string, Location string, LocationCode string, maxDistance int) error {
+func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location string, LocationCode string, maxDistance int) error {
 	Lat, Long, err := crawler.GetCoordinates(Location)
 	if err != nil {
 		return err
@@ -71,7 +72,7 @@ func CreateChannelItemTableIfMissing(ChannelID string, Location string, Location
 		TotalItems:   0,
 	}
 	// if channelID already exists, just update the Coordinates in DB and memory
-	if table, ok := Tables[ChannelID]; ok {
+	if _, ok := Tables[ChannelID]; ok {
 		ChannelMap[ChannelID] = Channel
 		update := bson.M{
 			"$set": bson.M{
@@ -81,7 +82,7 @@ func CreateChannelItemTableIfMissing(ChannelID string, Location string, Location
 				"LocationCode": LocationCode,
 			},
 		}
-		Tables[ChannelID] = table
+		ChannelMap[ChannelID] = Channel
 		ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
 		ChannelTable.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
 		return nil

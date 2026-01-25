@@ -139,7 +139,6 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 			chromedp.Sleep(10*time.Second),
 			chromedp.FullScreenshot(&screenShot, 90),
 			chromedp.OuterHTML("body", &HTMLContent),
-			chromedp.WaitReady("body", chromedp.ByQuery),
 			chromedp.Evaluate(`document.querySelector('button.a-button-text[alt="Continue shopping"]')?.click()`, nil),
 			chromedp.Sleep(5*time.Second),
 			// chromedp.Text(selector, &priceText, chromedp.ByQuery),
@@ -172,7 +171,6 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 
 	slog.Info("ChromeDP found Selector", slog.String("Found HTML Element", priceText))
 	// Parse price
-	fmt.Println(priceText)
 	price, err := formatPrice(priceText)
 	if err != nil || price == 0 {
 		os.WriteFile("failoverHTML.html", []byte(HTMLContent), 0o644)

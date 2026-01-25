@@ -318,7 +318,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 		})
 		// add tracker to database
-		err := database.CreateChannelItemTableIfMissing(i.ChannelID,
+		err := database.UpdateChannelOrCreateChannelItemTableIfMissing(i.ChannelID,
 			options[0].StringValue(),
 			options[1].StringValue(),
 			int(options[2].IntValue()))

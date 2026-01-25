@@ -82,7 +82,6 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 		chromedp.Navigate(url),
 		chromedp.Sleep(10*time.Second),
 		chromedp.FullScreenshot(&first, 90), // 90 = JPEG quality
-		chromedp.WaitReady("body", chromedp.ByQuery),
 		chromedp.Evaluate(`document.querySelector('div.xdg88n9.x10l6tqk.x1tk7jg1.x1vjfegm')?.click()`, nil),
 		chromedp.Sleep(3*time.Second),
 		chromedp.FullScreenshot(&second, 90), // 90 = JPEG quality

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"os"
@@ -80,7 +81,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	var items []types.EbayListing
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
-		chromedp.Sleep(10*time.Second),
+		chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
 		chromedp.FullScreenshot(&first, 90), // 90 = JPEG quality
 		chromedp.Evaluate(`document.querySelector('div.xdg88n9.x10l6tqk.x1tk7jg1.x1vjfegm')?.click()`, nil),
 		chromedp.Sleep(3*time.Second),

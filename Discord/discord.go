@@ -224,7 +224,7 @@ var (
 						{
 							Name:         "uri",
 							Description:  "Add Scrapping URI",
-							Type:         discordgo.ApplicationCommandOptionString,
+							Type:         discordgo.ApplicationCommandOptionInteger,
 							Required:     true,
 							Autocomplete: true,
 						},
@@ -579,11 +579,11 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			embeds := []*discordgo.MessageEmbed{}
 			// get option values
 			name := options[0].Options[0].StringValue()
-			uri := options[0].Options[1].StringValue()
 
 			// handle add and remove subcommands
 			switch options[0].Name {
 			case "add":
+				uri := options[0].Options[1].StringValue()
 				htmlQuery := options[0].Options[2].StringValue()
 
 				// database reutrns a price struct, setpricefield formats the returned price
@@ -601,7 +601,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				}
 
 			case "remove":
-				res, err := database.RemoveTrackingInfo(name, uri, i.ChannelID)
+				trackerIndex := options[0].Options[1].IntValue()
+				res, err := database.RemoveTrackingInfo(name, int(trackerIndex), i.ChannelID)
 				em := setEmbed(&res)
 				if err != nil {
 					content = err.Error()

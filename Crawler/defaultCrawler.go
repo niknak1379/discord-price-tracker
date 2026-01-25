@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"net/http"
 	"os"
 	"strconv"
@@ -96,7 +97,7 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 			res, err2 = GetPrice(uri, querySelector, false)
 		} else if err2 != nil || res == 0 {
 			slog.Warn("no proxy also failed, triggering chromeDPFailover crawl",
-				slog.Any("Error", err2), slog.Any("PriceErr", priceErr))
+				slog.Any("Error", err2), slog.Int("Price", res))
 			res, err2 = ChromeDPFailover(uri, querySelector, true)
 		}
 		return int(float64(res) * TaxRate), err2
@@ -136,7 +137,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	if strings.Contains(url, "amazon") {
 		err = chromedp.Run(ctx,
 			chromedp.Navigate(url),
-			chromedp.Sleep(10*time.Second),
+			chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
 			chromedp.FullScreenshot(&screenShot, 90),
 			chromedp.OuterHTML("body", &HTMLContent),
 			chromedp.Evaluate(`document.querySelector('button.a-button-text[alt="Continue shopping"]')?.click()`, nil),
@@ -147,13 +148,13 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	} else {
 		err = chromedp.Run(ctx,
 			chromedp.Navigate(url),
-			chromedp.Sleep(10*time.Second),
+			chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
 			chromedp.FullScreenshot(&screenShot, 90),
 			chromedp.OuterHTML("body", &HTMLContent),
 			chromedp.Evaluate(js, &priceText),
 		)
 	}
-	if err != nil {
+	if err != nil || priceText == "" {
 		if proxy {
 			slog.Warn("ChromDP proxy failed, triggering non proxy")
 			res, err := ChromeDPFailover(url, selector, false)

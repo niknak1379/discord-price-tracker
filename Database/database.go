@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/url"
 	"os"
@@ -495,7 +496,8 @@ func AddTrackingInfo(itemName string, uri string, querySelector string, ChannelI
 	return result, p, err
 }
 
-func RemoveTrackingInfo(itemName string, uri string, ChannelID string) (Item, error) {
+func RemoveTrackingInfo(itemName string, index int, ChannelID string) (Item, error) {
+	var result Item
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
 		slog.Error("couldnt load channel", slog.Any("Error", err))
@@ -505,11 +507,25 @@ func RemoveTrackingInfo(itemName string, uri string, ChannelID string) (Item, er
 		"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"},
 	}
 
-	update := bson.M{"$pull": bson.M{"TrackingList": bson.M{"URI": uri}}}
+	update1 := bson.M{
+		"$unset": bson.M{
+			fmt.Sprintf("TrackingList.%d", index): "",
+		},
+	}
+	_, err = Table.UpdateOne(ctx, filter, update1)
+	if err != nil {
+		return result, err
+	}
 
-	var result Item
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
-	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
+	update2 := bson.M{
+		"$pull": bson.M{
+			"TrackingList": nil,
+		},
+	}
+	opts := options.FindOneAndUpdate().
+		SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).
+		SetReturnDocument(options.After)
+	err = Table.FindOneAndUpdate(ctx, filter, update2, opts).Decode(&result)
 	if err != nil {
 		return result, err
 	}

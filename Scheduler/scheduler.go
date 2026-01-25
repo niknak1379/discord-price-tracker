@@ -170,6 +170,7 @@ func updateSingleItem(item *database.Item, Channel database.Channel) {
 	currLow := database.Price{
 		Price: math.MaxInt,
 		Url:   "Unavailable From All Sources",
+		Date:  time.Now(),
 	}
 
 	for _, t := range item.TrackingList {
@@ -193,7 +194,7 @@ func updateSingleItem(item *database.Item, Channel database.Channel) {
 	}
 
 	database.UpdateLowestPrice(item.Name, currLow, Channel.ChannelID)
-	handleEbayListingsUpdate(item.Name, item.CurrentLowestPrice.Price, item.Type, Channel, item.SuppressNotifications, item.Timer)
+	handleSecondHandListingsUpdate(item.Name, item.CurrentLowestPrice.Price, item.Type, Channel, item.SuppressNotifications, item.Timer)
 	database.UpdateAggregateReport(item.Name, Channel.ChannelID)
 }
 
@@ -214,7 +215,7 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Pric
 	return p, err
 }
 
-func handleEbayListingsUpdate(Name string, Price int, Type string, Channel database.Channel, Suppress bool, timer int) {
+func handleSecondHandListingsUpdate(Name string, Price int, Type string, Channel database.Channel, Suppress bool, timer int) {
 	oldEbayListings, _ := database.GetEbayListings(Name, Channel.ChannelID)
 	ListingsMap := map[string]*types.EbayListing{} // maps titles to price for checking if price exists or was updated
 	for i := range oldEbayListings {

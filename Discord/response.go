@@ -40,8 +40,13 @@ func LowestPriceAlert(itemName string, newPrice int, oldPrice database.Price, UR
 }
 
 func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
-	s := fmt.Sprintf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
-		itemName, URL, err.Error())
+	var s string
+	if err != nil {
+		s = fmt.Sprintf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
+			itemName, URL, err.Error())
+	} else {
+		s = fmt.Sprintf("returned price of 0 for item %s, with url %s", itemName, URL)
+	}
 	slog.Error(s)
 	nameField := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter("Problematic Item", 42),
@@ -128,19 +133,22 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 	}
 
 	if len(items) != 0 {
-		for _, item := range items {
+		for index, item := range items {
+			var choice discordgo.ApplicationCommandOptionChoice
 			if len(item) > 100 {
-				choice := discordgo.ApplicationCommandOptionChoice{
+				choice = discordgo.ApplicationCommandOptionChoice{
 					Name:  "item too long" + item[8:20],
+					Value: "placeholder",
+				}
+			} else {
+				choice = discordgo.ApplicationCommandOptionChoice{
+					Name:  item,
 					Value: item,
 				}
-				choices = append(choices, &choice)
-				continue
 			}
-
-			choice := discordgo.ApplicationCommandOptionChoice{
-				Name:  item,
-				Value: item,
+			// if its a url do by index instead
+			if t == 1 {
+				choice.Value = index
 			}
 			choices = append(choices, &choice)
 		}

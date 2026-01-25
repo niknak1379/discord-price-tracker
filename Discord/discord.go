@@ -572,11 +572,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				autoCompleteQuerySelector(i, discord)
 			}
 		default:
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			})
+			err := customAcknowledge(discord, i)
 			content := ""
-			embeds := []*discordgo.MessageEmbed{}
 			// get option values
 			name := options[0].Options[0].StringValue()
 
@@ -596,8 +593,20 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				em[len(em)-1].Fields = append(em[len(em)-1].Fields, priceField...)
 				if err != nil {
 					content = err.Error()
+					Discord.ChannelMessageSendEmbed(i.ChannelID, &discordgo.MessageEmbed{
+						Title: "Error",
+						Fields: []*discordgo.MessageEmbedField{
+							{
+								Name:  "Error",
+								Value: content,
+							},
+						},
+						Color: 10038562, // red
+					})
 				} else {
-					embeds = append(embeds, em...)
+					for _, embed := range em {
+						discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+					}
 				}
 
 			case "remove":
@@ -606,15 +615,24 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				em := setEmbed(&res)
 				if err != nil {
 					content = err.Error()
+					Discord.ChannelMessageSendEmbed(i.ChannelID, &discordgo.MessageEmbed{
+						Title: "Error",
+						Fields: []*discordgo.MessageEmbedField{
+							{
+								Name:  "Error",
+								Value: content,
+							},
+						},
+						Color: 10038562, // red
+					})
 				} else {
-					embeds = append(embeds, em...)
+					for _, embed := range em {
+						discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+					}
 				}
+
 			}
 
-			_, err := discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Content: content,
-				Embeds:  embeds,
-			})
 			if err != nil {
 				slog.Error("Error in sending edit tracking response", slog.Any("Error", err))
 			}

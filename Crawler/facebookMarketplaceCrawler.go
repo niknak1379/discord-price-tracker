@@ -28,7 +28,7 @@ func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong flo
 		Price = Price / 2
 		depop, err3 = CrawlDepop(Name, Price)
 	}
-	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong, maxDistance, LocationCode)
+	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong, maxDistance, LocationCode, true)
 	ebay, err := GetEbayListings(Name, Price, true)
 
 	if err != nil || err2 != nil || err3 != nil {
@@ -52,7 +52,7 @@ func FacebookURLGenerator(Name string, Price int, LocationCode string) string {
 
 // JS loaded cannot use colly for this
 func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
-	maxDistance int, LocationCode string,
+	maxDistance int, LocationCode string, proxy bool,
 ) ([]types.EbayListing, error) {
 	crawlDate := time.Now()
 	url := FacebookURLGenerator(Name, desiredPrice, LocationCode)
@@ -62,7 +62,11 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 		chromedp.Flag("log-level", "3"),
 	)
-
+	if proxy {
+		opts = append(opts,
+			chromedp.ProxyServer("http://gluetun:8888"),
+		)
+	}
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	defer allocCancel()
 
@@ -79,7 +83,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 		chromedp.Sleep(10*time.Second),
 		chromedp.FullScreenshot(&first, 90), // 90 = JPEG quality
 		chromedp.WaitReady("body", chromedp.ByQuery),
-		chromedp.Click("div.xdg88n9.x10l6tqk.x1tk7jg1.x1vjfegm"),
+		chromedp.Evaluate(`document.querySelector('div.xdg88n9.x10l6tqk.x1tk7jg1.x1vjfegm')?.click()`, nil),
 		chromedp.Sleep(3*time.Second),
 		chromedp.FullScreenshot(&second, 90), // 90 = JPEG quality
 		chromedp.Evaluate(`
@@ -97,15 +101,19 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	)
 
 	var retArr []types.EbayListing
-	if err != nil {
-		fileErr1 := os.WriteFile("facebookFirst.png", first, 0o644)
-		fileErr2 := os.WriteFile("facebookSecond.png", second, 0o644)
-		slog.Error("Error in marketplace", slog.Any("error value", err), slog.Any("File error 1", fileErr1),
-			slog.Any("file error 2", fileErr2))
-		err = errors.Join(errors.New("Error in facebook marketplace:"), err)
-		return retArr, err
-	} else if len(items) == 0 {
-		return retArr, errors.New("no items returned from facebook, check screenshots for sanity check")
+	if err != nil || len(items) == 0 {
+		if proxy {
+			slog.Warn("facebook proxy failed, triggering no proxy crawl", slog.Any("Error", err), slog.Int("ItemArr length", len(items)))
+			retArr, err = MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode, false)
+			return retArr, err
+		} else {
+			fileErr1 := os.WriteFile("facebookFirst.png", first, 0o644)
+			fileErr2 := os.WriteFile("facebookSecond.png", second, 0o644)
+			slog.Error("Error in marketplace", slog.Any("error value", err), slog.Any("File error 1", fileErr1),
+				slog.Any("file error 2", fileErr2))
+			err = errors.Join(errors.New("Error in facebook marketplace:"), err)
+			return retArr, err
+		}
 	}
 	// <------------------ sanitize the list ------------>
 	for i := range items {

@@ -51,7 +51,7 @@ func FacebookURLGenerator(Name string, Price int, LocationCode string) string {
 }
 
 // JS loaded cannot use colly for this
-func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong float64,
+func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	maxDistance int, LocationCode string,
 ) ([]types.EbayListing, error) {
 	crawlDate := time.Now()
@@ -94,9 +94,6 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat float64, homeLong f
 				Condition: e.querySelector('span.x1lliihq.x6ikm8r.x10wlt62.x1n2onr6.xlyipyv.xuxw1ft')?.innerText || '',
 		}))
 		`, &items),
-
-		// Price: parseInt((e.querySelector('span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.xlh3980.xvmahel.x1n0sxbx.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.x4zkp8e.x676frb.x1lkfr7t.x1lbecb7.x1s688f.xzsf02u')?.innerText || '0' ).replace('$', '').replaceAll(',', '')),
-		//                                        x193iq5w xeuugli x13faqbe x1vvkbs xlh3980 xvmahel x1n0sxbx x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x4zkp8e x3x7a5m x1lkfr7t x1lbecb7 x1s688f xzsf02u
 	)
 
 	var retArr []types.EbayListing

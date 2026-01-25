@@ -76,6 +76,10 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 		res, priceErr = formatPrice(h.Text)
 		c.OnHTMLDetach(querySelector)
 	})
+	var collyHTML string
+	c.OnHTML("body", func(h *colly.HTMLElement) {
+		collyHTML, _ = h.DOM.Html()
+	})
 	err = c.Visit(uri)
 
 	c.Wait()
@@ -85,6 +89,7 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 	if err != nil || priceErr != nil {
 		var res int
 		var err2 error
+		os.WriteFile("collyHTML.html", []byte(collyHTML), 0o644)
 		if proxy {
 			slog.Warn("error in getting price in crawler, triggering no proxy crawl",
 				slog.Any("Error", err), slog.Any("PriceErr", priceErr))
@@ -92,20 +97,28 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 		} else if err2 != nil || res == 0 {
 			slog.Warn("no proxy also failed, triggering chromeDPFailover crawl",
 				slog.Any("Error", err2), slog.Any("PriceErr", priceErr))
-			res, err2 = ChromeDPFailover(uri, querySelector)
+			res, err2 = ChromeDPFailover(uri, querySelector, true)
 		}
 		return int(float64(res) * TaxRate), err2
 	}
 	return int(float64(res) * TaxRate), err
 }
 
-func ChromeDPFailover(url string, selector string) (int, error) {
+func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 		chromedp.Flag("log-level", "3"),
 	)
+	if proxy {
+		opts = append(opts,
+			chromedp.ProxyServer("http://gluetun:8888"),
+		)
+	}
 
+	slog.Warn("ChromDP Triggered for default crawler",
+		slog.String("URL", url), slog.String("Selector", selector),
+		slog.Bool("Proxy", proxy))
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	defer allocCancel()
 
@@ -116,40 +129,54 @@ func ChromeDPFailover(url string, selector string) (int, error) {
 	defer timeoutCancel()
 
 	var priceText string
-	var htmlContent []byte
+	var screenShot []byte
+	var HTMLContent string
 	var err error
+	js := fmt.Sprintf(`document.querySelector("%s")?.innerText || ""`, selector)
 	if strings.Contains(url, "amazon") {
 		err = chromedp.Run(ctx,
 			chromedp.Navigate(url),
 			chromedp.Sleep(10*time.Second),
 			chromedp.WaitReady("body", chromedp.ByQuery),
-			chromedp.Click("button", chromedp.ByQuery),
+			chromedp.Evaluate(`document.querySelector('button.a-button-text[alt="Continue shopping"]')?.click()`, nil),
 			chromedp.Sleep(5*time.Second),
-			chromedp.FullScreenshot(&htmlContent, 90),
-			chromedp.Text(selector, &priceText, chromedp.ByQuery),
+			chromedp.FullScreenshot(&screenShot, 90),
+			chromedp.OuterHTML("body", &HTMLContent),
+			// chromedp.Text(selector, &priceText, chromedp.ByQuery),
+			chromedp.Evaluate(js, &priceText),
 		)
 	} else {
 		err = chromedp.Run(ctx,
 			chromedp.Navigate(url),
 			chromedp.Sleep(10*time.Second),
-			chromedp.FullScreenshot(&htmlContent, 90),
-			chromedp.WaitReady("body", chromedp.ByQuery),
+			chromedp.FullScreenshot(&screenShot, 90),
+			chromedp.OuterHTML("body", &HTMLContent),
 			chromedp.Text(selector, &priceText, chromedp.ByQuery),
 		)
 	}
 	if err != nil {
-		err2 := os.WriteFile("failoverSS.png", htmlContent, 0o644)
-		slog.Error("error in default chromedp", slog.String("selector", selector),
-			slog.String("URL", url), slog.Any("ChromeDP Error", err), slog.Any("File Write Error", err2))
-		return 0, fmt.Errorf("selector '%s' not found for url %s, %w", selector, url, err)
+		if proxy {
+			slog.Warn("ChromDP proxy failed, triggering non proxy")
+			res, err := ChromeDPFailover(url, selector, false)
+			return res, err
+		} else {
+			slog.Error("no proxy ChromeDB also failed")
+			err2 := os.WriteFile("failoverSS.png", screenShot, 0o644)
+			err3 := os.WriteFile("failoverHTML.html", []byte(HTMLContent), 0o644)
+			slog.Error("error in default chromedp", slog.String("selector", selector),
+				slog.String("URL", url), slog.Any("ChromeDP Error", err),
+				slog.Any("ScreenShot Write Error", err2), slog.Any("HTML Write Error", err3))
+			return 0, fmt.Errorf("selector '%s' not found for url %s, %w", selector, url, err)
+		}
 	}
 
-	slog.Info("ChromeDP found Selector")
-
+	slog.Info("ChromeDP found Selector", slog.String("Found HTML Element", priceText))
 	// Parse price
+	fmt.Println(priceText)
 	price, err := formatPrice(priceText)
 	if err != nil || price == 0 {
-		os.WriteFile("failoverSS.png", htmlContent, 0o644)
+		os.WriteFile("failoverHTML.html", []byte(HTMLContent), 0o644)
+		os.WriteFile("failoverSS.png", screenShot, 0o644)
 		return 0, fmt.Errorf("failed to parse price '%s': %w", priceText, err)
 	}
 

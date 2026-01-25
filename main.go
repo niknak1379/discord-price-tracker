@@ -42,7 +42,7 @@ func main() {
 
 func amazonTest() {
 	i, err := crawler.GetPrice("https://www.amazon.com/dp/B0B3F8V4JG?ref=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&ref_=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&social_share=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&language=en-US",
-		"h5 span.a-price-whole", true)
+		"form#addToCart span.a-price-whole", true)
 	slog.Info("price", slog.Int("int", i), slog.Any("error", err))
 }
 

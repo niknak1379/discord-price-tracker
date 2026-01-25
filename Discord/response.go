@@ -90,12 +90,16 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		Discord.ChannelFileSend(ChannelID, "first.png", reader2)
 	} else {
 		reader, err := os.Open("failoverSS.png")
+		reader2, err2 := os.Open("failoverHTML.html")
+		reader3, err3 := os.Open("collyHTML.html")
 		defer reader.Close()
-		if err != nil {
-			slog.Error("Could not send error image", slog.Any("Error", err))
+		if err != nil || err2 != nil || err3 != nil {
+			slog.Error("Could not send error image",
+				slog.Any("Error", err), slog.Any("Error HTML File", err2))
 		}
 		Discord.ChannelFileSend(ChannelID, "failoverSS.png", reader)
-
+		Discord.ChannelFileSend(ChannelID, "failoverHTML.png", reader2)
+		Discord.ChannelFileSend(ChannelID, "collyHTML.png", reader3)
 	}
 	Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
 		Title:  "Error",

@@ -150,7 +150,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 			chromedp.Sleep(10*time.Second),
 			chromedp.FullScreenshot(&screenShot, 90),
 			chromedp.OuterHTML("body", &HTMLContent),
-			chromedp.Text(selector, &priceText, chromedp.ByQuery),
+			chromedp.Evaluate(js, &priceText),
 		)
 	}
 	if err != nil {

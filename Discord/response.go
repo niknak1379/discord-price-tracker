@@ -98,8 +98,8 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 				slog.Any("Error", err), slog.Any("Error HTML File", err2))
 		}
 		Discord.ChannelFileSend(ChannelID, "failoverSS.png", reader)
-		Discord.ChannelFileSend(ChannelID, "failoverHTML.png", reader2)
-		Discord.ChannelFileSend(ChannelID, "collyHTML.png", reader3)
+		Discord.ChannelFileSend(ChannelID, "failoverHTML.HTML", reader2)
+		Discord.ChannelFileSend(ChannelID, "collyHTML.HTML", reader3)
 	}
 	Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
 		Title:  "Error",

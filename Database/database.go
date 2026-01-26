@@ -68,7 +68,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 		return Item{}, errors.New("Channel Capacity Reached, add to a separate channel")
 	}
 	updateChannelLength(Channel.ChannelID, 1)
-	if Timer >= 0 {
+	if Timer <= 0 {
 		return Item{}, errors.New("Invalid Timer value")
 	}
 	p, t, err := validateURI(uri, query)

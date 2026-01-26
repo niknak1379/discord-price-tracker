@@ -126,7 +126,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
-	ctx, timeoutCancel := context.WithTimeout(ctx, 60*time.Second)
+	ctx, timeoutCancel := context.WithTimeout(ctx, 90*time.Second)
 	defer timeoutCancel()
 
 	var priceText string
@@ -179,7 +179,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 					});
 			`, nil),
 			chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
-			chromedp.FullScreenshot(&screenShot, 90),
+			chromedp.FullScreenshot(&screenShot, 70),
 			chromedp.OuterHTML("body", &HTMLContent),
 			chromedp.Evaluate(`document.querySelector('button.a-button-text[alt="Continue shopping"]')?.click()`, nil),
 			chromedp.Sleep(5*time.Second),
@@ -190,14 +190,17 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 		err = chromedp.Run(ctx,
 			chromedp.Navigate(url),
 			chromedp.Sleep(time.Duration(rand.IntN(10)+30)*time.Second),
-			chromedp.FullScreenshot(&screenShot, 90),
+			chromedp.FullScreenshot(&screenShot, 70),
 			chromedp.OuterHTML("body", &HTMLContent),
 			chromedp.Evaluate(js, &priceText),
 		)
 	}
 	if err != nil || priceText == "" {
 		if proxy {
-			slog.Warn("ChromDP proxy failed, triggering non proxy")
+			err2 := os.WriteFile("proxyFailoverSS.png", screenShot, 0o644)
+			err3 := os.WriteFile("proxyFailoverHTML.html", []byte(HTMLContent), 0o644)
+			slog.Warn("ChromDP proxy failed, triggering non proxy", slog.Any("write err1", err2),
+				slog.Any("write err 2", err3))
 			res, err := ChromeDPFailover(url, selector, false)
 			return res, err
 		} else {

@@ -74,14 +74,34 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	if strings.Contains(err.Error(), "facebook") {
 		reader, err := os.Open("facebookSecond.png")
 		reader2, err2 := os.Open("facebookFirst.png")
+		reader3, err3 := os.Open("proxyFacebookSecond.png")
+		reader4, err4 := os.Open("proxyFacebookFirst.png")
+		reader5, err5 := os.Open("proxyFacebookHTML.html")
+		reader6, err6 := os.Open("facebookHTML.html")
+
 		defer reader.Close()
 		defer reader2.Close()
-		if err != nil || err2 != nil {
-			slog.Error("Could not load error images", slog.Any("Error", err),
-				slog.Any("Error", err2))
+		defer reader3.Close()
+		defer reader4.Close()
+		defer reader5.Close()
+		defer reader6.Close()
+		if err != nil || err2 != nil || err3 != nil ||
+			err4 != nil || err5 != nil || err6 != nil {
+			slog.Error("Could not load error images",
+				slog.Any("err", err),
+				slog.Any("err2", err2),
+				slog.Any("err3", err3),
+				slog.Any("err4", err4),
+				slog.Any("err5", err5),
+				slog.Any("err6", err6),
+			)
 		}
 		Discord.ChannelFileSend(ChannelID, "second.png", reader)
 		Discord.ChannelFileSend(ChannelID, "first.png", reader2)
+		Discord.ChannelFileSend(ChannelID, "proxySecond.png", reader3)
+		Discord.ChannelFileSend(ChannelID, "proxyFirst.png", reader4)
+		Discord.ChannelFileSend(ChannelID, "proxyHTML.html", reader5)
+		Discord.ChannelFileSend(ChannelID, "facebook.html", reader6)
 	} else if strings.Contains(err.Error(), "Ebay") {
 		reader, err := os.Open("ebaySecond.png")
 		reader2, err2 := os.Open("ebayFirst.png")
@@ -97,14 +117,28 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		reader, err := os.Open("failoverSS.png")
 		reader2, err2 := os.Open("failoverHTML.html")
 		reader3, err3 := os.Open("collyHTML.html")
+		reader4, err4 := os.Open("proxyFailoverSS.png")
+		reader5, err5 := os.Open("proxyFailoverHTML.html")
 		defer reader.Close()
-		if err != nil || err2 != nil || err3 != nil {
+		defer reader2.Close()
+		defer reader3.Close()
+		defer reader4.Close()
+		defer reader5.Close()
+		if err != nil || err2 != nil || err3 != nil ||
+			err4 != nil || err5 != nil {
 			slog.Error("Could not send error image",
-				slog.Any("Error", err), slog.Any("Error HTML File", err2))
+				slog.Any("Error", err),
+				slog.Any("Error HTML File", err2),
+				slog.Any("err3", err3),
+				slog.Any("err4", err4),
+				slog.Any("err5", err5),
+			)
 		}
+		Discord.ChannelFileSend(ChannelID, "collyHTML.html", reader3)
 		Discord.ChannelFileSend(ChannelID, "failoverSS.png", reader)
-		Discord.ChannelFileSend(ChannelID, "failoverHTML.HTML", reader2)
-		Discord.ChannelFileSend(ChannelID, "collyHTML.HTML", reader3)
+		Discord.ChannelFileSend(ChannelID, "failoverHTML.html", reader2)
+		Discord.ChannelFileSend(ChannelID, "proxyFailoverSS.png", reader4)
+		Discord.ChannelFileSend(ChannelID, "proxyFailoverHTML.html", reader5)
 	}
 	Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
 		Title:  "Error",

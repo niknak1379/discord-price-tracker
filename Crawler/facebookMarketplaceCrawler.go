@@ -74,10 +74,11 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
-	ctx, timeoutCancel := context.WithTimeout(ctx, 60*time.Second) // Increased timeout
+	ctx, timeoutCancel := context.WithTimeout(ctx, 90*time.Second) // Increased timeout
 	defer timeoutCancel()
 	var first []byte
 	var second []byte
+	var HTMLContent string
 	var items []types.EbayListing
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
@@ -123,10 +124,11 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
         });
     `, nil),
 		chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
-		chromedp.FullScreenshot(&first, 90), // 90 = JPEG quality
+		chromedp.FullScreenshot(&first, 70),
+		chromedp.OuterHTML("body", &HTMLContent),
 		chromedp.Evaluate(`document.querySelector('div.xdg88n9.x10l6tqk.x1tk7jg1.x1vjfegm')?.click()`, nil),
 		chromedp.Sleep(3*time.Second),
-		chromedp.FullScreenshot(&second, 90), // 90 = JPEG quality
+		chromedp.FullScreenshot(&second, 70),
 		chromedp.Evaluate(`
 		Array.from(document.querySelectorAll('div.x9f619.x78zum5.x1r8uery.xdt5ytf.x1iyjqo2.xs83m0k.x135b78x.x11lfxj5.x1iorvi4.xjkvuk6.xnpuxes.x1cjf5ee.x17dddeq')).map(e => ({
 				Title: e.querySelector('span.x1lliihq.x6ikm8r.x10wlt62.x1n2onr6')?.innerText || '',
@@ -144,14 +146,27 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	var retArr []types.EbayListing
 	if err != nil || len(items) == 0 {
 		if proxy {
-			slog.Warn("facebook proxy failed, triggering no proxy crawl", slog.Any("Error", err), slog.Int("ItemArr length", len(items)))
+			fileErr1 := os.WriteFile("proxyFacebookFirst.png", first, 0o644)
+			fileErr2 := os.WriteFile("proxyFacebookSecond.png", second, 0o644)
+			fileErr3 := os.WriteFile("proxyFacebookHTML.html", []byte(HTMLContent), 0o644)
+			slog.Warn("facebook proxy failed, triggering no proxy crawl",
+				slog.Any("Error", err),
+				slog.Int("ItemArr length", len(items)),
+				slog.Any("wirte Err", fileErr1),
+				slog.Any("write err 2", fileErr2),
+				slog.Any("write err 3", fileErr3),
+			)
 			retArr, err = MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode, false)
 			return retArr, err
 		} else {
 			fileErr1 := os.WriteFile("facebookFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("facebookSecond.png", second, 0o644)
-			slog.Error("Error in marketplace", slog.Any("error value", err), slog.Any("File error 1", fileErr1),
-				slog.Any("file error 2", fileErr2))
+			fileErr3 := os.WriteFile("facebookHTML.html", []byte(HTMLContent), 0o644)
+			slog.Error("Error in marketplace", slog.Any("error value", err),
+				slog.Any("File error 1", fileErr1),
+				slog.Any("file error 2", fileErr2),
+				slog.Any("file error 3", fileErr3),
+			)
 			err = errors.Join(errors.New("Error in facebook marketplace:"), err)
 			return retArr, err
 		}

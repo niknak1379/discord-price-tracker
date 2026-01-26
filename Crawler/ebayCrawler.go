@@ -213,10 +213,9 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
         });
     `, nil),
 		chromedp.Sleep(10*time.Second),
-		chromedp.FullScreenshot(&first, 90), // 90 = JPEG quality
-		chromedp.WaitReady("body", chromedp.ByQuery),
+		chromedp.FullScreenshot(&first, 70),
 		chromedp.Sleep(3*time.Second),
-		chromedp.FullScreenshot(&second, 90), // 90 = JPEG quality
+		chromedp.FullScreenshot(&second, 70),
 		chromedp.Evaluate(`
 		Array.from(document.querySelectorAll('ul.srp-results > li')).map(e => {
 				const rows = e.querySelectorAll('div.s-card__attribute-row');

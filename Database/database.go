@@ -164,7 +164,7 @@ func EditName(oldName string, newName string, ChannelID string) (Item, error) {
 }
 
 // method itself checks if the price is a duplicate and if so does not add it
-func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date time.Time, ChannelID string) (Price, error) {
+func AddNewPrice(Name string, uri string, newPrice int, date time.Time, ChannelID string) (Price, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
 		slog.Error("couldnt load channel", slog.Any("Error", err))
@@ -222,7 +222,11 @@ func AddNewPrice(Name string, uri string, newPrice int, historicalLow int, date 
 		}
 	}
 
-	if newPrice < historicalLow {
+	historicalLow, err := GetLowestHistoricalPrice(Name, ChannelID)
+	if err != nil {
+		panic(err)
+	}
+	if newPrice < historicalLow.Price {
 		UpdateLowestHistoricalPrice(Name, price, ChannelID)
 	}
 

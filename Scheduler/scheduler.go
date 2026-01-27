@@ -188,6 +188,7 @@ func updateSingleItem(item *database.Item, Channel *database.Channel) {
 		slog.String("channelID", Channel.ChannelID))
 
 	date := time.Now()
+	// todays lowest price
 	currLow := database.Price{
 		Price: math.MaxInt,
 		Url:   "Unavailable From All Sources",
@@ -199,12 +200,10 @@ func updateSingleItem(item *database.Item, Channel *database.Channel) {
 		r := rand.IntN(180)
 		time.Sleep(time.Duration(r) * time.Second)
 
-		oldLow, err := database.GetLowestHistoricalPrice(item.Name, Channel.ChannelID)
-		if err != nil {
-			continue
-		}
+		// yesterdays lowest price
+		oldLow := item.CurrentLowestPrice
 
-		np, err := updatePrice(item.Name, t.URI, t.HtmlQuery, oldLow, date, Channel.ChannelID, item.SuppressNotifications)
+		np, err := updatePrice(item.Name, &t, oldLow, date, Channel.ChannelID, item.SuppressNotifications)
 		if currLow.Price > np.Price && err == nil {
 			currLow = np
 		}
@@ -219,19 +218,19 @@ func updateSingleItem(item *database.Item, Channel *database.Channel) {
 	database.UpdateAggregateReport(item.Name, Channel.ChannelID)
 }
 
-func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Price, date time.Time, ChannelID string, Suppress bool) (database.Price, error) {
-	newPrice, err := crawler.GetPrice(URI, HtmlQuery, true)
+func updatePrice(Name string, Tracker *database.TrackingInfo, oldLow database.Price, date time.Time, ChannelID string, Suppress bool) (database.Price, error) {
+	newPrice, err := crawler.GetPrice(Tracker.URI, Tracker.HtmlQuery, true)
 	if err != nil || newPrice == 0 {
 		slog.Error("error getting price in updatePrice", slog.Any("Error", err),
 			slog.Int("Returned Price", newPrice))
-		discord.CrawlErrorAlert(Name, URI, err, ChannelID)
+		discord.CrawlErrorAlert(Name, Tracker.URI, err, ChannelID)
 		return database.Price{}, err
 	}
-	p, _ := database.AddNewPrice(Name, URI, newPrice, oldLow.Price, date, ChannelID)
+	p, _ := database.AddNewPrice(Name, Tracker.URI, newPrice, date, ChannelID)
 
 	// notify discord if a new historical low has been achieved
 	if oldLow.Price != newPrice && !Suppress {
-		discord.PriceChangeAlert(Name, newPrice, oldLow, URI, ChannelID)
+		discord.PriceChangeAlert(Name, newPrice, oldLow, Tracker.URI, ChannelID)
 	}
 	return p, err
 }

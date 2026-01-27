@@ -26,12 +26,12 @@ func PriceChangeAlert(itemName string, newPrice int, oldPrice database.Price, UR
 	} else {
 		color = 2067276
 	}
-	oldPriceField := setPriceField(&oldPrice, "Previous Price")
+	oldPriceField := setPriceField(&oldPrice, "Previous ")
 	newPriceField := setPriceField(&database.Price{
 		Price: newPrice,
 		Url:   URL,
 		Date:  time.Now(),
-	}, "New Price")
+	}, "New ")
 	var Fields []*discordgo.MessageEmbedField
 	Fields = append(Fields, oldPriceField...)
 	Fields = append(Fields, newPriceField...)

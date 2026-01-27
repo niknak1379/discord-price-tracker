@@ -45,6 +45,10 @@ var (
 			},
 		},
 		{
+			Name:        "channel_info",
+			Description: "get channel settings",
+		},
+		{
 			Name:        "add",
 			Description: "Add new Price Tracker",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -354,6 +358,15 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				},
 			})
 		}
+	},
+	"channel_info": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		info := database.GetChannelInfo(i.ChannelID)
+		em := formatChannelInfo(info)
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Data: &discordgo.InteractionResponseData{
+				Embeds: []*discordgo.MessageEmbed{em},
+			},
+		})
 	},
 	"add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		switch i.Type {

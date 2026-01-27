@@ -105,29 +105,87 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 	return int(float64(res) * TaxRate), err
 }
 
-func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
+func NewChromedpContext(timeout time.Duration, extraOpts ...chromedp.ExecAllocatorOption) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
+		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-dev-shm-usage", true),
 		chromedp.Flag("log-level", "3"),
 	)
-	if proxy {
-		opts = append(opts,
-			chromedp.ProxyServer("http://gluetun:8888"),
-		)
+
+	opts = append(opts, extraOpts...)
+
+	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	ctx, ctxCancel := chromedp.NewContext(allocCtx)
+	ctx, timeoutCancel := context.WithTimeout(ctx, timeout)
+
+	cancel := func() {
+		timeoutCancel()
+		ctxCancel()
+		allocCancel()
 	}
 
+	return ctx, cancel
+}
+
+func StealthActions() chromedp.Action {
+	return chromedp.Evaluate(`
+		// Webdriver
+		Object.defineProperty(navigator, 'webdriver', {
+			get: () => undefined
+		});
+		
+		// Plugins
+		Object.defineProperty(navigator, 'plugins', {
+			get: () => [
+				{name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer'},
+				{name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai'},
+				{name: 'Native Client', filename: 'internal-nacl-plugin'}
+			]
+		});
+		
+		// Languages
+		Object.defineProperty(navigator, 'languages', {
+			get: () => ['en-US', 'en']
+		});
+		
+		// Chrome runtime
+		window.chrome = {
+			runtime: {
+				connect: () => {},
+				sendMessage: () => {}
+			}
+		};
+		
+		// Permissions
+		const originalQuery = window.navigator.permissions.query;
+		window.navigator.permissions.query = (parameters) => (
+			parameters.name === 'notifications' ?
+				Promise.resolve({ state: Notification.permission }) :
+				originalQuery(parameters)
+		);
+		
+		// Hardware
+		Object.defineProperty(navigator, 'hardwareConcurrency', {
+			get: () => 8
+		});
+	`, nil)
+}
+
+func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	slog.Warn("ChromDP Triggered for default crawler",
 		slog.String("URL", url), slog.String("Selector", selector),
-		slog.Bool("Proxy", proxy))
-	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer allocCancel()
-
-	ctx, cancel := chromedp.NewContext(allocCtx)
+		slog.Bool("Proxy", proxy),
+	)
+	var ctx context.Context
+	var cancel context.CancelFunc
+	if proxy {
+		ctx, cancel = NewChromedpContext(90*time.Second, chromedp.ProxyServer("http://gluetun:8888"))
+	} else {
+		ctx, cancel = NewChromedpContext(90 * time.Second)
+	}
 	defer cancel()
-
-	ctx, timeoutCancel := context.WithTimeout(ctx, 90*time.Second)
-	defer timeoutCancel()
 
 	var priceText string
 	var screenShot []byte
@@ -137,47 +195,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	if strings.Contains(url, "amazon") {
 		err = chromedp.Run(ctx,
 			chromedp.Navigate(url),
-			chromedp.Evaluate(`
-					// Webdriver
-					Object.defineProperty(navigator, 'webdriver', {
-							get: () => undefined
-					});
-					
-					// Plugins
-					Object.defineProperty(navigator, 'plugins', {
-							get: () => [
-									{name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer'},
-									{name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai'},
-									{name: 'Native Client', filename: 'internal-nacl-plugin'}
-							]
-					});
-					
-					// Languages
-					Object.defineProperty(navigator, 'languages', {
-							get: () => ['en-US', 'en']
-					});
-					
-					// Chrome runtime
-					window.chrome = {
-							runtime: {
-									connect: () => {},
-									sendMessage: () => {}
-							}
-					};
-					
-					// Permissions
-					const originalQuery = window.navigator.permissions.query;
-					window.navigator.permissions.query = (parameters) => (
-							parameters.name === 'notifications' ?
-									Promise.resolve({ state: Notification.permission }) :
-									originalQuery(parameters)
-					);
-					
-					// Hardware
-					Object.defineProperty(navigator, 'hardwareConcurrency', {
-							get: () => 8
-					});
-			`, nil),
+			StealthActions(),
 			chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
 			chromedp.FullScreenshot(&screenShot, 70),
 			chromedp.OuterHTML("body", &HTMLContent),
@@ -189,6 +207,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	} else {
 		err = chromedp.Run(ctx,
 			chromedp.Navigate(url),
+			StealthActions(),
 			chromedp.Sleep(time.Duration(rand.IntN(10)+30)*time.Second),
 			chromedp.FullScreenshot(&screenShot, 70),
 			chromedp.OuterHTML("body", &HTMLContent),
@@ -249,9 +268,48 @@ func GetOpenGraphPic(url string) string {
 	err := c.Visit(url)
 	if err != nil || !visited {
 		slog.Warn("could not get Open Graph picture", slog.Any("ERROR: ", err), slog.Any("Visited: ", visited))
-		return ""
+
+		// Fallback to chromedp for Amazon
+		if strings.Contains(url, "amazon") {
+			imgURL = getAmazonImageChromedp(url, true)
+		}
+
+		if imgURL == "" {
+			return ""
+		}
 	}
 	c.Wait()
+	return imgURL
+}
+
+func getAmazonImageChromedp(url string, proxy bool) string {
+	var ctx context.Context
+	var cancel context.CancelFunc
+	if proxy {
+		ctx, cancel = NewChromedpContext(90*time.Second, chromedp.ProxyServer("http://gluetun:8888"))
+	} else {
+		ctx, cancel = NewChromedpContext(90 * time.Second)
+	}
+	defer cancel()
+
+	var imgURL string
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(url),
+		StealthActions(),
+		chromedp.Sleep(10*time.Second),
+		chromedp.Evaluate(`document.querySelector('button.a-button-text[alt="Continue shopping"]')?.click()`, nil),
+		chromedp.Sleep(2*time.Second),
+		chromedp.Evaluate(`document.querySelector('img#landingImage')?.src || ""`, &imgURL),
+	)
+	if err != nil {
+		if proxy {
+			slog.Warn("chromedp failed to get Amazon image, trying without proxy", slog.Any("error", err))
+			return getAmazonImageChromedp(url, false)
+		}
+		slog.Error("chromedp failed to get Amazon image", slog.Any("error", err))
+		return ""
+	}
+
 	return imgURL
 }
 

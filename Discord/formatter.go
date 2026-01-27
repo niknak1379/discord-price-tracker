@@ -283,6 +283,34 @@ func setPriceField(p *database.Price, message string) []*discordgo.MessageEmbedF
 	return fields
 }
 
+func formatChannelInfo(Channel *database.Channel) *discordgo.MessageEmbed {
+	locationField := discordgo.MessageEmbedField{
+		Name:   "Facebook Locaiton Code",
+		Value:  Channel.LocationCode,
+		Inline: false,
+	}
+	ChannelIDField := discordgo.MessageEmbedField{
+		Name:   "Channel ID",
+		Value:  Channel.ChannelID,
+		Inline: false,
+	}
+	distanceField := discordgo.MessageEmbedField{
+		Name:   "Max Distance",
+		Value:  strconv.Itoa(Channel.Distance),
+		Inline: false,
+	}
+	totalItemField := discordgo.MessageEmbedField{
+		Name:   "Total Items",
+		Value:  strconv.Itoa(Channel.TotalItems),
+		Inline: false,
+	}
+	em := &discordgo.MessageEmbed{
+		Title:  "Channel Information",
+		Fields: []*discordgo.MessageEmbedField{&ChannelIDField, &totalItemField, &locationField, &distanceField},
+	}
+	return em
+}
+
 // Truncate string to max length with ellipsis
 func truncateString(s string, maxLen int) string {
 	if len(s) <= maxLen {

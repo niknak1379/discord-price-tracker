@@ -58,6 +58,10 @@ func loadDBTables() {
 	}
 }
 
+func GetChannelInfo(ChannelID string) *Channel {
+	return ChannelMap[ChannelID]
+}
+
 func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location string, LocationCode string, maxDistance int) error {
 	Lat, Long, err := crawler.GetCoordinates(Location)
 	if err != nil {

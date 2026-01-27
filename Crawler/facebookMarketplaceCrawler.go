@@ -58,20 +58,13 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	crawlDate := time.Now()
 	url := FacebookURLGenerator(Name, desiredPrice, LocationCode)
 	slog.Info("crawling facebook marketplace URL", slog.String("URL", url))
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
-		chromedp.Flag("disable-blink-features", "AutomationControlled"),
-		chromedp.Flag("log-level", "3"),
-	)
+	var ctx context.Context
+	var cancel context.CancelFunc
 	if proxy {
-		opts = append(opts,
-			chromedp.ProxyServer("http://gluetun:8888"),
-		)
+		ctx, cancel = NewChromedpContext(90*time.Second, chromedp.ProxyServer("http://gluetun:8888"))
+	} else {
+		ctx, cancel = NewChromedpContext(90 * time.Second)
 	}
-	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer allocCancel()
-
-	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
 	ctx, timeoutCancel := context.WithTimeout(ctx, 90*time.Second) // Increased timeout
@@ -82,47 +75,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	var items []types.EbayListing
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
-		chromedp.Evaluate(`
-        // Webdriver
-        Object.defineProperty(navigator, 'webdriver', {
-            get: () => undefined
-        });
-        
-        // Plugins
-        Object.defineProperty(navigator, 'plugins', {
-            get: () => [
-                {name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer'},
-                {name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai'},
-                {name: 'Native Client', filename: 'internal-nacl-plugin'}
-            ]
-        });
-        
-        // Languages
-        Object.defineProperty(navigator, 'languages', {
-            get: () => ['en-US', 'en']
-        });
-        
-        // Chrome runtime
-        window.chrome = {
-            runtime: {
-                connect: () => {},
-                sendMessage: () => {}
-            }
-        };
-        
-        // Permissions
-        const originalQuery = window.navigator.permissions.query;
-        window.navigator.permissions.query = (parameters) => (
-            parameters.name === 'notifications' ?
-                Promise.resolve({ state: Notification.permission }) :
-                originalQuery(parameters)
-        );
-        
-        // Hardware
-        Object.defineProperty(navigator, 'hardwareConcurrency', {
-            get: () => 8
-        });
-    `, nil),
+		StealthActions(),
 		chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
 		chromedp.FullScreenshot(&first, 70),
 		chromedp.OuterHTML("body", &HTMLContent),

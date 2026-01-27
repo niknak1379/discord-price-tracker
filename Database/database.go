@@ -391,6 +391,9 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 
 	var results []Result
 	if err = cursor.All(ctx, &results); err != nil {
+		slog.Error("update ebay listing first pipeline error",
+			slog.Any("error", err),
+		)
 		return err
 	}
 	listingMap := make(map[string]types.EbayListing) // maps url to item
@@ -425,7 +428,7 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 				},
 			},
 		}
-	} else {
+	} else if len(results[0].ListingHistory) == 0 {
 		update = bson.M{
 			"$set": bson.M{
 				"EbayListings": listingsArr,
@@ -436,7 +439,11 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 	var result Item
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
-
+	if err != nil {
+		slog.Error("update ebay listing second pipeline error",
+			slog.Any("error", err),
+		)
+	}
 	return err
 }
 

@@ -1,7 +1,6 @@
 package crawler
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -151,67 +150,15 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool) ([]types.EbayLis
 func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListing, error) {
 	crawlDate := time.Now()
 	slog.Info("chromedp failover for ebay", slog.String("URL", url))
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
-		chromedp.Flag("disable-blink-features", "AutomationControlled"),
-		chromedp.Flag("log-level", "3"),
-		// not use a proxy for failover
-		// chromedp.ProxyServer("http://gluetun:8888"),
-	)
-	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer allocCancel()
-
-	ctx, cancel := chromedp.NewContext(allocCtx)
+	ctx, cancel := NewChromedpContext(90 * time.Second)
 	defer cancel()
 
-	ctx, timeoutCancel := context.WithTimeout(ctx, 60*time.Second) // Increased timeout
-	defer timeoutCancel()
 	var first []byte
 	var second []byte
 	var items []types.EbayListing
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
-		chromedp.Evaluate(`
-        // Webdriver
-        Object.defineProperty(navigator, 'webdriver', {
-            get: () => undefined
-        });
-        
-        // Plugins
-        Object.defineProperty(navigator, 'plugins', {
-            get: () => [
-                {name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer'},
-                {name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai'},
-                {name: 'Native Client', filename: 'internal-nacl-plugin'}
-            ]
-        });
-        
-        // Languages
-        Object.defineProperty(navigator, 'languages', {
-            get: () => ['en-US', 'en']
-        });
-        
-        // Chrome runtime
-        window.chrome = {
-            runtime: {
-                connect: () => {},
-                sendMessage: () => {}
-            }
-        };
-        
-        // Permissions
-        const originalQuery = window.navigator.permissions.query;
-        window.navigator.permissions.query = (parameters) => (
-            parameters.name === 'notifications' ?
-                Promise.resolve({ state: Notification.permission }) :
-                originalQuery(parameters)
-        );
-        
-        // Hardware
-        Object.defineProperty(navigator, 'hardwareConcurrency', {
-            get: () => 8
-        });
-    `, nil),
+		StealthActions(),
 		chromedp.Sleep(10*time.Second),
 		chromedp.FullScreenshot(&first, 70),
 		chromedp.Sleep(3*time.Second),
@@ -309,10 +256,11 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 		}
 	}
 	// exludes titles that have these key words
-	excludeArr := [13]string{
+	excludeArr := [15]string{
 		`\bfor parts`, `\bbroken`, `\baccessories\b`,
 		`\bbox only`, `\bempty box`, `\bcable\b`, `\bdongle\b`,
 		`\bkids\b`, `\bjunior\b`, `read`, `\bstand\b`, `\badapter\b`, `\bdefective`,
+		`damage`, `problem`,
 	}
 	for _, excludeQuery := range excludeArr {
 		query, _ := regexp.MatchString(excludeQuery, listingTitle)

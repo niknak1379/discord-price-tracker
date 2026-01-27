@@ -19,20 +19,26 @@ func ready(discord *discordgo.Session, ready *discordgo.Ready) {
 	discord.UpdateGameStatus(1, "stonks")
 }
 
-func LowestPriceAlert(itemName string, newPrice int, oldPrice database.Price, URL string, ChannelID string) {
-	oldPriceField := setPriceField(&oldPrice, "Previous Lowest")
+func PriceChangeAlert(itemName string, newPrice int, oldPrice database.Price, URL string, ChannelID string) {
+	var color int
+	if newPrice > oldPrice.Price {
+		color = 16776960
+	} else {
+		color = 2067276
+	}
+	oldPriceField := setPriceField(&oldPrice, "Previous Price")
 	newPriceField := setPriceField(&database.Price{
 		Price: newPrice,
 		Url:   URL,
 		Date:  time.Now(),
-	}, "New Lowest")
+	}, "New Price")
 	var Fields []*discordgo.MessageEmbedField
 	Fields = append(Fields, oldPriceField...)
 	Fields = append(Fields, newPriceField...)
 	em := discordgo.MessageEmbed{
 		Title:       "Price Update:",
 		Description: itemName,
-		Color:       2067276,
+		Color:       color,
 		URL:         URL,
 		Fields:      Fields,
 	}

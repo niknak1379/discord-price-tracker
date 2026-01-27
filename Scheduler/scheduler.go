@@ -230,7 +230,7 @@ func updatePrice(Name string, URI string, HtmlQuery string, oldLow database.Pric
 	p, _ := database.AddNewPrice(Name, URI, newPrice, oldLow.Price, date, ChannelID)
 
 	// notify discord if a new historical low has been achieved
-	if oldLow.Price > newPrice && !Suppress {
+	if oldLow.Price != newPrice && !Suppress {
 		discord.PriceChangeAlert(Name, newPrice, oldLow, URI, ChannelID)
 	}
 	return p, err

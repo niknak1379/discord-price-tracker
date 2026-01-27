@@ -363,6 +363,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		info := database.GetChannelInfo(i.ChannelID)
 		em := formatChannelInfo(info)
 		err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Embeds: []*discordgo.MessageEmbed{em},
 			},
@@ -508,6 +509,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			if err != nil {
 				content = "Error: " + err.Error()
 				discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
 						Content: content,
 					},

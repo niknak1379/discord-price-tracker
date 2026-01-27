@@ -111,8 +111,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 				slog.Any("write err 2", fileErr2),
 				slog.Any("write err 3", fileErr3),
 			)
-			retArr, err = MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode, false)
-			return retArr, err
+			return MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode, false)
 		} else {
 			fileErr1 := os.WriteFile("facebookFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("facebookSecond.png", second, 0o644)

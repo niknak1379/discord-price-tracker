@@ -362,11 +362,14 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"channel_info": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		info := database.GetChannelInfo(i.ChannelID)
 		em := formatChannelInfo(info)
-		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Data: &discordgo.InteractionResponseData{
 				Embeds: []*discordgo.MessageEmbed{em},
 			},
 		})
+		if err != nil {
+			slog.Error("Error in Sending ChannelInfo", err)
+		}
 	},
 	"add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		switch i.Type {

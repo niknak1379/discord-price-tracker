@@ -59,6 +59,7 @@ func loadDBTables() {
 }
 
 func GetChannelInfo(ChannelID string) *Channel {
+	slog.Info("Getting Channel Info", slog.String("Channel ID", ChannelID))
 	return ChannelMap[ChannelID]
 }
 

@@ -39,7 +39,9 @@ func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong flo
 			slog.Any("Depop Error", err3),
 		)
 	}
-	retArr := append(ebay, fb...)
+	retArr := []types.EbayListing{}
+	retArr = append(retArr, ebay...)
+	retArr = append(retArr, fb...)
 	retArr = append(retArr, depop...)
 	return retArr, errors.Join(err, err2, err3)
 }

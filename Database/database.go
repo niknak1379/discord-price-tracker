@@ -428,7 +428,7 @@ func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, Channe
 				},
 			},
 		}
-	} else if len(results[0].ListingHistory) == 0 {
+	} else {
 		update = bson.M{
 			"$set": bson.M{
 				"EbayListings": listingsArr,

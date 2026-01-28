@@ -240,7 +240,7 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 	}
 }
 
-func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int, ChannelID string) {
+func EbayListingPriceChangeAlert(newListing *types.EbayListing, oldPrice int, ChannelID string) {
 	colorCode := 1752220 // aqua
 	if oldPrice < newListing.Price {
 		colorCode = 12745742 // dark gold
@@ -257,7 +257,7 @@ func EbayListingPriceChangeAlert(newListing types.EbayListing, oldPrice int, Cha
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
 
-func NewEbayListingAlert(newListing types.EbayListing, ChannelID string) {
+func NewEbayListingAlert(newListing *types.EbayListing, ChannelID string) {
 	fields := formatSecondHandField(newListing, "Price", true)
 	em := discordgo.MessageEmbed{
 		Title:  "New Second Hand Listing Found For " + newListing.ItemName,

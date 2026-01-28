@@ -22,8 +22,8 @@ import (
 
 func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong float64,
 	maxDistance int, itemType string, LocationCode string,
-) ([]types.EbayListing, error) {
-	var depop []types.EbayListing
+) ([]*types.EbayListing, error) {
+	var depop []*types.EbayListing
 	var err3 error
 	if itemType == "Clothes" {
 		Price = Price / 2
@@ -39,7 +39,7 @@ func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong flo
 			slog.Any("Depop Error", err3),
 		)
 	}
-	retArr := []types.EbayListing{}
+	retArr := []*types.EbayListing{}
 	retArr = append(retArr, ebay...)
 	retArr = append(retArr, fb...)
 	retArr = append(retArr, depop...)
@@ -56,7 +56,7 @@ func FacebookURLGenerator(Name string, Price int, LocationCode string) string {
 // JS loaded cannot use colly for this
 func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	maxDistance int, LocationCode string, proxy bool,
-) ([]types.EbayListing, error) {
+) ([]*types.EbayListing, error) {
 	crawlDate := time.Now()
 	url := FacebookURLGenerator(Name, desiredPrice, LocationCode)
 	slog.Info("crawling facebook marketplace URL", slog.String("URL", url))
@@ -98,7 +98,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 		`, &items),
 	)
 
-	var retArr []types.EbayListing
+	var retArr []*types.EbayListing
 	if err != nil || len(items) == 0 {
 		if proxy {
 			fileErr1 := os.WriteFile("proxyFacebookFirst.png", first, 0o644)
@@ -141,7 +141,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 			items[i].Date = crawlDate
 			items[i].Duration = 0
 			items[i].AcceptsOffers = true
-			retArr = append(retArr, items[i])
+			retArr = append(retArr, &items[i])
 		}
 	}
 	return retArr, err

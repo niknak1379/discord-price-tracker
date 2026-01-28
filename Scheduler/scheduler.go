@@ -24,7 +24,7 @@ func SetChannelScheduler(ctx context.Context) {
 	activeRoutines := make(map[string]context.CancelFunc) // Track running goroutines
 	itemTimers := make(map[string]time.Duration)          // Track current timers
 	itemSuppression := make(map[string]bool)              // trakc noti suppression
-	itemTrackingList := make(map[string][]database.TrackingInfo)
+	itemTrackingList := make(map[string][]*database.TrackingInfo)
 	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
 		for _, item := range itemsArr {
@@ -54,7 +54,7 @@ func loadAndStartItems(ctx context.Context,
 	activeRoutines map[string]context.CancelFunc,
 	itemTimers map[string]time.Duration,
 	itemSuppression map[string]bool,
-	itemTrackingList map[string][]database.TrackingInfo,
+	itemTrackingList map[string][]*database.TrackingInfo,
 ) {
 	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
@@ -203,7 +203,7 @@ func updateSingleItem(item *database.Item, Channel *database.Channel) {
 		// yesterdays lowest price
 		oldLow := item.CurrentLowestPrice
 
-		np, err := updatePrice(item.Name, &t, oldLow, date, Channel.ChannelID, item.SuppressNotifications)
+		np, err := updatePrice(item.Name, t, oldLow, date, Channel.ChannelID, item.SuppressNotifications)
 		if currLow.Price > np.Price && err == nil {
 			currLow = np
 		}
@@ -239,7 +239,7 @@ func handleSecondHandListingsUpdate(Name string, Price int, Type string, Channel
 	oldEbayListings, _ := database.GetEbayListings(Name, Channel.ChannelID)
 	ListingsMap := map[string]*types.EbayListing{} // maps titles to price for checking if price exists or was updated
 	for i := range oldEbayListings {
-		ListingsMap[oldEbayListings[i].URL] = &oldEbayListings[i]
+		ListingsMap[oldEbayListings[i].URL] = oldEbayListings[i]
 	}
 	ebayListings, err := crawler.GetSecondHandListings(Name, Price,
 		Channel.Lat, Channel.Long, Channel.Distance, Type, Channel.LocationCode)

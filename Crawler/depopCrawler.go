@@ -21,12 +21,12 @@ func depopURLGenerator(Name string, price int) string {
 	return base + Name + Price
 }
 
-func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
+func CrawlDepop(Name string, Price int) ([]*types.EbayListing, error) {
 	url := depopURLGenerator(Name, Price)
 	c := initCrawler()
 
 	crawlDate := time.Now()
-	retArr := []types.EbayListing{}
+	retArr := []*types.EbayListing{}
 	visited := false
 	slog.Info("logging depop url", slog.String("Url", url))
 	c.OnHTML("ol[class^='styles_productGrid__'] li", func(e *colly.HTMLElement) {
@@ -75,7 +75,7 @@ func CrawlDepop(Name string, Price int) ([]types.EbayListing, error) {
 				AcceptsOffers: true,
 			}
 			slog.Info("listing", slog.Any("depop listing information", Listing))
-			retArr = append(retArr, Listing)
+			retArr = append(retArr, &Listing)
 		} else {
 			slog.Info("skipping depop item, title not matched or price too high",
 				slog.String("URL", url))

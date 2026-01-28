@@ -38,18 +38,18 @@ type AggregateReport struct {
 	LowestPriceDuringTimePeriod int `bson:"LowestPriceDuringTimePeriod"`
 }
 type Item struct {
-	Name                  string              `bson:"Name"`
-	TrackingList          []TrackingInfo      `bson:"TrackingList"`
-	LowestPrice           Price               `bson:"LowestPrice"`
-	PriceHistory          []Price             `bson:"PriceHistory"`
-	CurrentLowestPrice    Price               `bson:"CurrentLowestPrice"`
-	Timer                 int                 `bson:"Timer"`
-	Type                  string              `bson:"Type"`
-	ImgURL                string              `bson:"ImgURL"`
-	EbayListings          []types.EbayListing `bson:"EbayListings"`
-	ListingsHistory       []types.EbayListing `bson:"ListingsHistory"`
-	SevenDayAggregate     AggregateReport     `bson:"SevenDayAggregate"`
-	SuppressNotifications bool                `bson:"SuppressNotifications"`
+	Name                  string               `bson:"Name"`
+	TrackingList          []*TrackingInfo      `bson:"TrackingList"`
+	LowestPrice           Price                `bson:"LowestPrice"`
+	PriceHistory          []*Price             `bson:"PriceHistory"`
+	CurrentLowestPrice    Price                `bson:"CurrentLowestPrice"`
+	Timer                 int                  `bson:"Timer"`
+	Type                  string               `bson:"Type"`
+	ImgURL                string               `bson:"ImgURL"`
+	EbayListings          []*types.EbayListing `bson:"EbayListings"`
+	ListingsHistory       []*types.EbayListing `bson:"ListingsHistory"`
+	SevenDayAggregate     AggregateReport      `bson:"SevenDayAggregate"`
+	SuppressNotifications bool                 `bson:"SuppressNotifications"`
 }
 
 var (
@@ -79,19 +79,19 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 	imgURL := crawler.GetOpenGraphPic(uri)
 	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price,
 		Channel.Lat, Channel.Long, Channel.Distance, Type, Channel.LocationCode)
-	slices.SortFunc(ebayListings, func(a, b types.EbayListing) int {
+	slices.SortFunc(ebayListings, func(a, b *types.EbayListing) int {
 		return b.Price - a.Price
 	})
-	arr := []TrackingInfo{t}
-	PriceArr := []Price{p}
+	arr := []*TrackingInfo{t}
+	PriceArr := []*Price{p}
 	i := Item{
 		Name:                  itemName,
 		ImgURL:                imgURL,
-		LowestPrice:           p,
+		LowestPrice:           *p,
 		Type:                  Type,
 		TrackingList:          arr,
 		PriceHistory:          PriceArr,
-		CurrentLowestPrice:    p,
+		CurrentLowestPrice:    *p,
 		Timer:                 Timer,
 		EbayListings:          ebayListings,
 		ListingsHistory:       ebayListings,
@@ -342,11 +342,11 @@ func GetAllItems(ChannelID string) []*Item {
 	return result
 }
 
-func GetEbayListings(itemName string, ChannelID string) ([]types.EbayListing, error) {
+func GetEbayListings(itemName string, ChannelID string) ([]*types.EbayListing, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
 		slog.Error("couldnt load channel", slog.Any("Error", err))
-		return []types.EbayListing{}, err
+		return []*types.EbayListing{}, err
 	}
 	var res Item
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
@@ -358,18 +358,18 @@ func GetEbayListings(itemName string, ChannelID string) ([]types.EbayListing, er
 	return res.EbayListings, err
 }
 
-func UpdateEbayListings(itemName string, listingsArr []types.EbayListing, ChannelID string) error {
+func UpdateEbayListings(itemName string, listingsArr []*types.EbayListing, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
 		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return err
 	}
 	filter := bson.M{"Name": itemName}
-	slices.SortFunc(listingsArr, func(a, b types.EbayListing) int {
+	slices.SortFunc(listingsArr, func(a, b *types.EbayListing) int {
 		return b.Price - a.Price
 	})
 	startOfDay := time.Now().Truncate(24 * time.Hour)
-	var filteredListigArr []types.EbayListing // filtered array
+	var filteredListigArr []*types.EbayListing // filtered array
 	// pipeline to see if price is duplicate
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: bson.D{{Key: "Name", Value: itemName}}}},
@@ -490,7 +490,7 @@ func AddTrackingInfo(itemName string, uri string, querySelector string, ChannelI
 	}
 	p, t, err := validateURI(uri, querySelector)
 	if err != nil {
-		return Item{}, p, err
+		return Item{}, *p, err
 	}
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
 
@@ -502,9 +502,9 @@ func AddTrackingInfo(itemName string, uri string, querySelector string, ChannelI
 	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil {
-		return result, p, err
+		return result, *p, err
 	}
-	return result, p, err
+	return result, *p, err
 }
 
 func RemoveTrackingInfo(itemName string, index int, ChannelID string) (Item, error) {
@@ -564,15 +564,15 @@ func InitDB(context context.Context) {
 	slog.Info("DB Successfully Pinged")
 }
 
-func validateURI(uri string, querySelector string) (Price, TrackingInfo, error) {
+func validateURI(uri string, querySelector string) (*Price, *TrackingInfo, error) {
 	_, err := url.ParseRequestURI(uri)
 	if err != nil {
 		slog.Error("Invalid url")
-		return Price{}, TrackingInfo{}, err
+		return &Price{}, &TrackingInfo{}, err
 	}
 	pr, err := crawler.GetPrice(uri, querySelector, true)
 	if err != nil {
-		return Price{}, TrackingInfo{}, err
+		return &Price{}, &TrackingInfo{}, err
 	}
 	tracking := TrackingInfo{
 		URI:       uri,
@@ -583,5 +583,5 @@ func validateURI(uri string, querySelector string) (Price, TrackingInfo, error) 
 		Price: pr,
 		Url:   uri,
 	}
-	return price, tracking, err
+	return &price, &tracking, err
 }

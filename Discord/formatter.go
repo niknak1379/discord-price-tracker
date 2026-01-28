@@ -114,7 +114,7 @@ func setTrackerFields(Item *database.Item) []*discordgo.MessageEmbedField {
 	return fields
 }
 
-func setSecondHandField(ebayArr []types.EbayListing) []*discordgo.MessageEmbedField {
+func setSecondHandField(ebayArr []*types.EbayListing) []*discordgo.MessageEmbedField {
 	var res []*discordgo.MessageEmbedField
 	if len(ebayArr) == 0 {
 		return res
@@ -134,7 +134,7 @@ func setSecondHandField(ebayArr []types.EbayListing) []*discordgo.MessageEmbedFi
 
 // new listing is there so that it  doesnt return duplicate fields in discord.response
 // for alerts
-func formatSecondHandField(Listing types.EbayListing, Message string, newListing bool) []*discordgo.MessageEmbedField {
+func formatSecondHandField(Listing *types.EbayListing, Message string, newListing bool) []*discordgo.MessageEmbedField {
 	var ret []*discordgo.MessageEmbedField
 	AcceptsOffer := "No"
 	if Listing.AcceptsOffers {

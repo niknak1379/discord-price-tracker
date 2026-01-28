@@ -17,6 +17,7 @@ import (
 	types "priceTracker/Types"
 
 	"github.com/chromedp/chromedp"
+	"github.com/dlclark/regexp2"
 	"github.com/gocolly/colly/v2"
 )
 
@@ -57,11 +58,11 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 // returns a map of urls and prices + shipping cost
 // it returns an error on items that are local pickup only
 // since they dont have a shipping fee div
-func GetEbayListings(Name string, desiredPrice int, Proxy bool) ([]types.EbayListing, error) {
+func GetEbayListings(Name string, desiredPrice int, Proxy bool) ([]*types.EbayListing, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
 
 	slog.Info(url, slog.Bool("proxy", Proxy))
-	var listingArr []types.EbayListing
+	var listingArr []*types.EbayListing
 	crawlDate := time.Now()
 	visited := false
 	c := initCrawler()
@@ -130,7 +131,7 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool) ([]types.EbayLis
 			Duration:      0,
 		}
 		slog.Info("listing", slog.Any("ebay listing information", listing))
-		listingArr = append(listingArr, listing)
+		listingArr = append(listingArr, &listing)
 	})
 	err := c.Visit(url)
 	c.Wait()
@@ -147,7 +148,7 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool) ([]types.EbayLis
 	return listingArr, err
 }
 
-func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListing, error) {
+func EbayFailover(url string, desiredPrice int, Name string) ([]*types.EbayListing, error) {
 	crawlDate := time.Now()
 	slog.Info("chromedp failover for ebay", slog.String("URL", url))
 	ctx, cancel := NewChromedpContext(90 * time.Second)
@@ -206,7 +207,7 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
 		}).filter(item => item !== null)
 		`, &items),
 	)
-	var retArr []types.EbayListing
+	var retArr []*types.EbayListing
 
 	if err != nil {
 		fileErr1 := os.WriteFile("ebayFirst.png", first, 0o644)
@@ -227,10 +228,40 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
 			items[i].Price = int(float64(items[i].Price) * TaxRate)
 			items[i].Date = crawlDate
 			items[i].Duration = 0
-			retArr = append(retArr, items[i])
+			retArr = append(retArr, &items[i])
 		}
 	}
 	return retArr, err
+}
+
+var excludeRegexes []*regexp2.Regexp
+
+func init() {
+	excludePatterns := []string{
+		`\bfor parts`,
+		`\bbroken`,
+		`\baccessories\b`,
+		`(?=.*\bonly\b)(?=.*\bbox\b)`,
+		`\bempty box`,
+		`\bcable\b`,
+		`\bdongle\b`,
+		`\bkids\b`,
+		`\bjunior\b`,
+		`read`,
+		`\bstand\b`,
+		`\badapter\b`,
+		`\bdefective`,
+		`damage`,
+		`problem`,
+	}
+
+	for _, pattern := range excludePatterns {
+		re, err := regexp2.Compile(pattern, 0)
+		if err != nil {
+			continue
+		}
+		excludeRegexes = append(excludeRegexes, re)
+	}
 }
 
 // checks the title to make sure the name is in the title and
@@ -238,16 +269,15 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]types.EbayListin
 func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 	words := strings.Fields(strings.ToLower(itemName))
 	listingTitle = strings.ToLower(listingTitle)
+
 	replacer := strings.NewReplacer(
 		".", " ",
 		"'", " ",
-		"’", " ",
+		"'", " ",
 	)
 	listingTitle = replacer.Replace(listingTitle)
 
-	// short designators like x, xt or numbers get lost, so add spaces
-	// around them ----- changed my mind ill do it for all of them
-	// ----- a lot of models still get mixed up especially for monitors
+	// Check all words from itemName are in listingTitle
 	for _, word := range words {
 		pattern := `\b` + regexp.QuoteMeta(word) + `\b`
 		matched, _ := regexp.MatchString(pattern, listingTitle)
@@ -255,21 +285,20 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 			return false // Word not found
 		}
 	}
-	// exludes titles that have these key words
-	excludeArr := [15]string{
-		`\bfor parts`, `\bbroken`, `\baccessories\b`,
-		`(?=.*\bonly\b)(?=.*\bbox\b)`, `\bempty box`, `\bcable\b`, `\bdongle\b`,
-		`\bkids\b`, `\bjunior\b`, `read`, `\bstand\b`, `\badapter\b`, `\bdefective`,
-		`damage`, `problem`,
-	}
 
-	for _, excludeQuery := range excludeArr {
-		query, _ := regexp.MatchString(excludeQuery, listingTitle)
-		if query {
-			return false
+	// Exclude titles with unwanted keywords
+	for _, re := range excludeRegexes {
+		match, err := re.MatchString(listingTitle)
+		if err != nil {
+			continue
+		}
+
+		if match {
+			return false // Excluded keyword found
 		}
 	}
-	return true
+
+	return true // Title is valid
 }
 
 // i dont need this anymore but ill keep it just in case

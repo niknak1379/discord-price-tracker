@@ -162,7 +162,19 @@ func updateChannelLength(ChannelID string, Diff int) error {
 	Len, err := getChannelLength(ChannelID)
 	if err != nil {
 		return err
+	} else if Diff+Len < 0 {
+		slog.Error("Illegal Channel Length",
+			slog.String("ChannelID", ChannelID),
+			slog.Int("Diff", Diff),
+			slog.Int("Length", Len),
+		)
+		return errors.New("Illegal Channel Length")
 	}
+	slog.Info("Updating Channel Length",
+		slog.String("ChannelID", ChannelID),
+		slog.Int("Diff", Diff),
+		slog.Int("Length", Len),
+	)
 	update := bson.M{
 		"$set": bson.M{
 			"TotalItems": Diff + Len,
@@ -170,6 +182,7 @@ func updateChannelLength(ChannelID string, Diff int) error {
 	}
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
+		slog.Error("Error updating Channel Length", slog.Any("error", err))
 		return err
 	}
 	res := Table.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)

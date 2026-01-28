@@ -5,6 +5,7 @@ go 1.25.5
 require (
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/chromedp/chromedp v0.14.2
+	github.com/dlclark/regexp2 v1.11.5
 	github.com/go-echarts/go-echarts/v2 v2.6.7
 	github.com/go-echarts/snapshot-chromedp v0.0.5
 	github.com/gocolly/colly/v2 v2.3.0
@@ -21,7 +22,6 @@ require (
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/chromedp/cdproto v0.0.0-20250803210736-d308e07a266d // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
-	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/go-json-experiment/json v0.0.0-20251027170946-4849db3c2f7e // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect

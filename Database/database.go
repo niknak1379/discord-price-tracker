@@ -106,6 +106,39 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 	return i, err
 }
 
+// removes all trackers and manually sets the price to filter second hand listingsArr
+func SetDesiredPrice(Name, ChannelID string, price int) error {
+	item, err := GetItem(Name, ChannelID)
+	if err != nil {
+		slog.Error("Error getting Item in setdesiredprice",
+			slog.Any("error", err),
+		)
+		return err
+	}
+	for i := range item.TrackingList {
+		_, err = RemoveTrackingInfo(Name, i, ChannelID)
+		if err != nil {
+			slog.Error("Error removing tracker in setdesiredprice",
+				slog.Any("error", err),
+			)
+			return err
+		}
+	}
+
+	DesiredPrice := &Price{
+		Price: price,
+		Date:  time.Now(),
+		Url:   "Don't Worry About It",
+	}
+	_, err = UpdateLowestPrice(Name, DesiredPrice, ChannelID)
+	if err != nil {
+		slog.Error("Error updating lowest price in setdesiredprice",
+			slog.Any("error", err),
+		)
+	}
+	return err
+}
+
 func EditTimer(Name string, NewTimer int, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -300,7 +333,7 @@ func GetLowestPrice(Name string, ChannelID string) (Price, error) {
 	return res.LowestPrice, err
 }
 
-func UpdateLowestPrice(Name string, newLow Price, ChannelID string) (Item, error) {
+func UpdateLowestPrice(Name string, newLow *Price, ChannelID string) (Item, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
 		slog.Error("couldnt load channel", slog.Any("Error", err))

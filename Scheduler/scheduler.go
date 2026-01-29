@@ -213,7 +213,8 @@ func updateSingleItem(item *database.Item, Channel *database.Channel) {
 		currLow.Price = item.CurrentLowestPrice.Price
 	}
 
-	database.UpdateLowestPrice(item.Name, currLow, Channel.ChannelID)
+	item.CurrentLowestPrice = currLow
+	database.UpdateLowestPrice(item.Name, &currLow, Channel.ChannelID)
 	handleSecondHandListingsUpdate(item.Name, item.CurrentLowestPrice.Price, item.Type, Channel, item.SuppressNotifications, item.Timer)
 	database.UpdateAggregateReport(item.Name, Channel.ChannelID)
 }

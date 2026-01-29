@@ -85,7 +85,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 		chromedp.Sleep(3*time.Second),
 		chromedp.FullScreenshot(&second, 70),
 		chromedp.Evaluate(`
-		Array.from(document.querySelectorAll('div.x9f619.x78zum5.x1r8uery.xdt5ytf.x1iyjqo2.xs83m0k.x135b78x.x11lfxj5.x1iorvi4.xjkvuk6.xnpuxes.x1cjf5ee.x17dddeq')).map(e => ({
+		Array.from(document.querySelectorAll("div[data-virtualized='false']")).map(e => ({
 				Title: e.querySelector('span.x1lliihq.x6ikm8r.x10wlt62.x1n2onr6')?.innerText || '',
 				URL: e.querySelector('a')?.href || '',
 				Price: ((el) => {

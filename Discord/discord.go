@@ -147,6 +147,25 @@ var (
 			},
 		},
 		{
+			Name:        "set_price",
+			Description: "removes all trackers and manually sets price",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "name",
+					Description:  "Add item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:        "price",
+					Description: "desired price",
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Required:    true,
+				},
+			},
+		},
+		{
 			Name:        "list",
 			Description: "get all items",
 		},
@@ -475,9 +494,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			getRes, err := database.GetItem(options[0].StringValue(), i.ChannelID)
 			if err != nil {
 				content := err.Error()
-				discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-					Content: content,
-				})
+				discord.ChannelMessageSend(i.ChannelID, content)
 			} else {
 				em := setEmbed(&getRes)
 
@@ -494,7 +511,28 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 		}
 	},
-	"edit_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"set_price": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+		// 0 is item name, 1 is uri, 2 is htmlqueryselector
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoComplete(options[0].StringValue(), 0, i, discord)
+		default:
+			err := customAcknowledge(discord, i)
+			if err != nil {
+				slog.Error("ack error", slog.Any("error value", err))
+			}
+			err = database.SetDesiredPrice(options[0].StringValue(), i.ChannelID, int(options[1].IntValue()))
+			if err != nil {
+				content := err.Error()
+				discord.ChannelMessageSend(i.ChannelID, content)
+
+			} else {
+				discord.ChannelMessageSend(i.ChannelID, "Price Successfully Set")
+			}
+		}
+	}, "edit_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
 
 		switch i.Type {

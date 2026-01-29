@@ -25,6 +25,7 @@ func SetChannelScheduler(ctx context.Context) {
 	itemTimers := make(map[string]time.Duration)          // Track current timers
 	itemSuppression := make(map[string]bool)              // trakc noti suppression
 	itemTrackingList := make(map[string][]*database.TrackingInfo)
+	itemLowestPrice := make(map[string]int)
 	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
 		for _, item := range itemsArr {
@@ -32,7 +33,7 @@ func SetChannelScheduler(ctx context.Context) {
 		}
 	}
 	// Initial load for scheduler this runs after the timers hit tho not immediately
-	loadAndStartItems(ctx, activeRoutines, itemTimers, itemSuppression, itemTrackingList)
+	loadAndStartItems(ctx, activeRoutines, itemTimers, itemSuppression, itemTrackingList, itemLowestPrice)
 
 	for {
 		select {
@@ -45,7 +46,7 @@ func SetChannelScheduler(ctx context.Context) {
 			return
 		case <-refreshTicker.C:
 			slog.Info("refreshing item list")
-			loadAndStartItems(ctx, activeRoutines, itemTimers, itemSuppression, itemTrackingList)
+			loadAndStartItems(ctx, activeRoutines, itemTimers, itemSuppression, itemTrackingList, itemLowestPrice)
 		}
 	}
 }
@@ -55,6 +56,7 @@ func loadAndStartItems(ctx context.Context,
 	itemTimers map[string]time.Duration,
 	itemSuppression map[string]bool,
 	itemTrackingList map[string][]*database.TrackingInfo,
+	itemLowestPrice map[string]int,
 ) {
 	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
@@ -75,6 +77,7 @@ func loadAndStartItems(ctx context.Context,
 				oldSuppression, ok := itemSuppression[itemKey]
 				oldTimer, ok2 := itemTimers[itemKey]
 				oldTrackingList, ok3 := itemTrackingList[itemKey]
+				oldLowestPrice, ok4 := itemLowestPrice[itemKey]
 				// check weather tracking list was changed
 				var wasTrackignListChanged bool
 				if ok3 && len(oldTrackingList) == len(item.TrackingList) {
@@ -89,8 +92,13 @@ func loadAndStartItems(ctx context.Context,
 					wasTrackignListChanged = true
 				}
 
+				// resets go routine if timer value has changed
+				// or if suppress notification
+				// or if lowest price for second hand data collection
+				// or tracking list has changed
 				if (ok2 && oldTimer != newTimer) ||
 					(ok && oldSuppression != item.SuppressNotifications) ||
+					(ok4 && oldLowestPrice != item.CurrentLowestPrice.Price) ||
 					wasTrackignListChanged {
 					slog.Info("timer changed or suppression changed for item, restarting",
 						slog.String("item", item.Name),
@@ -103,6 +111,7 @@ func loadAndStartItems(ctx context.Context,
 					delete(itemTimers, itemKey)
 					delete(itemSuppression, itemKey)
 					delete(itemTrackingList, itemKey)
+					delete(itemLowestPrice, itemKey)
 				} else {
 					slog.Info("suppression and timer unchanged skipping")
 					continue // Timer unchanged, skip
@@ -119,6 +128,7 @@ func loadAndStartItems(ctx context.Context,
 			itemTimers[itemKey] = newTimer
 			itemSuppression[itemKey] = item.SuppressNotifications
 			itemTrackingList[itemKey] = item.TrackingList
+			itemLowestPrice[itemKey] = item.CurrentLowestPrice.Price
 			slog.Info("Initializing Crawler Schedule",
 				slog.String("item", item.Name),
 				slog.String("timer", newTimer.String()))
@@ -129,6 +139,7 @@ func loadAndStartItems(ctx context.Context,
 				delete(itemTimers, itemKey)
 				delete(itemSuppression, itemKey)
 				delete(itemTrackingList, itemKey)
+				delete(itemLowestPrice, itemKey)
 			}(itemCtx, itemKey)
 		}
 	}
@@ -259,7 +270,9 @@ func handleSecondHandListingsUpdate(Name string, Price int, Type string, Channel
 				ebayListings[i].Duration = oldListing.Duration + time.Duration(timer)*time.Hour
 				if ebayListings[i].Price != oldListing.Price {
 					// update count for how many times price was increased
-					ebayListings[i].TotalPriceChange += ebayListings[i].Price - oldListing.Price
+					ebayListings[i].TotalPriceChange = oldListing.TotalPriceChange +
+						(ebayListings[i].Price - oldListing.Price)
+
 					if ebayListings[i].Price > oldListing.Price {
 						ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum + 1
 						ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum

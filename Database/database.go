@@ -145,7 +145,7 @@ func EditTimer(Name string, NewTimer int, ChannelID string) error {
 		slog.Error("Could not load channel from db", slog.Any("Error", err))
 		return err
 	}
-	if NewTimer >= 0 {
+	if NewTimer <= 0 {
 		return errors.New("Invalid Timer value")
 	}
 	update := bson.M{

@@ -214,11 +214,14 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 			chromedp.Evaluate(js, &priceText),
 		)
 	}
-	if err != nil || priceText == "" {
+	if priceText == "" {
 		if proxy {
 			err2 := os.WriteFile("proxyFailoverSS.png", screenShot, 0o644)
 			err3 := os.WriteFile("proxyFailoverHTML.html", []byte(HTMLContent), 0o644)
-			slog.Warn("ChromDP proxy failed, triggering non proxy", slog.Any("write err1", err2),
+			slog.Warn("ChromDP proxy failed, triggering non proxy",
+				slog.Any("error", err),
+				slog.Any("priceText", priceText),
+				slog.Any("write err1", err2),
 				slog.Any("write err 2", err3))
 			return ChromeDPFailover(url, selector, false)
 		} else {

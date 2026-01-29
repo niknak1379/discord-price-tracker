@@ -100,12 +100,14 @@ func loadAndStartItems(ctx context.Context,
 					(ok && oldSuppression != item.SuppressNotifications) ||
 					(ok4 && oldLowestPrice != item.CurrentLowestPrice.Price) ||
 					wasTrackignListChanged {
-					slog.Info("timer changed or suppression changed for item, restarting",
+					slog.Info("timer changed, suppression, trackingList, or price changed for item, restarting",
 						slog.String("item", item.Name),
 						slog.String("old_timer", oldTimer.String()),
 						slog.String("new_timer", newTimer.String()),
 						slog.Bool("oldSuppression", oldSuppression),
-						slog.Bool("itemSuppression", item.SuppressNotifications))
+						slog.Bool("itemSuppression", item.SuppressNotifications),
+						slog.Int("desiredPrice", item.CurrentLowestPrice.Price),
+					)
 					cancel()
 					delete(activeRoutines, itemKey)
 					delete(itemTimers, itemKey)
@@ -119,7 +121,7 @@ func loadAndStartItems(ctx context.Context,
 			}
 
 			// Start new routine for this item
-			r := rand.IntN(120) + 60
+			r := rand.IntN(240) + 60
 			time.Sleep(time.Duration(r) * time.Second)
 
 			// Create cancel context for this item

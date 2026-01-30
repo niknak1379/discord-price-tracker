@@ -246,7 +246,6 @@ func EbayListingPriceChangeAlert(newListing *types.EbayListing, oldPrice int, Ch
 		colorCode = 12745742 // dark gold
 	}
 	newFields := formatSecondHandField(newListing, "New Price", true)
-	newListing.Price = oldPrice
 	oldP := &types.EbayListing{
 		Price: oldPrice,
 		Title: newListing.Title,

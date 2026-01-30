@@ -2,6 +2,7 @@ package discord
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -47,6 +48,32 @@ var (
 		{
 			Name:        "channel_info",
 			Description: "get channel settings",
+		},
+		{
+			Name:        "get_logs",
+			Description: "returnes the latest html and pictures recorded",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "crawl",
+					Description: "Item Type",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{
+							Name:  "Facebook",
+							Value: "facebook",
+						},
+						{
+							Name:  "Ebay",
+							Value: "ebay",
+						},
+						{
+							Name:  "Default",
+							Value: "default",
+						},
+					},
+				},
+			},
 		},
 		{
 			Name:        "add",
@@ -391,7 +418,11 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			slog.Error("Error in Sending ChannelInfo", err)
 		}
 	},
-	"add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"get_logs": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		customAcknowledge(discord, i)
+		CrawlErrorAlert("Logs", "User Requested",
+			errors.New(i.ApplicationCommandData().Options[0].StringValue()), i.ChannelID)
+	}, "add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoCompleteQuerySelector(i, discord)

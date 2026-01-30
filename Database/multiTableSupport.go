@@ -64,6 +64,7 @@ func GetChannelInfo(ChannelID string) *Channel {
 }
 
 func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location string, LocationCode string, maxDistance int) error {
+	slog.Info("setup Channel Called", slog.String("ChannelID", ChannelID))
 	Lat, Long, err := crawler.GetCoordinates(Location)
 	if err != nil {
 		return err
@@ -78,6 +79,7 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 	}
 	// if channelID already exists, just update the Coordinates in DB and memory
 	if _, ok := Tables[ChannelID]; ok {
+		slog.Info("Channel Already Exists Updating")
 		ChannelMap[ChannelID] = &Channel
 		update := bson.M{
 			"$set": bson.M{
@@ -96,6 +98,7 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 		ChannelTable.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
 		return nil
 	}
+	slog.Info("New Channel, creating in DB")
 	err = Client.Database("tracker").CreateCollection(context.TODO(), ChannelID)
 	if err != nil {
 		return err

@@ -87,7 +87,11 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 				"LocationCode": LocationCode,
 			},
 		}
-		ChannelMap[ChannelID] = &Channel
+		ChannelMap[ChannelID].Distance = maxDistance
+		ChannelMap[ChannelID].Lat = Lat
+		ChannelMap[ChannelID].Long = Long
+		ChannelMap[ChannelID].LocationCode = LocationCode
+
 		ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
 		ChannelTable.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
 		return nil

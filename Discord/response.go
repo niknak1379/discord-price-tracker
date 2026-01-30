@@ -247,7 +247,11 @@ func EbayListingPriceChangeAlert(newListing *types.EbayListing, oldPrice int, Ch
 	}
 	newFields := formatSecondHandField(newListing, "New Price", true)
 	newListing.Price = oldPrice
-	oldFields := formatSecondHandField(newListing, "Old Price", false)
+	oldP := &types.EbayListing{
+		Price: oldPrice,
+		Title: newListing.Title,
+	}
+	oldFields := formatSecondHandField(oldP, "Old Price", false)
 	em := discordgo.MessageEmbed{
 		Title:  "Second Hand Listing Price Change For " + newListing.ItemName,
 		Color:  colorCode,

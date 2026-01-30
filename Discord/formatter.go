@@ -150,22 +150,22 @@ func formatSecondHandField(Listing *types.EbayListing, Message string, newListin
 		Value:  "$" + strconv.Itoa(Listing.Price+1),
 		Inline: false,
 	}
-	conditionField := discordgo.MessageEmbedField{
-		Name:   "Condition/Location:",
-		Value:  truncateString(Listing.Condition, MaxFieldValueLen),
-		Inline: false,
-	}
-	urlField := discordgo.MessageEmbedField{
-		Name:   "From URL:",
-		Value:  truncateString(Listing.URL, MaxFieldValueLen),
-		Inline: false,
-	}
 	separatorField := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter("", 44),
 		Value:  "",
 		Inline: false,
 	}
 	if newListing {
+		conditionField := discordgo.MessageEmbedField{
+			Name:   "Condition/Location:",
+			Value:  truncateString(Listing.Condition, MaxFieldValueLen),
+			Inline: false,
+		}
+		urlField := discordgo.MessageEmbedField{
+			Name:   "From URL:",
+			Value:  truncateString(Listing.URL, MaxFieldValueLen),
+			Inline: false,
+		}
 		durationField := discordgo.MessageEmbedField{
 			Value: strconv.Itoa(int(Listing.Duration.Hours()/24)) + " Days and " +
 				strconv.Itoa(int(Listing.Duration.Hours())%24) + " Hours",

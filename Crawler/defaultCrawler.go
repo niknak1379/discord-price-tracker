@@ -303,7 +303,7 @@ func getAmazonImageChromedp(url string, proxy bool) string {
 		chromedp.Sleep(2*time.Second),
 		chromedp.Evaluate(`document.querySelector('img#landingImage')?.src || ""`, &imgURL),
 	)
-	if err != nil {
+	if err != nil || imgURL == "" {
 		if proxy {
 			slog.Warn("chromedp failed to get Amazon image, trying without proxy", slog.Any("error", err))
 			return getAmazonImageChromedp(url, false)
@@ -312,6 +312,7 @@ func getAmazonImageChromedp(url string, proxy bool) string {
 		return ""
 	}
 
+	slog.Info("Image URL found")
 	return imgURL
 }
 

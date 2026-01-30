@@ -99,7 +99,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	)
 
 	var retArr []*types.EbayListing
-	if err != nil || len(items) == 0 {
+	if len(items) == 0 {
 		if proxy {
 			fileErr1 := os.WriteFile("proxyFacebookFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("proxyFacebookSecond.png", second, 0o644)

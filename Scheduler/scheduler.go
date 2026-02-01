@@ -60,8 +60,10 @@ func loadAndStartItems(ctx context.Context,
 ) {
 	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
+		routineExists := make(map[string]bool)
 		for _, item := range itemsArr {
 			itemKey := item.Name + "_" + Channel.ChannelID
+			routineExists[itemKey] = true
 
 			// Get new timer value
 			newTimer := time.Duration(item.Timer) * time.Hour
@@ -272,24 +274,27 @@ func handleSecondHandListingsUpdate(Name string, Price int, Type string, Channel
 				ebayListings[i].Duration = oldListing.Duration + time.Duration(timer)*time.Hour
 				if ebayListings[i].Price != oldListing.Price {
 					// update count for how many times price was increased
-					ebayListings[i].TotalPriceChange = oldListing.TotalPriceChange +
-						(ebayListings[i].Price - oldListing.Price)
+					priceChange := ebayListings[i].Price - oldListing.Price
+					ebayListings[i].TotalPriceChange = oldListing.TotalPriceChange + priceChange
 
-					if ebayListings[i].Price > oldListing.Price {
+					// price inc
+					if priceChange > 0 {
 						ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum + 1
 						ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum
 					} else {
+						// price decrease
 						ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum + 1
 						ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum
 					}
 					if !Suppress &&
-						math.Abs(float64(oldListing.Price)-float64(ebayListings[i].Price)) > 5 {
+						math.Abs(float64(priceChange)) > 5 {
 						discord.EbayListingPriceChangeAlert(ebayListings[i], oldListing.Price, Channel.ChannelID)
 					}
 				} else {
 					// have to pass down the stats since im not doing a look up eachtime
 					ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum
 					ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum
+					ebayListings[i].TotalPriceChange = oldListing.TotalPriceChange
 				}
 			} else if !Suppress {
 				discord.NewEbayListingAlert(ebayListings[i], Channel.ChannelID)

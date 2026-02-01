@@ -104,6 +104,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 			fileErr1 := os.WriteFile("proxyFacebookFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("proxyFacebookSecond.png", second, 0o644)
 			fileErr3 := os.WriteFile("proxyFacebookHTML.html", []byte(HTMLContent), 0o644)
+			time.Sleep(5 * time.Second)
 			slog.Warn("facebook proxy failed, triggering no proxy crawl",
 				slog.Any("Error", err),
 				slog.Int("ItemArr length", len(items)),

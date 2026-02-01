@@ -218,6 +218,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 		if proxy {
 			err2 := os.WriteFile("proxyFailoverSS.png", screenShot, 0o644)
 			err3 := os.WriteFile("proxyFailoverHTML.html", []byte(HTMLContent), 0o644)
+			time.Sleep(5 * time.Second)
 			slog.Warn("ChromDP proxy failed, triggering non proxy",
 				slog.Any("error", err),
 				slog.Any("priceText", priceText),

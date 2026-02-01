@@ -82,7 +82,9 @@ func AutoCompleteURL(Name string, ChannelID string) []string {
 
 func AutoCompleteQuery() map[string]string {
 	ret := map[string]string{
-		"Amazon":       "form#addToCart span.a-price-whole",
+		//div[data-feature-name='corePriceDisplay_desktop'] span.priceToPay
+		//"Amazon":       "form#addToCart span.a-price-whole",
+		"Amazon":       "div[data-feature-name='corePriceDisplay_desktop'] span.priceToPay",
 		"NewEgg":       "div.price-current>strong",
 		"MicroCenter":  "#options-pricing2022",
 		"BHPhotoVideo": "span[class^='price_']",

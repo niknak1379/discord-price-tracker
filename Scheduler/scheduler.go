@@ -22,11 +22,7 @@ func SetChannelScheduler(ctx context.Context) {
 	defer refreshTicker.Stop()
 
 	activeRoutines := make(map[string]context.CancelFunc) // Track running goroutines
-	itemTimers := make(map[string]time.Duration)          // Track current timers
-	itemSuppression := make(map[string]bool)              // trakc noti suppression
-	itemTrackingList := make(map[string][]*database.TrackingInfo)
-	itemLowestPrice := make(map[string]int)
-	itemAdditionalNames := make(map[string][]string)
+	itemMap := make(map[string]*database.Item)
 	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
 		for _, item := range itemsArr {
@@ -34,8 +30,7 @@ func SetChannelScheduler(ctx context.Context) {
 		}
 	}
 	// Initial load for scheduler this runs after the timers hit tho not immediately
-	loadAndStartItems(ctx, activeRoutines, itemTimers, itemSuppression,
-		itemTrackingList, itemLowestPrice, itemAdditionalNames)
+	loadAndStartItems(ctx, activeRoutines, itemMap)
 
 	for {
 		select {
@@ -48,19 +43,14 @@ func SetChannelScheduler(ctx context.Context) {
 			return
 		case <-refreshTicker.C:
 			slog.Info("refreshing item list")
-			loadAndStartItems(ctx, activeRoutines, itemTimers, itemSuppression,
-				itemTrackingList, itemLowestPrice, itemAdditionalNames)
+			loadAndStartItems(ctx, activeRoutines, itemMap)
 		}
 	}
 }
 
 func loadAndStartItems(ctx context.Context,
 	activeRoutines map[string]context.CancelFunc,
-	itemTimers map[string]time.Duration,
-	itemSuppression map[string]bool,
-	itemTrackingList map[string][]*database.TrackingInfo,
-	itemLowestPrice map[string]int,
-	itemAdditionalNames map[string][]string,
+	itemMap map[string]*database.Item,
 ) {
 	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
@@ -80,49 +70,13 @@ func loadAndStartItems(ctx context.Context,
 			if cancel, ok := activeRoutines[itemKey]; ok {
 				// Item exists, check if timer or suppression have changed
 				slog.Info("cancel function found for item", slog.String("itemName", item.Name))
-				oldSuppression, ok := itemSuppression[itemKey]
-				oldTimer, ok2 := itemTimers[itemKey]
-				oldTrackingList, ok3 := itemTrackingList[itemKey]
-				oldLowestPrice, ok4 := itemLowestPrice[itemKey]
-				oldAdditionalNames, ok5 := itemAdditionalNames[itemKey]
 				// check weather tracking list was changed
-				var wasTrackignListChanged bool
-				if ok3 && len(oldTrackingList) == len(item.TrackingList) {
-					for index := range oldTrackingList {
-						if oldTrackingList[index].HtmlQuery != item.TrackingList[index].HtmlQuery ||
-							oldTrackingList[index].URI != item.TrackingList[index].URI {
-							wasTrackignListChanged = true
-							break
-						}
-					}
-				} else {
-					wasTrackignListChanged = true
-				}
-
-				// resets go routine if timer value has changed
-				// or if suppress notification
-				// or if lowest price for second hand data collection
-				// or tracking list has changed
-				if (ok2 && oldTimer != newTimer) ||
-					(ok && oldSuppression != item.SuppressNotifications) ||
-					(ok4 && oldLowestPrice != item.CurrentLowestPrice.Price) ||
-					(ok5 && len(oldAdditionalNames) != len(item.AlternateTrackingQueries)) ||
-					wasTrackignListChanged {
-					slog.Info("timer changed, suppression, trackingList, or price changed for item, restarting",
-						slog.String("item", item.Name),
-						slog.String("old_timer", oldTimer.String()),
-						slog.String("new_timer", newTimer.String()),
-						slog.Bool("oldSuppression", oldSuppression),
-						slog.Bool("itemSuppression", item.SuppressNotifications),
-						slog.Int("desiredPrice", item.CurrentLowestPrice.Price),
-					)
+				oldItem, ok := itemMap[itemKey]
+				if ok && HaveItemPropertiesChanged(item, oldItem) {
+					slog.Info("item Properties changed, resetting goroutine")
 					cancel()
 					delete(activeRoutines, itemKey)
-					delete(itemTimers, itemKey)
-					delete(itemSuppression, itemKey)
-					delete(itemTrackingList, itemKey)
-					delete(itemLowestPrice, itemKey)
-					delete(itemAdditionalNames, itemKey)
+					delete(itemMap, itemKey)
 				} else {
 					slog.Info("suppression and timer unchanged skipping")
 					continue // Timer unchanged, skip
@@ -136,11 +90,7 @@ func loadAndStartItems(ctx context.Context,
 			// Create cancel context for this item
 			itemCtx, cancel := context.WithCancel(ctx)
 			activeRoutines[itemKey] = cancel
-			itemTimers[itemKey] = newTimer
-			itemSuppression[itemKey] = item.SuppressNotifications
-			itemTrackingList[itemKey] = item.TrackingList
-			itemLowestPrice[itemKey] = item.CurrentLowestPrice.Price
-			itemAdditionalNames[itemKey] = item.AlternateTrackingQueries
+			itemMap[itemKey] = item
 			slog.Info("Initializing Crawler Schedule",
 				slog.String("item", item.Name),
 				slog.String("timer", newTimer.String()))
@@ -148,11 +98,7 @@ func loadAndStartItems(ctx context.Context,
 				itemCrawlRoutine(itemCtx, item, Channel)
 				// Clean up when routine exits
 				delete(activeRoutines, itemKey)
-				delete(itemTimers, itemKey)
-				delete(itemSuppression, itemKey)
-				delete(itemTrackingList, itemKey)
-				delete(itemLowestPrice, itemKey)
-				delete(itemAdditionalNames, itemKey)
+				delete(itemMap, itemKey)
 			}(itemCtx, itemKey)
 		}
 	}
@@ -172,7 +118,7 @@ func loadAndStartItems(ctx context.Context,
 			slog.Info("stopping routine for deleted item", slog.String("item", itemKey))
 			cancel()
 			delete(activeRoutines, itemKey)
-			delete(itemTimers, itemKey)
+			delete(itemMap, itemKey)
 		}
 	}
 }

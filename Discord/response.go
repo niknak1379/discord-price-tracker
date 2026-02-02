@@ -14,6 +14,17 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+// color variables
+
+var (
+	red      = 10038562 // red
+	aqua     = 1752220  // aqua
+	darkGold = 12745742 // dark gold
+	pink     = 15277667 // pink
+	yellow   = 16776960 // yellow
+	green    = 2067276  // green)
+)
+
 func ready(discord *discordgo.Session, ready *discordgo.Ready) {
 	slog.Info("Discord Logged in")
 	discord.UpdateGameStatus(1, "stonks")
@@ -22,9 +33,9 @@ func ready(discord *discordgo.Session, ready *discordgo.Ready) {
 func PriceChangeAlert(itemName string, newPrice int, oldPrice database.Price, URL string, ChannelID string) {
 	var color int
 	if newPrice > oldPrice.Price {
-		color = 16776960
+		color = yellow // yellow
 	} else {
-		color = 2067276
+		color = green // green
 	}
 	oldPriceField := setPriceField(&oldPrice, "Previous ")
 	newPriceField := setPriceField(&database.Price{
@@ -149,7 +160,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
 		Title:  "Error",
 		Fields: Fields,
-		Color:  10038562, // red
+		Color:  red,
 	})
 }
 
@@ -241,9 +252,9 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 }
 
 func EbayListingPriceChangeAlert(newListing *types.EbayListing, oldPrice int, ChannelID string) {
-	colorCode := 1752220 // aqua
+	colorCode := aqua
 	if oldPrice < newListing.Price {
-		colorCode = 12745742 // dark gold
+		colorCode = darkGold
 	}
 	newFields := formatSecondHandField(newListing, "New Price", true)
 	oldP := &types.EbayListing{
@@ -264,7 +275,7 @@ func NewEbayListingAlert(newListing *types.EbayListing, ChannelID string) {
 	fields := formatSecondHandField(newListing, "Price", true)
 	em := discordgo.MessageEmbed{
 		Title:  "New Second Hand Listing Found For " + newListing.ItemName,
-		Color:  15277667, // pink
+		Color:  pink,
 		URL:    newListing.URL,
 		Fields: fields,
 	}

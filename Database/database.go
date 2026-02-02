@@ -511,7 +511,11 @@ func GetItem(itemName string, ChannelID string) (Item, error) {
 	}
 	var res Item
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
-	opts := options.FindOne().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
+	opts := options.FindOne().SetProjection(
+		bson.D{
+			{Key: "PriceHistory", Value: 0},
+			{Key: "ListingsHistory", Value: 0},
+		})
 	err = Table.FindOne(ctx, filter, opts).Decode(&res)
 	if err != nil {
 		return res, err

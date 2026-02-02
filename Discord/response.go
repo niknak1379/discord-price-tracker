@@ -17,12 +17,15 @@ import (
 // color variables
 
 var (
-	red      = 10038562 // red
-	aqua     = 1752220  // aqua
-	darkGold = 12745742 // dark gold
-	pink     = 15277667 // pink
-	yellow   = 16776960 // yellow
-	green    = 2067276  // green)
+	red        = 10038562 // red
+	aqua       = 1752220  // aqua
+	darkGold   = 12745742 // dark gold
+	yellow     = 16776960 // yellow
+	extremeRed = 16711680 // very red
+	pink       = 15277667 // pink
+	green      = 2067276  // green
+	orange     = 16737380
+	razerGreen = 3328050
 )
 
 func ready(discord *discordgo.Session, ready *discordgo.Ready) {
@@ -251,10 +254,22 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 	}
 }
 
-func EbayListingPriceChangeAlert(newListing *types.EbayListing, oldPrice int, ChannelID string) {
-	colorCode := aqua
+func EbayListingPriceChangeAlert(newListing *types.EbayListing,
+	oldPrice int, ChannelID string, aggregate *database.AggregateReport,
+) {
+	var colorCode int
 	if oldPrice < newListing.Price {
-		colorCode = darkGold
+		if newListing.Price > aggregate.AveragePrice {
+			colorCode = extremeRed // price higher and higher than average
+		} else {
+			colorCode = aqua // price higher but lower than average
+		}
+	} else {
+		if newListing.Price > aggregate.AveragePrice {
+			colorCode = orange // price lowered but bigger than average
+		} else {
+			colorCode = razerGreen // price lowered and lower than average
+		}
 	}
 	newFields := formatSecondHandField(newListing, "New Price", true)
 	oldP := &types.EbayListing{
@@ -271,11 +286,17 @@ func EbayListingPriceChangeAlert(newListing *types.EbayListing, oldPrice int, Ch
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
 
-func NewEbayListingAlert(newListing *types.EbayListing, ChannelID string) {
+func NewEbayListingAlert(newListing *types.EbayListing,
+	ChannelID string, aggregate *database.AggregateReport,
+) {
+	color := pink
+	if newListing.Price > aggregate.AveragePrice {
+		color = green
+	}
 	fields := formatSecondHandField(newListing, "Price", true)
 	em := discordgo.MessageEmbed{
 		Title:  "New Second Hand Listing Found For " + newListing.ItemName,
-		Color:  pink,
+		Color:  color,
 		URL:    newListing.URL,
 		Fields: fields,
 	}

@@ -20,6 +20,7 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
+// I cant refractor this to be like that since it causes an import cycle
 func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong float64,
 	maxDistance int, itemType string, LocationCode string, alternateNames []string,
 ) ([]*types.EbayListing, error) {

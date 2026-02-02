@@ -185,8 +185,7 @@ func updateSingleItem(item *database.Item, Channel *database.Channel) {
 
 	item.CurrentLowestPrice = currLow
 	database.UpdateLowestPrice(item.Name, &currLow, Channel.ChannelID)
-	handleSecondHandListingsUpdate(item.Name, item.CurrentLowestPrice.Price,
-		item.Type, Channel, item.SuppressNotifications, item.Timer, item.AlternateTrackingQueries)
+	handleSecondHandListingsUpdate(item, Channel)
 	database.UpdateAggregateReport(item.Name, Channel.ChannelID)
 }
 
@@ -208,19 +207,17 @@ func updatePrice(Name string, Tracker *database.TrackingInfo, oldLow database.Pr
 	return p, err
 }
 
-func handleSecondHandListingsUpdate(Name string, Price int, Type string,
-	Channel *database.Channel, Suppress bool, timer int, additionalNames []string,
-) {
-	oldEbayListings, _ := database.GetEbayListings(Name, Channel.ChannelID)
+func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Channel) {
+	oldEbayListings, _ := database.GetEbayListings(item.Name, Channel.ChannelID)
 	ListingsMap := map[string]*types.EbayListing{} // maps titles to price for checking if price exists or was updated
 	for i := range oldEbayListings {
 		ListingsMap[oldEbayListings[i].URL] = oldEbayListings[i]
 	}
-	ebayListings, err := crawler.GetSecondHandListings(Name, Price,
+	ebayListings, err := crawler.GetSecondHandListings(item.Name, item.CurrentLowestPrice.Price,
 		Channel.Lat, Channel.Long, Channel.Distance,
-		Type, Channel.LocationCode, additionalNames)
+		item.Type, Channel.LocationCode, item.AlternateTrackingQueries)
 	if err != nil {
-		discord.CrawlErrorAlert(Name, "Second Hand Listings", err, Channel.ChannelID)
+		discord.CrawlErrorAlert(item.Name, "Second Hand Listings", err, Channel.ChannelID)
 	} else {
 		for i := range ebayListings {
 			oldListing, ok := ListingsMap[ebayListings[i].URL]
@@ -228,10 +225,10 @@ func handleSecondHandListingsUpdate(Name string, Price int, Type string,
 			// ping discord
 			// update how long the listing has been online for
 			if ok {
-				if timer == 0 {
-					timer = 8
+				if item.Timer == 0 {
+					item.Timer = 8
 				}
-				ebayListings[i].Duration = oldListing.Duration + time.Duration(timer)*time.Hour
+				ebayListings[i].Duration = oldListing.Duration + time.Duration(item.Timer)*time.Hour
 				if ebayListings[i].Price != oldListing.Price {
 					// update count for how many times price was increased
 					priceChange := ebayListings[i].Price - oldListing.Price
@@ -246,9 +243,10 @@ func handleSecondHandListingsUpdate(Name string, Price int, Type string,
 						ebayListings[i].PriceDecreaseNum = oldListing.PriceDecreaseNum + 1
 						ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum
 					}
-					if !Suppress &&
+					if !item.SuppressNotifications &&
 						math.Abs(float64(priceChange)) > 5 {
-						discord.EbayListingPriceChangeAlert(ebayListings[i], oldListing.Price, Channel.ChannelID)
+						discord.EbayListingPriceChangeAlert(ebayListings[i], oldListing.Price,
+							Channel.ChannelID, &item.SevenDayAggregate)
 					}
 				} else {
 					// have to pass down the stats since im not doing a look up eachtime
@@ -256,15 +254,15 @@ func handleSecondHandListingsUpdate(Name string, Price int, Type string,
 					ebayListings[i].PriceIncreaseNum = oldListing.PriceIncreaseNum
 					ebayListings[i].TotalPriceChange = oldListing.TotalPriceChange
 				}
-			} else if !Suppress {
-				discord.NewEbayListingAlert(ebayListings[i], Channel.ChannelID)
+			} else if !item.SuppressNotifications {
+				discord.NewEbayListingAlert(ebayListings[i], Channel.ChannelID, &item.SevenDayAggregate)
 			}
 		}
-		err = database.UpdateEbayListings(Name, ebayListings, Channel.ChannelID)
+		err = database.UpdateEbayListings(item.Name, ebayListings, Channel.ChannelID)
 		if err != nil {
 			slog.Error("error updaing DB in ebay listing",
-				slog.Any("Error", err), slog.String("Name", Name))
-			discord.CrawlErrorAlert(Name, "www.ebay.com/DBError", err, Channel.ChannelID)
+				slog.Any("Error", err), slog.String("Name", item.Name))
+			discord.CrawlErrorAlert(item.Name, "www.ebay.com/DBError", err, Channel.ChannelID)
 			return
 		}
 	}

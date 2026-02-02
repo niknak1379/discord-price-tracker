@@ -67,7 +67,6 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 	if Channel.TotalItems >= 25 {
 		return Item{}, errors.New("Channel Capacity Reached, add to a separate channel")
 	}
-	updateChannelLength(Channel.ChannelID, 1)
 	if Timer <= 0 {
 		return Item{}, errors.New("Invalid Timer value")
 	}
@@ -101,6 +100,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 	if err != nil {
 		slog.Error("Error", slog.Any("Error", err))
 	}
+	updateChannelLength(Channel.ChannelID, 1)
 	UpdateAggregateReport(itemName, Channel.ChannelID)
 	i, err = GetItem(itemName, Channel.ChannelID)
 	return i, err

@@ -67,10 +67,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	} else {
 		ctx, cancel = NewChromedpContext(90 * time.Second)
 	}
-	defer cancel()
 
-	ctx, timeoutCancel := context.WithTimeout(ctx, 90*time.Second) // Increased timeout
-	defer timeoutCancel()
 	var first []byte
 	var second []byte
 	var HTMLContent string
@@ -98,6 +95,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 		`, &items),
 	)
 
+	cancel()
 	var retArr []*types.EbayListing
 	if len(items) == 0 {
 		if proxy {

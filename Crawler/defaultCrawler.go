@@ -185,7 +185,6 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	} else {
 		ctx, cancel = NewChromedpContext(90 * time.Second)
 	}
-	defer cancel()
 
 	var priceText string
 	var screenShot []byte
@@ -214,6 +213,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 			chromedp.Evaluate(js, &priceText),
 		)
 	}
+	cancel()
 	if priceText == "" {
 		if proxy {
 			err2 := os.WriteFile("proxyFailoverSS.png", screenShot, 0o644)

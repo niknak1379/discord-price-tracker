@@ -152,7 +152,6 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]*types.EbayListi
 	crawlDate := time.Now()
 	slog.Info("chromedp failover for ebay", slog.String("URL", url))
 	ctx, cancel := NewChromedpContext(90 * time.Second)
-	defer cancel()
 
 	var first []byte
 	var second []byte
@@ -207,6 +206,7 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]*types.EbayListi
 		}).filter(item => item !== null)
 		`, &items),
 	)
+	cancel()
 	var retArr []*types.EbayListing
 
 	if err != nil {

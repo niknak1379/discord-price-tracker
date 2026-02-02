@@ -229,6 +229,25 @@ var (
 			},
 		},
 		{
+			Name:        "add_additional_name",
+			Description: "Add Additional Names for Tracking regex",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "name",
+					Description:  "name of item to be changed",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:        "additional_name",
+					Description: "name of item to be changed",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
+				},
+			},
+		},
+		{
 			Name:        "edit_tracking",
 			Description: "Edit a currently Existing Tracker",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -422,7 +441,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		customAcknowledge(discord, i)
 		CrawlErrorAlert("Logs", "User Requested",
 			errors.New(i.ApplicationCommandData().Options[0].StringValue()), i.ChannelID)
-	}, "add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	},
+	"add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoCompleteQuerySelector(i, discord)
@@ -504,6 +524,30 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				content = err.Error()
 			} else {
 				content = fmt.Sprintf("Price Update Notification Status: %t", options[1].BoolValue())
+			}
+			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+				Content: content,
+			})
+		}
+	},
+	"add_additional_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoComplete(options[0].StringValue(), 0, i, discord)
+		default:
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
+			// add tracker to database
+			err := database.AddAlternateTrackingName(i.ApplicationCommandData().Options[0].StringValue(),
+				i.ApplicationCommandData().Options[1].StringValue(), i.ChannelID)
+			content := ""
+			if err != nil {
+				content = err.Error()
+			} else {
+				content = "Additional Tracking Names Added"
 			}
 			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 				Content: content,

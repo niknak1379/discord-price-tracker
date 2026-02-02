@@ -26,6 +26,7 @@ func SetChannelScheduler(ctx context.Context) {
 	itemSuppression := make(map[string]bool)              // trakc noti suppression
 	itemTrackingList := make(map[string][]*database.TrackingInfo)
 	itemLowestPrice := make(map[string]int)
+	itemAdditionalNames := make(map[string][]string)
 	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
 		for _, item := range itemsArr {
@@ -33,7 +34,8 @@ func SetChannelScheduler(ctx context.Context) {
 		}
 	}
 	// Initial load for scheduler this runs after the timers hit tho not immediately
-	loadAndStartItems(ctx, activeRoutines, itemTimers, itemSuppression, itemTrackingList, itemLowestPrice)
+	loadAndStartItems(ctx, activeRoutines, itemTimers, itemSuppression,
+		itemTrackingList, itemLowestPrice, itemAdditionalNames)
 
 	for {
 		select {
@@ -46,7 +48,8 @@ func SetChannelScheduler(ctx context.Context) {
 			return
 		case <-refreshTicker.C:
 			slog.Info("refreshing item list")
-			loadAndStartItems(ctx, activeRoutines, itemTimers, itemSuppression, itemTrackingList, itemLowestPrice)
+			loadAndStartItems(ctx, activeRoutines, itemTimers, itemSuppression,
+				itemTrackingList, itemLowestPrice, itemAdditionalNames)
 		}
 	}
 }
@@ -57,6 +60,7 @@ func loadAndStartItems(ctx context.Context,
 	itemSuppression map[string]bool,
 	itemTrackingList map[string][]*database.TrackingInfo,
 	itemLowestPrice map[string]int,
+	itemAdditionalNames map[string][]string,
 ) {
 	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID)
@@ -80,6 +84,7 @@ func loadAndStartItems(ctx context.Context,
 				oldTimer, ok2 := itemTimers[itemKey]
 				oldTrackingList, ok3 := itemTrackingList[itemKey]
 				oldLowestPrice, ok4 := itemLowestPrice[itemKey]
+				oldAdditionalNames, ok5 := itemAdditionalNames[itemKey]
 				// check weather tracking list was changed
 				var wasTrackignListChanged bool
 				if ok3 && len(oldTrackingList) == len(item.TrackingList) {
@@ -101,6 +106,7 @@ func loadAndStartItems(ctx context.Context,
 				if (ok2 && oldTimer != newTimer) ||
 					(ok && oldSuppression != item.SuppressNotifications) ||
 					(ok4 && oldLowestPrice != item.CurrentLowestPrice.Price) ||
+					(ok5 && len(oldAdditionalNames) != len(item.AlternateTrackingQueries)) ||
 					wasTrackignListChanged {
 					slog.Info("timer changed, suppression, trackingList, or price changed for item, restarting",
 						slog.String("item", item.Name),
@@ -116,6 +122,7 @@ func loadAndStartItems(ctx context.Context,
 					delete(itemSuppression, itemKey)
 					delete(itemTrackingList, itemKey)
 					delete(itemLowestPrice, itemKey)
+					delete(itemAdditionalNames, itemKey)
 				} else {
 					slog.Info("suppression and timer unchanged skipping")
 					continue // Timer unchanged, skip
@@ -133,6 +140,7 @@ func loadAndStartItems(ctx context.Context,
 			itemSuppression[itemKey] = item.SuppressNotifications
 			itemTrackingList[itemKey] = item.TrackingList
 			itemLowestPrice[itemKey] = item.CurrentLowestPrice.Price
+			itemAdditionalNames[itemKey] = item.AlternateTrackingQueries
 			slog.Info("Initializing Crawler Schedule",
 				slog.String("item", item.Name),
 				slog.String("timer", newTimer.String()))
@@ -144,6 +152,7 @@ func loadAndStartItems(ctx context.Context,
 				delete(itemSuppression, itemKey)
 				delete(itemTrackingList, itemKey)
 				delete(itemLowestPrice, itemKey)
+				delete(itemAdditionalNames, itemKey)
 			}(itemCtx, itemKey)
 		}
 	}
@@ -230,7 +239,8 @@ func updateSingleItem(item *database.Item, Channel *database.Channel) {
 
 	item.CurrentLowestPrice = currLow
 	database.UpdateLowestPrice(item.Name, &currLow, Channel.ChannelID)
-	handleSecondHandListingsUpdate(item.Name, item.CurrentLowestPrice.Price, item.Type, Channel, item.SuppressNotifications, item.Timer)
+	handleSecondHandListingsUpdate(item.Name, item.CurrentLowestPrice.Price,
+		item.Type, Channel, item.SuppressNotifications, item.Timer, item.AlternateTrackingQueries)
 	database.UpdateAggregateReport(item.Name, Channel.ChannelID)
 }
 
@@ -252,14 +262,17 @@ func updatePrice(Name string, Tracker *database.TrackingInfo, oldLow database.Pr
 	return p, err
 }
 
-func handleSecondHandListingsUpdate(Name string, Price int, Type string, Channel *database.Channel, Suppress bool, timer int) {
+func handleSecondHandListingsUpdate(Name string, Price int, Type string,
+	Channel *database.Channel, Suppress bool, timer int, additionalNames []string,
+) {
 	oldEbayListings, _ := database.GetEbayListings(Name, Channel.ChannelID)
 	ListingsMap := map[string]*types.EbayListing{} // maps titles to price for checking if price exists or was updated
 	for i := range oldEbayListings {
 		ListingsMap[oldEbayListings[i].URL] = oldEbayListings[i]
 	}
 	ebayListings, err := crawler.GetSecondHandListings(Name, Price,
-		Channel.Lat, Channel.Long, Channel.Distance, Type, Channel.LocationCode)
+		Channel.Lat, Channel.Long, Channel.Distance,
+		Type, Channel.LocationCode, additionalNames)
 	if err != nil {
 		discord.CrawlErrorAlert(Name, "Second Hand Listings", err, Channel.ChannelID)
 	} else {

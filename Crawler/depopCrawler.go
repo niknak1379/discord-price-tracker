@@ -21,7 +21,7 @@ func depopURLGenerator(Name string, price int) string {
 	return base + Name + Price
 }
 
-func CrawlDepop(Name string, Price int) ([]*types.EbayListing, error) {
+func CrawlDepop(Name string, Price int, alternateNames []string) ([]*types.EbayListing, error) {
 	url := depopURLGenerator(Name, Price)
 	c := initCrawler()
 
@@ -53,7 +53,7 @@ func CrawlDepop(Name string, Price int) ([]*types.EbayListing, error) {
 
 		productCollector.OnHTML("p.styles_textWrapper__v3kxJ", func(pe *colly.HTMLElement) {
 			condition = pe.Text
-			if titleCorrectnessCheck(condition, Name) {
+			if titleCorrectnessCheck(condition, append(alternateNames, Name)) {
 				approved = true
 			}
 		})

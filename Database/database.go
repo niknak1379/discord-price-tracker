@@ -38,18 +38,19 @@ type AggregateReport struct {
 	LowestPriceDuringTimePeriod int `bson:"LowestPriceDuringTimePeriod"`
 }
 type Item struct {
-	Name                  string               `bson:"Name"`
-	TrackingList          []*TrackingInfo      `bson:"TrackingList"`
-	LowestPrice           Price                `bson:"LowestPrice"`
-	PriceHistory          []*Price             `bson:"PriceHistory"`
-	CurrentLowestPrice    Price                `bson:"CurrentLowestPrice"`
-	Timer                 int                  `bson:"Timer"`
-	Type                  string               `bson:"Type"`
-	ImgURL                string               `bson:"ImgURL"`
-	EbayListings          []*types.EbayListing `bson:"EbayListings"`
-	ListingsHistory       []*types.EbayListing `bson:"ListingsHistory"`
-	SevenDayAggregate     AggregateReport      `bson:"SevenDayAggregate"`
-	SuppressNotifications bool                 `bson:"SuppressNotifications"`
+	Name                     string               `bson:"Name"`
+	AlternateTrackingQueries []string             `bson:"AlternateTrackingQueries"`
+	TrackingList             []*TrackingInfo      `bson:"TrackingList"`
+	LowestPrice              Price                `bson:"LowestPrice"`
+	PriceHistory             []*Price             `bson:"PriceHistory"`
+	CurrentLowestPrice       Price                `bson:"CurrentLowestPrice"`
+	Timer                    int                  `bson:"Timer"`
+	Type                     string               `bson:"Type"`
+	ImgURL                   string               `bson:"ImgURL"`
+	EbayListings             []*types.EbayListing `bson:"EbayListings"`
+	ListingsHistory          []*types.EbayListing `bson:"ListingsHistory"`
+	SevenDayAggregate        AggregateReport      `bson:"SevenDayAggregate"`
+	SuppressNotifications    bool                 `bson:"SuppressNotifications"`
 }
 
 var (
@@ -77,24 +78,25 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 	}
 	imgURL := crawler.GetOpenGraphPic(uri)
 	ebayListings, _ := crawler.GetSecondHandListings(itemName, p.Price,
-		Channel.Lat, Channel.Long, Channel.Distance, Type, Channel.LocationCode)
+		Channel.Lat, Channel.Long, Channel.Distance, Type, Channel.LocationCode, []string{})
 	slices.SortFunc(ebayListings, func(a, b *types.EbayListing) int {
 		return b.Price - a.Price
 	})
 	arr := []*TrackingInfo{t}
 	PriceArr := []*Price{p}
 	i := Item{
-		Name:                  itemName,
-		ImgURL:                imgURL,
-		LowestPrice:           *p,
-		Type:                  Type,
-		TrackingList:          arr,
-		PriceHistory:          PriceArr,
-		CurrentLowestPrice:    *p,
-		Timer:                 Timer,
-		EbayListings:          ebayListings,
-		ListingsHistory:       ebayListings,
-		SuppressNotifications: false,
+		Name:                     itemName,
+		AlternateTrackingQueries: []string{},
+		ImgURL:                   imgURL,
+		LowestPrice:              *p,
+		Type:                     Type,
+		TrackingList:             arr,
+		PriceHistory:             PriceArr,
+		CurrentLowestPrice:       *p,
+		Timer:                    Timer,
+		EbayListings:             ebayListings,
+		ListingsHistory:          ebayListings,
+		SuppressNotifications:    false,
 	}
 	_, err = Table.InsertOne(ctx, i)
 	if err != nil {
@@ -104,6 +106,23 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 	UpdateAggregateReport(itemName, Channel.ChannelID)
 	i, err = GetItem(itemName, Channel.ChannelID)
 	return i, err
+}
+
+// add different tracking queries
+func AddAlternateTrackingName(Name, AlternateName, ChannelID string) error {
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		slog.Error("Could not load channel from db", slog.Any("Error", err))
+		return err
+	}
+
+	update := bson.M{
+		"$push": bson.M{
+			"AlternateTrackingQueries": AlternateName,
+		},
+	}
+	res := Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update)
+	return res.Err()
 }
 
 // removes all trackers and manually sets the price to filter second hand listingsArr

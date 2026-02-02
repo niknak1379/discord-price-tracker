@@ -58,7 +58,7 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 // returns a map of urls and prices + shipping cost
 // it returns an error on items that are local pickup only
 // since they dont have a shipping fee div
-func GetEbayListings(Name string, desiredPrice int, Proxy bool) ([]*types.EbayListing, error) {
+func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Proxy bool) ([]*types.EbayListing, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
 
 	slog.Info(url, slog.Bool("proxy", Proxy))
@@ -74,7 +74,7 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool) ([]*types.EbayLi
 		title := e.ChildText(".s-card__title span.primary")
 
 		// check to see if listing is viable
-		if !titleCorrectnessCheck(title, Name) {
+		if !titleCorrectnessCheck(title, append(alternateNames, Name)) {
 			slog.Info("skipping title criteria not met", slog.String("Title", title))
 			return
 		}
@@ -138,17 +138,17 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool) ([]*types.EbayLi
 	if err != nil || !visited {
 		if !Proxy {
 			slog.Warn("Colly failed even without proxy triggering chromeDP")
-			listingArr, err = EbayFailover(url, desiredPrice, Name)
+			listingArr, err = EbayFailover(url, desiredPrice, Name, alternateNames)
 			return listingArr, err
 		}
 		slog.Warn("ebay failed, redoing request without proxy")
-		listingArr, err = GetEbayListings(Name, desiredPrice, false)
+		listingArr, err = GetEbayListings(Name, desiredPrice, alternateNames, false)
 		return listingArr, err
 	}
 	return listingArr, err
 }
 
-func EbayFailover(url string, desiredPrice int, Name string) ([]*types.EbayListing, error) {
+func EbayFailover(url string, desiredPrice int, Name string, alternateNames []string) ([]*types.EbayListing, error) {
 	crawlDate := time.Now()
 	slog.Info("chromedp failover for ebay", slog.String("URL", url))
 	ctx, cancel := NewChromedpContext(90 * time.Second)
@@ -221,8 +221,10 @@ func EbayFailover(url string, desiredPrice int, Name string) ([]*types.EbayListi
 	slog.Info("Ebay Failover returned Items, its fine for now")
 	// <------------------ sanitize the list ------------>
 	for i := range items {
-		if titleCorrectnessCheck(items[i].Title, Name) && items[i].Price != 0 &&
+		if titleCorrectnessCheck(items[i].Title, append(alternateNames, Name)) &&
+			items[i].Price != 0 &&
 			items[i].Price < desiredPrice {
+
 			items[i].ItemName = Name
 			items[i].URL = strings.Split(items[i].URL, "?_skw")[0]
 			items[i].Price = int(float64(items[i].Price) * TaxRate)
@@ -266,10 +268,8 @@ func init() {
 
 // checks the title to make sure the name is in the title and
 // no unwanted returned results by ebay
-func titleCorrectnessCheck(listingTitle string, itemName string) bool {
-	words := strings.Fields(strings.ToLower(itemName))
+func titleCorrectnessCheck(listingTitle string, itemNames []string) bool {
 	listingTitle = strings.ToLower(listingTitle)
-
 	replacer := strings.NewReplacer(
 		".", " ",
 		"'", " ",
@@ -277,13 +277,23 @@ func titleCorrectnessCheck(listingTitle string, itemName string) bool {
 	)
 	listingTitle = replacer.Replace(listingTitle)
 
-	// Check all words from itemName are in listingTitle
-	for _, word := range words {
-		pattern := `\b` + regexp.QuoteMeta(word) + `\b`
-		matched, _ := regexp.MatchString(pattern, listingTitle)
-		if !matched {
-			return false // Word not found
+	// Check all words from itemName arr are in listingTitle
+	atLeastOneMatched := false
+outerloop:
+	for _, itemName := range itemNames {
+		words := strings.Fields(strings.ToLower(itemName))
+		for _, word := range words {
+			pattern := `\b` + regexp.QuoteMeta(word) + `\b`
+			matched, _ := regexp.MatchString(pattern, listingTitle)
+			if !matched {
+				continue outerloop // Word not found
+			}
 		}
+		atLeastOneMatched = true
+		break
+	}
+	if !atLeastOneMatched {
+		return false
 	}
 
 	// Exclude titles with unwanted keywords

@@ -21,16 +21,17 @@ import (
 )
 
 func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong float64,
-	maxDistance int, itemType string, LocationCode string,
+	maxDistance int, itemType string, LocationCode string, alternateNames []string,
 ) ([]*types.EbayListing, error) {
 	var depop []*types.EbayListing
 	var err3 error
 	if itemType == "Clothes" {
 		Price = Price / 2
-		depop, err3 = CrawlDepop(Name, Price)
+		depop, err3 = CrawlDepop(Name, Price, alternateNames)
 	}
-	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong, maxDistance, LocationCode, true)
-	ebay, err := GetEbayListings(Name, Price, true)
+	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong,
+		maxDistance, LocationCode, true, alternateNames)
+	ebay, err := GetEbayListings(Name, Price, alternateNames, true)
 
 	if err != nil || err2 != nil || err3 != nil {
 		slog.Error("errors from getting second hand listing",
@@ -55,7 +56,7 @@ func FacebookURLGenerator(Name string, Price int, LocationCode string) string {
 
 // JS loaded cannot use colly for this
 func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
-	maxDistance int, LocationCode string, proxy bool,
+	maxDistance int, LocationCode string, proxy bool, alternateNames []string,
 ) ([]*types.EbayListing, error) {
 	crawlDate := time.Now()
 	url := FacebookURLGenerator(Name, desiredPrice, LocationCode)
@@ -110,7 +111,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 				slog.Any("write err 2", fileErr2),
 				slog.Any("write err 3", fileErr3),
 			)
-			return MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode, false)
+			return MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode, false, alternateNames)
 		} else {
 			fileErr1 := os.WriteFile("facebookFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("facebookSecond.png", second, 0o644)
@@ -126,7 +127,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	}
 	// <------------------ sanitize the list ------------>
 	for i := range items {
-		if titleCorrectnessCheck(items[i].Title, Name) && items[i].Price != 0 &&
+		if titleCorrectnessCheck(items[i].Title, append(alternateNames, Name)) && items[i].Price != 0 &&
 			items[i].Price < desiredPrice {
 			distance, distStr, err := ValidateDistance(items[i].Condition, homeLat,
 				homeLong, maxDistance)

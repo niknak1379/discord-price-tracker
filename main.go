@@ -58,6 +58,7 @@ func crawlerTest() {
 		"span[class^='price_']", true)
 	crawler.GetPrice("https://www.newegg.com/fractal-design-atx-mid-tower-meshify-3-steel-pc-case-white-fd-c-mes3a-04/p/N82E16811352227",
 		"li.price-current strong", true)
-	itemArr, err := crawler.EbayFailover("https://www.ebay.com/sch/i.html?_nkw=rtx%203060%20ti&LH_ItemCondition=3000|2020|2010|1500&_udhi=707&rt=nc&LH_BIN=1&_stpos=90274&_fcid=1", 1000, "rtx 3060 ti")
+	itemArr, err := crawler.EbayFailover("https://www.ebay.com/sch/i.html?_nkw=rtx%203060%20ti&LH_ItemCondition=3000|2020|2010|1500&_udhi=707&rt=nc&LH_BIN=1&_stpos=90274&_fcid=1", 
+	  1000, "rtx 3060 ti", []string{})
 	slog.Info("ebay test", slog.Any("itemArr", itemArr), slog.Any("err", err))
 }

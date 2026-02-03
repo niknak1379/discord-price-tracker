@@ -22,12 +22,14 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 	var retArr []*discordgo.MessageEmbed
 
 	// Set up current price information
+	alternativeNameFields := setAlternateNamesFields(Item)
 	trackerFields := setTrackerFields(Item)
 	ebayFields := setSecondHandField(Item.EbayListings)
 	aggregatefields := formatAggregateFields(Item.SevenDayAggregate, "Used Aggregation For the Last 7 Days")
 	priceFields := setPriceField(&Item.CurrentLowestPrice, "Current")
 	lowestPriceField := setPriceField(&Item.LowestPrice, "Historically Lowest")
 
+	fields = append(fields, alternativeNameFields...)
 	fields = append(fields, trackerFields...)
 	fields = append(fields, ebayFields...)
 	fields = append(fields, aggregatefields...)
@@ -85,6 +87,19 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 	}
 
 	return retArr
+}
+
+func setAlternateNamesFields(Item *database.Item) []*discordgo.MessageEmbedField {
+	Fields := []*discordgo.MessageEmbedField{}
+	for _, Name := range Item.AlternateTrackingQueries {
+		field := discordgo.MessageEmbedField{
+			Name:   embedSeparatorFormatter("Alternative Name", 43),
+			Value:  Name,
+			Inline: false,
+		}
+		Fields = append(Fields, &field)
+	}
+	return Fields
 }
 
 func setTrackerFields(Item *database.Item) []*discordgo.MessageEmbedField {

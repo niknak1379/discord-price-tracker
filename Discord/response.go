@@ -290,7 +290,7 @@ func NewEbayListingAlert(newListing *types.EbayListing,
 	ChannelID string, aggregate *database.AggregateReport,
 ) {
 	color := pink
-	if newListing.Price > aggregate.AveragePrice {
+	if newListing.Price < aggregate.AveragePrice {
 		color = green
 	}
 	fields := formatSecondHandField(newListing, "Price", true)

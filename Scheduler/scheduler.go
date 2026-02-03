@@ -213,9 +213,12 @@ func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Chann
 	for i := range oldEbayListings {
 		ListingsMap[oldEbayListings[i].URL] = oldEbayListings[i]
 	}
-	ebayListings, err := crawler.GetSecondHandListings(item.Name, item.CurrentLowestPrice.Price,
+	ebayListings, err := crawler.GetSecondHandListings(
+		append(item.AlternateTrackingQueries, item.Name),
+		item.CurrentLowestPrice.Price,
 		Channel.Lat, Channel.Long, Channel.Distance,
-		item.Type, Channel.LocationCode, item.AlternateTrackingQueries)
+		item.Type, Channel.LocationCode,
+	)
 	if err != nil {
 		discord.CrawlErrorAlert(item.Name, "Second Hand Listings", err, Channel.ChannelID)
 	} else {
@@ -263,7 +266,6 @@ func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Chann
 			slog.Error("error updaing DB in ebay listing",
 				slog.Any("Error", err), slog.String("Name", item.Name))
 			discord.CrawlErrorAlert(item.Name, "www.ebay.com/DBError", err, Channel.ChannelID)
-			return
 		}
 	}
 }

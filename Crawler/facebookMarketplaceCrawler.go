@@ -21,31 +21,36 @@ import (
 )
 
 // I cant refractor this to be like that since it causes an import cycle
-func GetSecondHandListings(Name string, Price int, homeLat float64, homeLong float64,
-	maxDistance int, itemType string, LocationCode string, alternateNames []string,
+func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong float64,
+	maxDistance int, itemType string, LocationCode string,
 ) ([]*types.EbayListing, error) {
-	var depop []*types.EbayListing
-	var err3 error
-	if itemType == "Clothes" {
-		Price = Price / 2
-		depop, err3 = CrawlDepop(Name, Price, alternateNames)
-	}
-	fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong,
-		maxDistance, LocationCode, true, alternateNames)
-	ebay, err := GetEbayListings(Name, Price, alternateNames, true)
-
-	if err != nil || err2 != nil || err3 != nil {
-		slog.Error("errors from getting second hand listing",
-			slog.Any("Ebay error", err),
-			slog.Any("Facebook Marketplace Error", err2),
-			slog.Any("Depop Error", err3),
-		)
-	}
 	retArr := []*types.EbayListing{}
-	retArr = append(retArr, ebay...)
-	retArr = append(retArr, fb...)
-	retArr = append(retArr, depop...)
-	return retArr, errors.Join(err, err2, err3)
+	var err error
+	for _, Name := range Names {
+
+		var depop []*types.EbayListing
+		var err3 error
+		if itemType == "Clothes" {
+			Price = Price / 2
+			depop, err3 = CrawlDepop(Name, Price, Names)
+		}
+		fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong,
+			maxDistance, LocationCode, true, Names)
+		ebay, err4 := GetEbayListings(Name, Price, Names, true)
+
+		if err != nil || err2 != nil || err3 != nil {
+			slog.Error("errors from getting second hand listing",
+				slog.Any("Ebay error", err),
+				slog.Any("Facebook Marketplace Error", err2),
+				slog.Any("Depop Error", err3),
+			)
+		}
+		retArr = append(retArr, ebay...)
+		retArr = append(retArr, fb...)
+		retArr = append(retArr, depop...)
+		err = errors.Join(err, err2, err3, err4)
+	}
+	return retArr, err
 }
 
 func FacebookURLGenerator(Name string, Price int, LocationCode string) string {

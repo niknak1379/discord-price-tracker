@@ -50,7 +50,15 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 		retArr = append(retArr, depop...)
 		err = errors.Join(err, err2, err3, err4)
 	}
-	return retArr, err
+	dedupMap := make(map[string]*types.EbayListing)
+	for _, Listing := range retArr {
+		dedupMap[Listing.URL] = Listing
+	}
+	dedupArr := []*types.EbayListing{}
+	for _, Listing := range dedupMap {
+		dedupArr = append(dedupArr, Listing)
+	}
+	return dedupArr, err
 }
 
 func FacebookURLGenerator(Name string, Price int, LocationCode string) string {

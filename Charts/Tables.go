@@ -11,8 +11,8 @@ func AggregateTable(itemArr []*database.Item) []string {
 	t := table.NewWriter()
 	t.SetTitle("Seven Day Aggregate")
 	t.AppendHeader(table.Row{
-		"Name", "New Price", "AVG Used",
-		"AVG Sold", "Lowest", "STDEV", "Listings#",
+		"Name", "New", "AVG Used",
+		"AVG Sold", "Lowest", "STDEV", "#",
 	})
 	for _, Item := range itemArr {
 		t.AppendRow(table.Row{
@@ -26,8 +26,8 @@ func AggregateTable(itemArr []*database.Item) []string {
 			t = table.NewWriter()
 			t.SetTitle("Seven Day Aggregate")
 			t.AppendHeader(table.Row{
-				"Name", "New Price", "AVG Used",
-				"AVG Sold", "Lowest", "STDEV", "Listings#",
+				"Name", "New", "AVG Used",
+				"AVG Sold", "Lowest", "STDEV", "#",
 			})
 		}
 	}

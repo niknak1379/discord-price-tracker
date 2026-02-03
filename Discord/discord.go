@@ -372,6 +372,10 @@ var (
 			},
 		},
 		{
+			Name:        "channel_item_summary",
+			Description: "Get Aggregate Data for the Used Listings of the Item",
+		},
+		{
 			Name:        "restart",
 			Description: "Saves Progress and Stops the Bot",
 		},
@@ -434,7 +438,20 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			},
 		})
 		if err != nil {
-			slog.Error("Error in Sending ChannelInfo", err)
+			slog.Error("Error in Sending ChannelInfo", slog.Any("error", err))
+		}
+	},
+	"channel_item_summary": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		Items := database.GetAllItems(i.ChannelID)
+		table := charts.AggregateTable(Items)
+		err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "```" + table + "```",
+			},
+		})
+		if err != nil {
+			slog.Error("Error in Sending ChannelInfo", slog.Any("error", err))
 		}
 	},
 	"get_logs": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -884,7 +901,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			} else {
 				startDate := endDate.AddDate(0, 0, -30*int(options[1].IntValue()))
 				message := startDate.Format("2006-01-02") + " - " + endDate.Format("2006-01-02")
-				fields = formatAggregateFields(Aggregate, message)
+				fields = formatAggregateFields(&Aggregate, message)
 			}
 			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 				Content: content,

@@ -49,6 +49,8 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 		retArr = append(retArr, fb...)
 		retArr = append(retArr, depop...)
 		err = errors.Join(err, err2, err3, err4)
+		t := rand.IntN(240) + 60
+		time.Sleep(time.Duration(t) * time.Second)
 	}
 	dedupMap := make(map[string]*types.EbayListing)
 	for _, Listing := range retArr {

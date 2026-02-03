@@ -6,12 +6,13 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
-func AggregateTable(itemArr []*database.Item) string {
+func AggregateTable(itemArr []*database.Item) []string {
+	retArr := []string{}
 	t := table.NewWriter()
-	t.AppendHeader(table.Row{"7 Day Average"})
+	t.SetTitle("Seven Day Aggregate")
 	t.AppendHeader(table.Row{
-		"Name", "New Price", "Average Used Price",
-		"Average Price Sold", "Lowest Used Price", "STDEV", "Unique Listings",
+		"Name", "New Price", "AVG Used",
+		"AVG Sold", "Lowest", "STDEV", "Listings#",
 	})
 	for _, Item := range itemArr {
 		t.AppendRow(table.Row{
@@ -20,6 +21,18 @@ func AggregateTable(itemArr []*database.Item) string {
 			Item.SevenDayAggregate.LowestPriceDuringTimePeriod, Item.SevenDayAggregate.PriceSTDEV,
 			Item.SevenDayAggregate.UniqueListings,
 		})
+		if len(t.Render()) > 1500 {
+			retArr = append(retArr, "```"+t.Render()+"```")
+			t = table.NewWriter()
+			t.SetTitle("Seven Day Aggregate")
+			t.AppendHeader(table.Row{
+				"Name", "New Price", "AVG Used",
+				"AVG Sold", "Lowest", "STDEV", "Listings#",
+			})
+		}
 	}
-	return t.Render()
+	if t.Length() != 0 {
+		retArr = append(retArr, "```"+t.Render()+"```")
+	}
+	return retArr
 }

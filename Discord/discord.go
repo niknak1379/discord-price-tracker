@@ -442,16 +442,14 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		}
 	},
 	"channel_item_summary": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		customAcknowledge(discord, i)
 		Items := database.GetAllItems(i.ChannelID)
 		table := charts.AggregateTable(Items)
-		err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "```" + table + "```",
-			},
-		})
-		if err != nil {
-			slog.Error("Error in Sending ChannelInfo", slog.Any("error", err))
+		for _, string := range table {
+			_, err := discord.ChannelMessageSend(i.ChannelID, string)
+			if err != nil {
+				slog.Error("Error in Sending ChannelInfo", slog.Any("error", err))
+			}
 		}
 	},
 	"get_logs": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {

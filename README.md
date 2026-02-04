@@ -104,7 +104,7 @@ I'll make this later I'm too lazy right now
 
 16. **channel_item_summary_one_week**: get aggregate data for the past week
 
-17. **channel_item_summary_custom_length**: get aggregate data for custom time period
+17. **channel_item_summary_custom_ln**: get aggregate data for custom time period
     - Required Inputs:
       - months: how many months back for the aggregations
 

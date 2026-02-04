@@ -372,8 +372,20 @@ var (
 			},
 		},
 		{
-			Name:        "channel_item_summary",
+			Name:        "channel_item_summary_one_week",
 			Description: "Get Aggregate Data for the Used Listings of the Item",
+		},
+		{
+			Name:        "channel_item_summary_custom_length",
+			Description: "Get Aggregate Data for the Used Listings of the Item",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "months",
+					Description: "How Many Months Back for the Aggregations",
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Required:    true,
+				},
+			},
 		},
 		{
 			Name:        "restart",
@@ -441,10 +453,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			slog.Error("Error in Sending ChannelInfo", slog.Any("error", err))
 		}
 	},
-	"channel_item_summary": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"channel_item_summary_one_week": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		customAcknowledge(discord, i)
-		Items := database.GetAllItems(i.ChannelID)
-		table := charts.AggregateTable(Items)
+		table := charts.ThisWeekAggregateTable(i.ChannelID)
 		for _, string := range table {
 			_, err := discord.ChannelMessageSend(i.ChannelID, string)
 			if err != nil {
@@ -452,7 +463,17 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 		}
 	},
-	"get_logs": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"channel_item_summary_custom_length": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		customAcknowledge(discord, i)
+		table := charts.CustomAggregateTable(i.ChannelID,
+			int(i.ApplicationCommandData().Options[0].IntValue()))
+		for _, string := range table {
+			_, err := discord.ChannelMessageSend(i.ChannelID, string)
+			if err != nil {
+				slog.Error("Error in Sending ChannelInfo", slog.Any("error", err))
+			}
+		}
+	}, "get_logs": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		customAcknowledge(discord, i)
 		CrawlErrorAlert("Logs", "User Requested",
 			errors.New(i.ApplicationCommandData().Options[0].StringValue()), i.ChannelID)
@@ -663,7 +684,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		if err != nil {
 			slog.Error("ack error", slog.Any("error value", err))
 		}
-		getRes := database.GetAllItems(i.ChannelID)
+		getRes := database.GetAllItems(i.ChannelID,
+			[]string{"ListingsHistory", "PriceHistory"})
 		// returnstr, _ := json.Marshal(getRes)
 
 		for _, Item := range getRes {

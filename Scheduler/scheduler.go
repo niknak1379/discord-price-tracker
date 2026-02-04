@@ -15,7 +15,10 @@ import (
 	discord "priceTracker/Discord"
 )
 
-var backUpAmazonQuery = "div#apex_desktop span.priceToPay"
+var (
+	backUpAmazonQuery = "div#apex_desktop span.priceToPay"
+	exludedFields     = []string{"PriceHistory, ListingsHistory, EbayListings"}
+)
 
 func SetChannelScheduler(ctx context.Context) {
 	slog.Info("first crawl start time", slog.Any("start time", time.Now()))
@@ -27,7 +30,7 @@ func SetChannelScheduler(ctx context.Context) {
 	activeRoutines := make(map[string]context.CancelFunc) // Track running goroutines
 	itemMap := make(map[string]*database.Item)
 	for _, Channel := range database.ChannelMap {
-		itemsArr := database.GetAllItems(Channel.ChannelID)
+		itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
 		for _, item := range itemsArr {
 			updateSingleItem(item, Channel)
 		}
@@ -56,7 +59,7 @@ func loadAndStartItems(ctx context.Context,
 	itemMap map[string]*database.Item,
 ) {
 	for _, Channel := range database.ChannelMap {
-		itemsArr := database.GetAllItems(Channel.ChannelID)
+		itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
 		routineExists := make(map[string]bool)
 		for _, item := range itemsArr {
 			itemKey := item.Name + "_" + Channel.ChannelID
@@ -109,7 +112,7 @@ func loadAndStartItems(ctx context.Context,
 	// Stop routines for deleted items
 	currentItems := make(map[string]bool)
 	for _, Channel := range database.ChannelMap {
-		itemsArr := database.GetAllItems(Channel.ChannelID)
+		itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
 		for _, item := range itemsArr {
 			itemKey := item.Name + "_" + Channel.ChannelID
 			currentItems[itemKey] = true

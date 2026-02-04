@@ -378,13 +378,17 @@ func UpdateLowestPrice(Name string, newLow *Price, ChannelID string) (Item, erro
 	return res, err
 }
 
-func GetAllItems(ChannelID string) []*Item {
+func GetAllItems(ChannelID string, exludedFields []string) []*Item {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
 		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return []*Item{}
 	}
-	opts := options.Find().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
+	projection := bson.D{}
+	for _, field := range exludedFields {
+		projection = append(projection, bson.E{Key: field, Value: 0})
+	}
+	opts := options.Find().SetProjection(projection)
 	cursor, err := Table.Find(ctx, bson.M{}, opts)
 	if err != nil {
 		panic(err)

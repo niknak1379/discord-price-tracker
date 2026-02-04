@@ -376,7 +376,7 @@ var (
 			Description: "Get Aggregate Data for the Used Listings of the Item",
 		},
 		{
-			Name:        "channel_item_summary_custom_length",
+			Name:        "channel_item_summary_custom_ln",
 			Description: "Get Aggregate Data for the Used Listings of the Item",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
@@ -463,7 +463,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 		}
 	},
-	"channel_item_summary_custom_length": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"channel_item_summary_custom_ln": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		customAcknowledge(discord, i)
 		table := charts.CustomAggregateTable(i.ChannelID,
 			int(i.ApplicationCommandData().Options[0].IntValue()))

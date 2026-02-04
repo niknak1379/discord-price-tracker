@@ -255,6 +255,9 @@ func init() {
 		`\bdefective`,
 		`damage`,
 		`problem`,
+		`replacement`,
+		`bracket`,
+		`waterblock`,
 	}
 
 	for _, pattern := range excludePatterns {

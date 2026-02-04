@@ -56,10 +56,6 @@ func initCrawler() *colly.Collector {
 		DisableCompression: false,
 	})
 	c.SetProxy("http://gluetun:8888")
-	c.OnError(func(r *colly.Response, err error) {
-		s := fmt.Sprintf("Error scraping %s: %v", r.Request.URL, err)
-		slog.Error(s)
-	})
 	return c
 }
 
@@ -112,6 +108,7 @@ func NewChromedpContext(timeout time.Duration, extraOpts ...chromedp.ExecAllocat
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("disable-dev-shm-usage", true),
 		chromedp.Flag("log-level", "3"),
+		chromedp.Flag("blink-settings", "imagesEnabled=false"),
 	)
 
 	opts = append(opts, extraOpts...)

@@ -257,6 +257,7 @@ func init() {
 		`problem`,
 		`replacement`,
 		`bracket`,
+		`water block`,
 		`waterblock`,
 	}
 

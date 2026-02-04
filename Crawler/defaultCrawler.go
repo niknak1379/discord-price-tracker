@@ -85,7 +85,7 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 
 	c.Wait()
 	if !crawled {
-		err = errors.New("could not crawl, html element does not exist")
+		err = errors.New("Error in default crawler: could not crawl, html element does not exist")
 	}
 	if err != nil || priceErr != nil {
 		var res int
@@ -232,7 +232,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 			slog.Error("error in default chromedp", slog.String("selector", selector),
 				slog.String("URL", url), slog.Any("ChromeDP Error", err),
 				slog.Any("ScreenShot Write Error", err2), slog.Any("HTML Write Error", err3))
-			return 0, fmt.Errorf("selector %s not found for url %s, %w", selector, url, err)
+			return 0, fmt.Errorf("selector %s not found for url %s, %w in default crawler", selector, url, err)
 		}
 	}
 
@@ -242,7 +242,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	if err != nil || price == 0 {
 		os.WriteFile("failoverHTML.html", []byte(HTMLContent), 0o644)
 		os.WriteFile("failoverSS.png", screenShot, 0o644)
-		return 0, fmt.Errorf("failed to parse price '%s': %w", priceText, err)
+		return 0, fmt.Errorf("failed to parse price '%s': %w in default crawler", priceText, err)
 	}
 
 	return price, nil

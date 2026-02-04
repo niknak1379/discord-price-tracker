@@ -122,7 +122,8 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		Discord.ChannelFileSend(ChannelID, "proxyFirst.png", reader4)
 		Discord.ChannelFileSend(ChannelID, "proxyHTML.html", reader5)
 		Discord.ChannelFileSend(ChannelID, "facebook.html", reader6)
-	} else if strings.Contains(err.Error(), "Ebay") {
+	}
+	if strings.Contains(err.Error(), "Ebay") {
 		reader, err := os.Open("ebaySecond.png")
 		reader2, err2 := os.Open("ebayFirst.png")
 		defer reader.Close()
@@ -133,7 +134,8 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		}
 		Discord.ChannelFileSend(ChannelID, "second.png", reader)
 		Discord.ChannelFileSend(ChannelID, "first.png", reader2)
-	} else {
+	}
+	if strings.Contains(err.Error(), "default") {
 		reader, err := os.Open("failoverSS.png")
 		reader2, err2 := os.Open("failoverHTML.html")
 		reader3, err3 := os.Open("collyHTML.html")

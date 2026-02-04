@@ -633,7 +633,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			getRes, err := database.EditName(options[0].StringValue(), options[1].StringValue(), i.ChannelID)
 			var embedArr []*discordgo.MessageEmbed
 			var content string
-
+			customAcknowledge(discord, i)
 			if err != nil {
 				content = "Error: " + err.Error()
 				discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{

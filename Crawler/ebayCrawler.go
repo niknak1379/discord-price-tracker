@@ -48,7 +48,7 @@ type distanceRes struct {
 
 func ConstructEbaySearchURL(Name string, newPrice int) string {
 	baseURL := "https://www.ebay.com/sch/i.html?_nkw="
-	usedQuery := "&LH_ItemCondition=3000|2020|2010|1500"
+	usedQuery := "&LH_ItemCondition=3000|2030|2020|2010|2000|1500|1000"
 	priceQuery := fmt.Sprintf("&_udhi=%d&rt=nc", newPrice)
 	noAuction := "&LH_BIN=1"
 	location := "&_stpos=90274&_fcid=1"

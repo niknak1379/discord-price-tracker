@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"math"
 	"math/rand/v2"
+	"strings"
 	"time"
 
 	crawler "priceTracker/Crawler"
@@ -13,6 +14,8 @@ import (
 
 	discord "priceTracker/Discord"
 )
+
+var backUpAmazonQuery = "div#apex_desktop span.priceToPay"
 
 func SetChannelScheduler(ctx context.Context) {
 	slog.Info("first crawl start time", slog.Any("start time", time.Now()))
@@ -191,6 +194,9 @@ func updateSingleItem(item *database.Item, Channel *database.Channel) {
 
 func updatePrice(Name string, Tracker *database.TrackingInfo, oldLow database.Price, date time.Time, ChannelID string, Suppress bool) (database.Price, error) {
 	newPrice, err := crawler.GetPrice(Tracker.URI, Tracker.HtmlQuery, true)
+	if err != nil && strings.Contains(Tracker.URI, "amazon") {
+		newPrice, err = crawler.GetPrice(Tracker.URI, backUpAmazonQuery, true)
+	}
 	if err != nil || newPrice == 0 {
 		slog.Error("error getting price in updatePrice", slog.Any("Error", err),
 			slog.Int("Returned Price", newPrice))

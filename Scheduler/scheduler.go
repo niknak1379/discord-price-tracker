@@ -150,7 +150,7 @@ func itemCrawlRoutine(ctx context.Context, item *database.Item, Channel *databas
 			slog.Info("stopping item crawl routine", slog.String("item", item.Name))
 			return
 		case <-ticker.C:
-			updateSingleItem(item, Channel)
+			go updateSingleItem(item, Channel)
 		}
 	}
 }

@@ -114,7 +114,8 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 			slog.Warn("price 0 something is wrong for", slog.Any("Error", err),
 				slog.Int("baseprice", basePrice), slog.String("URL", link))
 			return
-		} else if basePrice+shippingCost >= desiredPrice {
+		} else if basePrice+shippingCost >= desiredPrice ||
+			basePrice+shippingCost <= int(float64(desiredPrice)*float64(0.25)) {
 			slog.Info("price too high skipping title", slog.String("Title", title))
 			return
 		}
@@ -223,7 +224,8 @@ func EbayFailover(url string, desiredPrice int, Name string, alternateNames []st
 	for i := range items {
 		if titleCorrectnessCheck(items[i].Title, append(alternateNames, Name)) &&
 			items[i].Price != 0 &&
-			items[i].Price < desiredPrice {
+			items[i].Price < desiredPrice &&
+			items[i].Price >= int(float64(desiredPrice)*float64(0.25)) {
 
 			items[i].ItemName = Name
 			items[i].URL = strings.Split(items[i].URL, "?_skw")[0]

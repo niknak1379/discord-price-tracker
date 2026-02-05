@@ -259,6 +259,9 @@ func init() {
 		`bracket`,
 		`water block`,
 		`waterblock`,
+		`\boem\b`,
+		`\bboard\b`,
+		`\bdock\b`,
 	}
 
 	for _, pattern := range excludePatterns {

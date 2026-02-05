@@ -218,11 +218,16 @@ func updatePrice(Name string, Tracker *database.TrackingInfo, oldLow database.Pr
 
 func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Channel) {
 	oldEbayListings, _ := database.GetEbayListings(item.Name, Channel.ChannelID)
+	oldEbayBids, _ := database.GetEbayBids(item.Name, Channel.ChannelID)
 	ListingsMap := map[string]*types.EbayListing{} // maps titles to price for checking if price exists or was updated
+	BidsMap := map[string]*types.EbayBids{}
 	for i := range oldEbayListings {
 		ListingsMap[oldEbayListings[i].URL] = oldEbayListings[i]
 	}
-	ebayListings, err := crawler.GetSecondHandListings(
+	for i := range oldEbayBids {
+		BidsMap[oldEbayBids[i].URL] = oldEbayBids[i]
+	}
+	ebayListings, ebayBids, err := crawler.GetSecondHandListings(
 		append(item.AlternateTrackingQueries, item.Name),
 		item.CurrentLowestPrice.Price,
 		Channel.Lat, Channel.Long, Channel.Distance,
@@ -231,6 +236,16 @@ func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Chann
 	if err != nil {
 		discord.CrawlErrorAlert(item.Name, "Second Hand Listings", err, Channel.ChannelID)
 	} else {
+		for i := range ebayBids {
+			oldBid, ok := BidsMap[ebayBids[i].URL]
+			if !ok {
+				discord.NewBidAlert(ebayBids[i], Channel.ChannelID, &item.SevenDayAggregate)
+			} else {
+				if oldBid.Price != ebayBids[i].Price {
+					discord.BidPriceChangeAlert(ebayBids[i], oldBid, Channel.ChannelID, &item.SevenDayAggregate)
+				}
+			}
+		}
 		for i := range ebayListings {
 			oldListing, ok := ListingsMap[ebayListings[i].URL]
 			// if listing not found in the old list, or if price changed
@@ -270,8 +285,11 @@ func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Chann
 				discord.NewEbayListingAlert(ebayListings[i], Channel.ChannelID, &item.SevenDayAggregate)
 			}
 		}
+		item.EbayBids = ebayBids
+		item.EbayListings = ebayListings
 		err = database.UpdateEbayListings(item.Name, ebayListings, Channel.ChannelID)
-		if err != nil {
+		err2 := database.UpdateEbayBids(item.Name, ebayBids, Channel.ChannelID)
+		if err != nil || err2 != nil {
 			slog.Error("error updaing DB in ebay listing",
 				slog.Any("Error", err), slog.String("Name", item.Name))
 			discord.CrawlErrorAlert(item.Name, "www.ebay.com/DBError", err, Channel.ChannelID)

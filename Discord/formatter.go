@@ -28,10 +28,12 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 	aggregatefields := formatAggregateFields(&Item.SevenDayAggregate, "Used Aggregation For the Last 7 Days")
 	priceFields := setPriceField(&Item.CurrentLowestPrice, "Current")
 	lowestPriceField := setPriceField(&Item.LowestPrice, "Historically Lowest")
+	bidFields := setBidFields(Item.EbayBids)
 
 	fields = append(fields, alternativeNameFields...)
 	fields = append(fields, trackerFields...)
 	fields = append(fields, ebayFields...)
+	fields = append(fields, bidFields...)
 	fields = append(fields, aggregatefields...)
 	fields = append(fields, priceFields...)
 	fields = append(fields, lowestPriceField...)
@@ -145,6 +147,59 @@ func setSecondHandField(ebayArr []*types.EbayListing) []*discordgo.MessageEmbedF
 		res = append(res, listFields...)
 	}
 	return res
+}
+
+func setBidFields(ebayArr []*types.EbayBids) []*discordgo.MessageEmbedField {
+	bidFields := []*discordgo.MessageEmbedField{}
+	HeaderField := discordgo.MessageEmbedField{
+		Name: embedSeparatorFormatter("Ebay Bids", 44),
+	}
+	bidFields = append(bidFields, &HeaderField)
+
+	for _, Listing := range ebayArr {
+		listFields := formatBidField(Listing, false)
+		bidFields = append(bidFields, listFields...)
+	}
+
+	return bidFields
+}
+
+func formatBidField(Listing *types.EbayBids, priceChange bool) []*discordgo.MessageEmbedField {
+	retArr := []*discordgo.MessageEmbedField{}
+	NameField := discordgo.MessageEmbedField{
+		Name:   Listing.Title,
+		Value:  "",
+		Inline: false,
+	}
+	Price := discordgo.MessageEmbedField{
+		Name:   "Current Price",
+		Value:  "$ " + strconv.Itoa(Listing.Price),
+		Inline: false,
+	}
+	if priceChange {
+		return append(retArr, &NameField, &Price)
+	}
+	BidNumber := discordgo.MessageEmbedField{
+		Name:   "Number of Bids",
+		Value:  strconv.Itoa(Listing.Bids),
+		Inline: false,
+	}
+	EndDate := discordgo.MessageEmbedField{
+		Name:   "End Date",
+		Value:  Listing.EndDate.Format("2006-01-02 15:04:05"),
+		Inline: false,
+	}
+	conditionField := discordgo.MessageEmbedField{
+		Name:   "Condition:",
+		Value:  truncateString(Listing.Condition, MaxFieldValueLen),
+		Inline: false,
+	}
+	urlField := discordgo.MessageEmbedField{
+		Name:   "From URL:",
+		Value:  truncateString(Listing.URL, MaxFieldValueLen),
+		Inline: false,
+	}
+	return append(retArr, &NameField, &BidNumber, &EndDate, &conditionField, &urlField, &Price)
 }
 
 // new listing is there so that it  doesnt return duplicate fields in discord.response

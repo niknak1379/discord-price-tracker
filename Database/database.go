@@ -48,6 +48,7 @@ type Item struct {
 	Type                     string               `bson:"Type"`
 	ImgURL                   string               `bson:"ImgURL"`
 	EbayListings             []*types.EbayListing `bson:"EbayListings"`
+	EbayBids                 []*types.EbayBids    `bson:"EbayBids"`
 	ListingsHistory          []*types.EbayListing `bson:"ListingsHistory"`
 	SevenDayAggregate        AggregateReport      `bson:"SevenDayAggregate"`
 	SuppressNotifications    bool                 `bson:"SuppressNotifications"`
@@ -77,7 +78,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 		return Item{}, err
 	}
 	imgURL := crawler.GetOpenGraphPic(uri)
-	ebayListings, _ := crawler.GetSecondHandListings(
+	ebayListings, bids, _ := crawler.GetSecondHandListings(
 		append([]string{}, itemName),
 		p.Price, Channel.Lat, Channel.Long,
 		Channel.Distance, Type,
@@ -100,6 +101,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 		Timer:                    Timer,
 		EbayListings:             ebayListings,
 		ListingsHistory:          ebayListings,
+		EbayBids:                 bids,
 		SuppressNotifications:    false,
 	}
 	_, err = Table.InsertOne(ctx, i)
@@ -416,6 +418,48 @@ func GetEbayListings(itemName string, ChannelID string) ([]*types.EbayListing, e
 		return res.EbayListings, err
 	}
 	return res.EbayListings, err
+}
+
+func GetEbayBids(itemName string, ChannelID string) ([]*types.EbayBids, error) {
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		slog.Error("couldnt load channel", slog.Any("Error", err))
+		return []*types.EbayBids{}, err
+	}
+	var res Item
+	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
+	opts := options.FindOne().SetProjection(bson.D{{Key: "EbayListings", Value: 1}})
+	err = Table.FindOne(ctx, filter, opts).Decode(&res)
+	if err != nil {
+		return res.EbayBids, err
+	}
+	return res.EbayBids, err
+}
+
+func UpdateEbayBids(itemName string, bidArr []*types.EbayBids, ChannelID string) error {
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		slog.Error("couldnt load channel", slog.Any("Error", err))
+		return err
+	}
+	filter := bson.M{"Name": itemName}
+	slices.SortFunc(bidArr, func(a, b *types.EbayBids) int {
+		return b.Price - a.Price
+	})
+	update := bson.M{
+		"$set": bson.M{
+			"EbayBids": bidArr,
+		},
+	}
+	var result Item
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}})
+	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
+	if err != nil {
+		slog.Error("update ebay listing second pipeline error",
+			slog.Any("error", err),
+		)
+	}
+	return err
 }
 
 func UpdateEbayListings(itemName string, listingsArr []*types.EbayListing, ChannelID string) error {

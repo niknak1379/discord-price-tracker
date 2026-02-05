@@ -15,3 +15,12 @@ type EbayListing struct {
 	TotalPriceChange int           `bson:"TotalPriceChange"`
 	AcceptsOffers    bool          `bson:"AcceptsOffers"`
 }
+type EbayBids struct {
+	ItemName  string    `bson:"ItemName"`
+	Title     string    `bson:"Title"`
+	Condition string    `bson:Condition"`
+	Price     int       `bson:"Price"`
+	URL       string    `bson:"URL"`
+	Bids      int       `bson:"Bids"`
+	EndDate   time.Time `bson:"HoursLeft"`
+}

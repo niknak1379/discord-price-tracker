@@ -21,6 +21,7 @@ func main() {
 	godotenv.Load()
 	// amazonTest()
 	// BestBuyTest()
+	// crawlerTest()
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
@@ -54,11 +55,20 @@ func BestBuyTest() {
 }
 
 func crawlerTest() {
-	crawler.GetPrice("https://www.bhphotovideo.com/c/product/1752177-REG/fractal_design_fd_c_nor1c_02_north_mid_tower_atx_case.html",
-		"span[class^='price_']", true)
-	crawler.GetPrice("https://www.newegg.com/fractal-design-atx-mid-tower-meshify-3-steel-pc-case-white-fd-c-mes3a-04/p/N82E16811352227",
-		"li.price-current strong", true)
-	itemArr, err := crawler.EbayFailover("https://www.ebay.com/sch/i.html?_nkw=rtx%203060%20ti&LH_ItemCondition=3000|2020|2010|1500&_udhi=707&rt=nc&LH_BIN=1&_stpos=90274&_fcid=1", 
-	  1000, "rtx 3060 ti", []string{})
-	slog.Info("ebay test", slog.Any("itemArr", itemArr), slog.Any("err", err))
+	//crawler.GetPrice("https://www.bhphotovideo.com/c/product/1752177-REG/fractal_design_fd_c_nor1c_02_north_mid_tower_atx_case.html",
+	//"span[class^='price_']", true)
+	//crawler.GetPrice("https://www.newegg.com/fractal-design-atx-mid-tower-meshify-3-steel-pc-case-white-fd-c-mes3a-04/p/N82E16811352227",
+	//"li.price-current strong", true)
+	url := "https://www.ebay.com/sch/i.html?_nkw=Radeon+rx+9070+xt&LH_ItemCondition=3000%7C2030%7C2020%7C2010%7C2000%7C1500%7C1000_udlo%3D200&_udhi=801&_stpos=90274&_fcid=1&rt=nc&LH_All=1"
+	itemArr, bids, err := crawler.EbayFailover(url,
+		1000, "Radeon 9070 xt", []string{})
+	// itemArr, bids, err := crawler.GetEbayListings(
+	// "radeon 9070 xt",
+	// 1000,
+	// []string{},
+	// false)
+	slog.Info("ebay test",
+		slog.Any("itemArr", itemArr),
+		slog.Any("bid arr", bids),
+		slog.Any("err", err))
 }

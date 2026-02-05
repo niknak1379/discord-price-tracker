@@ -23,8 +23,9 @@ import (
 // I cant refractor this to be like that since it causes an import cycle
 func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong float64,
 	maxDistance int, itemType string, LocationCode string,
-) ([]*types.EbayListing, error) {
-	retArr := []*types.EbayListing{}
+) ([]*types.EbayListing, []*types.EbayBids, error) {
+	retListingArr := []*types.EbayListing{}
+	retBidArr := []*types.EbayBids{}
 	var err error
 	for _, Name := range Names {
 
@@ -36,7 +37,7 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 		}
 		fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong,
 			maxDistance, LocationCode, true, Names)
-		ebay, err4 := GetEbayListings(Name, Price, Names, true)
+		ebay, bids, err4 := GetEbayListings(Name, Price, Names, true)
 
 		if err != nil || err2 != nil || err3 != nil {
 			slog.Error("errors from getting second hand listing",
@@ -45,22 +46,31 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 				slog.Any("Depop Error", err3),
 			)
 		}
-		retArr = append(retArr, ebay...)
-		retArr = append(retArr, fb...)
-		retArr = append(retArr, depop...)
+		retListingArr = append(retListingArr, ebay...)
+		retListingArr = append(retListingArr, fb...)
+		retListingArr = append(retListingArr, depop...)
+		retBidArr = append(retBidArr, bids...)
 		err = errors.Join(err, err2, err3, err4)
 		t := rand.IntN(240) + 60
 		time.Sleep(time.Duration(t) * time.Second)
 	}
 	dedupMap := make(map[string]*types.EbayListing)
-	for _, Listing := range retArr {
+	for _, Listing := range retListingArr {
 		dedupMap[Listing.URL] = Listing
 	}
 	dedupArr := []*types.EbayListing{}
 	for _, Listing := range dedupMap {
 		dedupArr = append(dedupArr, Listing)
 	}
-	return dedupArr, err
+	dedupBidMap := make(map[string]*types.EbayBids)
+	for _, Listing := range retBidArr {
+		dedupBidMap[Listing.URL] = Listing
+	}
+	dedupBidArr := []*types.EbayBids{}
+	for _, Listing := range dedupBidMap {
+		dedupBidArr = append(dedupBidArr, Listing)
+	}
+	return dedupArr, dedupBidArr, err
 }
 
 func FacebookURLGenerator(Name string, Price int, LocationCode string) string {

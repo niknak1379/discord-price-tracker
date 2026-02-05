@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -50,7 +51,7 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 	baseURL := "https://www.ebay.com/sch/i.html?_nkw="
 	usedQuery := "&LH_ItemCondition=3000|2030|2020|2010|2000|1500|1000"
 	priceQuery := fmt.Sprintf("_udlo=%d&rt=nc&_udhi=%d", int(float64(newPrice)*float64(0.25)), newPrice)
-	noAuction := "&LH_BIN=1"
+	noAuction := "&LH_ALL=1"
 	location := "&_stpos=90274&_fcid=1"
 	return baseURL + url.PathEscape(Name) + usedQuery + priceQuery + noAuction + location
 }
@@ -58,11 +59,13 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 // returns a map of urls and prices + shipping cost
 // it returns an error on items that are local pickup only
 // since they dont have a shipping fee div
-func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Proxy bool) ([]*types.EbayListing, error) {
+func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Proxy bool,
+) ([]*types.EbayListing, []*types.EbayBids, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
 
 	slog.Info(url, slog.Bool("proxy", Proxy))
 	var listingArr []*types.EbayListing
+	var bidArr []*types.EbayBids
 	crawlDate := time.Now()
 	visited := false
 	c := initCrawler()
@@ -79,84 +82,212 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 			return
 		}
 		condition := e.ChildText("div.s-card__subtitle")
-
-		// first one is price, second one is wether its bid or normal "or best offer" GetEbayListings
-		// thid is delivery price +$12.00 delivery in 2-4 days
-		var basePrice, shippingCost int
-		var err error
-		var acceptsOffers bool
+		// checks wether element is a bid or not
+		isBid := false
 		e.ForEachWithBreak("div.s-card__attribute-row", func(i int, child *colly.HTMLElement) bool {
-			switch i {
-			case 0:
-				// get base price
-				basePrice, err = formatPrice(child.Text)
-				basePrice = int(float64(basePrice) * TaxRate)
-			case 1:
-				// skip bids, no need to add them to the return bid array
-				if strings.Contains(child.Text, "or Best Offer") {
-					acceptsOffers = true
+			if i == 1 {
+				if strings.Contains(child.Text, "bids") {
+					isBid = true
 				}
-			case 2:
-				// get shipping price
-				if strings.Contains(child.Text, "Free delivery") {
-					shippingCost = 0
-				} else {
-					shippingCost, err = formatPrice(child.Text)
-				}
-			default:
-				return false
+				return false // Stop after index 1
 			}
 			return true
 		})
-		link := e.ChildAttr("a.s-card__link", "href")
-		// skip item if any errors are met
-		if basePrice == 0 || err != nil {
-			slog.Warn("price 0 something is wrong for", slog.Any("Error", err),
-				slog.Int("baseprice", basePrice), slog.String("URL", link))
-			return
-		} else if basePrice+shippingCost >= desiredPrice ||
-			basePrice+shippingCost <= int(float64(desiredPrice)*float64(0.25)) {
-			slog.Info("price too high skipping title", slog.String("Title", title))
-			return
-		}
 
-		listing := types.EbayListing{
-			ItemName: Name,
-			Price:    shippingCost + basePrice,
-			// it has metadata from search after url, this leans it up
-			URL:           strings.Split(link, "?_skw")[0],
-			Title:         title,
-			AcceptsOffers: acceptsOffers,
-			Condition:     condition,
-			Date:          crawlDate,
-			Duration:      0,
+		// check wether bid or not
+		if isBid {
+			slog.Info("Bid Listing found", slog.String("Title", title),
+				slog.String("elementText", e.Text))
+			var basePrice, shippingCost int
+			var err error
+			var bids int
+			var endTime time.Time
+			e.ForEachWithBreak("div.s-card__attribute-row", func(i int, child *colly.HTMLElement) bool {
+				switch i {
+				case 0:
+					// get base price
+					basePrice, err = formatPrice(child.Text)
+					basePrice = int(float64(basePrice) * TaxRate)
+				case 1:
+					// index 1 is where auction end and how many bids data is held
+					// 34 bids · Time left2d 23h left
+					slog.Info("child text", slog.String("text", child.Text))
+					bidInfo := strings.Split(child.Text, "·")
+					slog.Info("bidInfo", slog.Any("text", bidInfo))
+					// 34
+					bidStr := strings.Split(bidInfo[0], " ")[0]
+					slog.Info("bidstr test", slog.String("text", bidStr))
+
+					bids, err = strconv.Atoi(bidStr)
+					if err != nil {
+						slog.Warn("Cant process bid number", slog.Any("error", err))
+					}
+					timeLeftStr := strings.Split(bidInfo[1], "left")
+					slog.Info("timeLeft", slog.Any("text", timeLeftStr))
+					if strings.Contains(timeLeftStr[0], "d") {
+						// 2d 16h left
+						timeLeftStr = strings.Split(timeLeftStr[0], " ")
+						day, err := strconv.Atoi(strings.Split(timeLeftStr[0], "d")[0])
+						if err != nil {
+							slog.Warn("Cant process bid Day", slog.Any("error", err))
+						}
+						hour, err := strconv.Atoi(strings.Split(timeLeftStr[1], "h")[0])
+						if err != nil {
+							slog.Warn("Cant process bid hour", slog.Any("error", err))
+						}
+						endTime = time.Now().Add(
+							time.Duration(day)*time.Hour*24 +
+								time.Duration(hour)*time.Hour,
+						)
+
+					} else {
+						timeLeftStr = strings.Split(timeLeftStr[0], " ")
+						hour, err := strconv.Atoi(strings.Split(timeLeftStr[0], "h")[0])
+						if err != nil {
+							slog.Warn("Cant process bid hour", slog.Any("error", err))
+						}
+						minute, err := strconv.Atoi(strings.Split(timeLeftStr[1], "m")[0])
+						if err != nil {
+							slog.Warn("Cant process bid minute", slog.Any("error", err))
+						}
+						endTime = time.Now().Add(
+							time.Duration(hour)*time.Hour +
+								time.Duration(minute)*time.Minute,
+						)
+					}
+
+				case 2:
+					// get shipping price
+					if strings.Contains(child.Text, "Free delivery") {
+						shippingCost = 0
+					} else {
+						shippingCost, err = formatPrice(child.Text)
+					}
+				default:
+					return false
+				}
+				return true
+			})
+			link := e.ChildAttr("a.s-card__link", "href")
+			// skip item if any errors are met
+			if basePrice == 0 || err != nil {
+				slog.Warn("price 0 something is wrong for", slog.Any("Error", err),
+					slog.Int("baseprice", basePrice), slog.String("URL", link))
+				return
+			} else if basePrice+shippingCost >= desiredPrice ||
+				basePrice+shippingCost <= int(float64(desiredPrice)*float64(0.25)) ||
+				time.Until(endTime) > 24*time.Hour {
+				slog.Info("price too high or end date too far, skipping bid",
+					slog.String("Title", title),
+				)
+				return
+			}
+
+			listing := types.EbayBids{
+				ItemName:  Name,
+				Price:     shippingCost + basePrice,
+				URL:       strings.Split(link, "?_skw")[0],
+				Title:     title,
+				Condition: condition,
+				EndDate:   endTime,
+				Bids:      bids,
+			}
+			slog.Info("bid", slog.Any("ebay listing information", listing))
+			bidArr = append(bidArr, &listing)
+		} else {
+
+			// first one is price, second one is wether its bid or normal "or best offer" GetEbayListings
+			// thid is delivery price +$12.00 delivery in 2-4 days
+			var basePrice, shippingCost int
+			var err error
+			var acceptsOffers bool
+			e.ForEachWithBreak("div.s-card__attribute-row", func(i int, child *colly.HTMLElement) bool {
+				switch i {
+				case 0:
+					// get base price
+					basePrice, err = formatPrice(child.Text)
+					basePrice = int(float64(basePrice) * TaxRate)
+				case 1:
+					// skip bids, no need to add them to the return bid array
+					if strings.Contains(child.Text, "or Best Offer") {
+						acceptsOffers = true
+					}
+				case 2:
+					// get shipping price
+					if strings.Contains(child.Text, "Free delivery") {
+						shippingCost = 0
+					} else {
+						shippingCost, err = formatPrice(child.Text)
+					}
+				default:
+					return false
+				}
+				return true
+			})
+			link := e.ChildAttr("a.s-card__link", "href")
+			// skip item if any errors are met
+			if basePrice == 0 || err != nil {
+				slog.Warn("price 0 something is wrong for", slog.Any("Error", err),
+					slog.Int("baseprice", basePrice), slog.String("URL", link))
+				return
+			} else if basePrice+shippingCost >= desiredPrice ||
+				basePrice+shippingCost <= int(float64(desiredPrice)*float64(0.25)) {
+				slog.Info("price too high skipping title", slog.String("Title", title))
+				return
+			}
+
+			listing := types.EbayListing{
+				ItemName: Name,
+				Price:    shippingCost + basePrice,
+				// it has metadata from search after url, this leans it up
+				URL:           strings.Split(link, "?_skw")[0],
+				Title:         title,
+				AcceptsOffers: acceptsOffers,
+				Condition:     condition,
+				Date:          crawlDate,
+				Duration:      0,
+			}
+			slog.Info("listing", slog.Any("ebay listing information", listing))
+			listingArr = append(listingArr, &listing)
 		}
-		slog.Info("listing", slog.Any("ebay listing information", listing))
-		listingArr = append(listingArr, &listing)
 	})
 	err := c.Visit(url)
 	c.Wait()
 	if err != nil || !visited {
 		if !Proxy {
 			slog.Warn("Colly failed even without proxy triggering chromeDP")
-			listingArr, err = EbayFailover(url, desiredPrice, Name, alternateNames)
-			return listingArr, err
+			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, alternateNames)
+			return listingArr, bidArr, err
 		}
 		slog.Warn("ebay failed, redoing request without proxy")
-		listingArr, err = GetEbayListings(Name, desiredPrice, alternateNames, false)
-		return listingArr, err
+		listingArr, bidArr, err = GetEbayListings(Name, desiredPrice, alternateNames, false)
+		return listingArr, bidArr, err
 	}
-	return listingArr, err
+	return listingArr, bidArr, err
 }
 
-func EbayFailover(url string, desiredPrice int, Name string, alternateNames []string) ([]*types.EbayListing, error) {
+func EbayFailover(url string, desiredPrice int, Name string, alternateNames []string) (
+	[]*types.EbayListing, []*types.EbayBids, error,
+) {
 	crawlDate := time.Now()
 	slog.Info("chromedp failover for ebay", slog.String("URL", url))
 	ctx, cancel := NewChromedpContext(90 * time.Second)
 
 	var first []byte
 	var second []byte
-	var items []types.EbayListing
+
+	type EbayItem struct {
+		Title        string
+		Condition    string
+		URL          string
+		Price        int
+		AcceptsOffer bool
+		IsBid        bool
+		Bids         int
+		EndTimeText  string
+	}
+
+	var items []*EbayItem
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
 		StealthActions(),
@@ -166,76 +297,149 @@ func EbayFailover(url string, desiredPrice int, Name string, alternateNames []st
 		chromedp.FullScreenshot(&second, 70),
 		chromedp.Evaluate(`
 		Array.from(document.querySelectorAll('ul.srp-results > li')).map(e => {
-				const rows = e.querySelectorAll('div.s-card__attribute-row');
-				let basePrice = 0;
-				let shippingCost = 0;
-				let AcceptsOffer = false
-				
-				// Format price function (converted from Go)
-				const formatPrice = (priceStr) => {
-						if (!priceStr) return 0;
-						let ret = priceStr.replace(/\$/g, '');
-						ret = ret.replace(/,/g, '');
-						ret = ret.trim();
-						ret = ret.split('.')[0];
-						return parseInt(ret) || 0;
-				};
-				
-				for (let i = 0; i < Math.min(3, rows.length); i++) {
-						if (i === 0) {
-								basePrice = formatPrice(rows[i].innerText);
-						}
-						if (i === 1 && rows[i].innerText.includes('or Best Offer')) {
+			const rows = e.querySelectorAll('div.s-card__attribute-row');
+			let basePrice = 0;
+			let shippingCost = 0;
+			let AcceptsOffer = false;
+			let isBid = false;
+			let bids = 0;
+			let endTimeText = '';
+			
+			const formatPrice = (priceStr) => {
+					if (!priceStr) return 0;
+					let ret = priceStr.replace(/\$/g, '');
+					ret = ret.replace(/,/g, '');
+					ret = ret.trim();
+					ret = ret.split('.')[0];
+					return parseInt(ret) || 0;
+			};
+			
+			if (rows.length > 1 && rows[1].innerText.includes('bids')) {
+					isBid = true;
+			}
+			
+			for (let i = 0; i < Math.min(3, rows.length); i++) {
+					if (i === 0) {
+							basePrice = formatPrice(rows[i].innerText);
+					}
+					if (i === 1) {
+							if (isBid) {
+								endTimeText = rows[i].innerText;  // Store raw text
+							} else if (rows[i].innerText.includes('or Best Offer')) {
 								AcceptsOffer = true;
-						}
-						if (i === 2) {
-								if (rows[i].innerText.includes('Free delivery')) {
-										shippingCost = 0;
-								} else {
-										shippingCost = formatPrice(rows[i].innerText);
-								}
-						}
-				}
-				
-				return {
-						Title: e.querySelector('.s-card__title span.primary')?.innerText || '',
-						Condition: e.querySelector('div.s-card__subtitle')?.innerText || '',
-						URL: e.querySelector('a.s-card__link')?.href || '',
-						AcceptsOffer: AcceptsOffer,
-						Price: shippingCost + basePrice
-				};
-		}).filter(item => item !== null)
-		`, &items),
+							}
+					}
+					if (i === 2) {
+							if (rows[i].innerText.includes('Free delivery')) {
+									shippingCost = 0;
+							} else {
+									shippingCost = formatPrice(rows[i].innerText);
+							}
+					}
+			}
+			
+			return {
+					Title: e.querySelector('.s-card__title span.primary')?.innerText || '',
+					Condition: e.querySelector('div.s-card__subtitle')?.innerText || '',
+					URL: e.querySelector('a.s-card__link')?.href || '',
+					AcceptsOffer: AcceptsOffer,
+					Price: shippingCost + basePrice,
+					IsBid: isBid,
+					Bids: bids,
+					EndTimeText: endTimeText
+			};
+	}).filter(item => item !== null)		`, &items),
 	)
 	cancel()
-	var retArr []*types.EbayListing
+	var retListingArr []*types.EbayListing
+	var retBidArr []*types.EbayBids
 
 	if err != nil {
 		fileErr1 := os.WriteFile("ebayFirst.png", first, 0o644)
 		fileErr2 := os.WriteFile("ebaySecond.png", second, 0o644)
 		slog.Error("Error in ebay failover", slog.Any("error value", err),
 			slog.Any("file error 1", fileErr1), slog.Any("file error 2", fileErr2))
-		return retArr, errors.Join(err, errors.New("Problem in Ebay chromeDP Failover"))
+		return retListingArr, retBidArr, errors.Join(err, errors.New("Problem in Ebay chromeDP Failover"))
 	} else if len(items) == 0 {
-		return retArr, errors.New("no items returned from Ebay chromeDP, check screenshots for sanity check")
+		return retListingArr, retBidArr, errors.New("no items returned from Ebay chromeDP, check screenshots for sanity check")
 	}
 	slog.Info("Ebay Failover returned Items, its fine for now")
-	// <------------------ sanitize the list ------------>
-	for i := range items {
-		if titleCorrectnessCheck(items[i].Title, append(alternateNames, Name)) &&
-			items[i].Price != 0 &&
-			items[i].Price < desiredPrice &&
-			items[i].Price >= int(float64(desiredPrice)*float64(0.25)) {
 
-			items[i].ItemName = Name
-			items[i].URL = strings.Split(items[i].URL, "?_skw")[0]
-			items[i].Price = int(float64(items[i].Price) * TaxRate)
-			items[i].Date = crawlDate
-			items[i].Duration = 0
-			retArr = append(retArr, &items[i])
+	// Sanitize the list
+	for i := range items {
+		if !titleCorrectnessCheck(items[i].Title, append(alternateNames, Name)) {
+			continue
+		}
+
+		if items[i].Price == 0 {
+			continue
+		}
+
+		if items[i].Price >= desiredPrice || items[i].Price <= int(float64(desiredPrice)*float64(0.25)) {
+			continue
+		}
+
+		if items[i].IsBid {
+			var bids int
+			var endTime time.Time
+			items[i].EndTimeText = strings.ReplaceAll(items[i].EndTimeText, " \nTime left\n", "")
+			bidInfo := strings.Split(items[i].EndTimeText, "·")
+			if len(bidInfo) >= 2 {
+				bidStr := strings.Split(bidInfo[0], " ")[0]
+				bids, _ = strconv.Atoi(bidStr)
+
+				timeLeftStr := strings.Split(bidInfo[1], "left")
+				if len(timeLeftStr) > 0 {
+					if strings.Contains(timeLeftStr[0], "d") {
+						// 2d 16h left
+						timeLeftStr = strings.Split(timeLeftStr[0], " ")
+						day, _ := strconv.Atoi(strings.Split(timeLeftStr[0], "d")[0])
+						hour, _ := strconv.Atoi(strings.Split(timeLeftStr[1], "h")[0])
+						endTime = time.Now().Add(
+							time.Duration(day)*time.Hour*24 +
+								time.Duration(hour)*time.Hour,
+						)
+					} else {
+						timeLeftStr = strings.Split(timeLeftStr[0], " ")
+						hour, _ := strconv.Atoi(strings.Split(timeLeftStr[0], "h")[0])
+						minute, _ := strconv.Atoi(strings.Split(timeLeftStr[1], "m")[0])
+						endTime = time.Now().Add(
+							time.Duration(hour)*time.Hour +
+								time.Duration(minute)*time.Minute,
+						)
+					}
+				}
+			} // Handle bid listing
+			if time.Until(endTime) > 24*time.Hour {
+				continue
+			}
+			bidListing := types.EbayBids{
+				ItemName:  Name,
+				Price:     int(float64(items[i].Price) * TaxRate),
+				URL:       strings.Split(items[i].URL, "?_skw")[0],
+				Title:     items[i].Title,
+				Condition: items[i].Condition,
+				EndDate:   endTime,
+				Bids:      bids,
+			}
+			retBidArr = append(retBidArr, &bidListing)
+		} else {
+			// Handle normal listing
+			listing := types.EbayListing{
+				ItemName:      Name,
+				Price:         int(float64(items[i].Price) * TaxRate),
+				URL:           strings.Split(items[i].URL, "?_skw")[0],
+				Title:         items[i].Title,
+				Condition:     items[i].Condition,
+				AcceptsOffers: items[i].AcceptsOffer,
+				Date:          crawlDate,
+				Duration:      0,
+			}
+			retListingArr = append(retListingArr, &listing)
 		}
 	}
-	return retArr, err
+
+	return retListingArr, retBidArr, err
 }
 
 var excludeRegexes []*regexp2.Regexp

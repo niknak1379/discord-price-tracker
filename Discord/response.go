@@ -305,6 +305,51 @@ func NewEbayListingAlert(newListing *types.EbayListing,
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
 
+func NewBidAlert(newListing *types.EbayBids,
+	ChannelID string, aggregate *database.AggregateReport,
+) {
+	color := pink
+	if newListing.Price < aggregate.AveragePrice {
+		color = green
+	}
+	fields := formatBidField(newListing, false)
+	em := discordgo.MessageEmbed{
+		Title:  "New Bid Found For " + newListing.ItemName,
+		Color:  color,
+		URL:    newListing.URL,
+		Fields: fields,
+	}
+	Discord.ChannelMessageSendEmbed(ChannelID, &em)
+}
+
+func BidPriceChangeAlert(newListing *types.EbayBids,
+	oldListing *types.EbayBids, ChannelID string, aggregate *database.AggregateReport,
+) {
+	var colorCode int
+	if oldListing.Price < newListing.Price {
+		if newListing.Price > aggregate.AveragePrice {
+			colorCode = extremeRed // price higher and higher than average
+		} else {
+			colorCode = aqua // price higher but lower than average
+		}
+	} else {
+		if newListing.Price > aggregate.AveragePrice {
+			colorCode = orange // price lowered but bigger than average
+		} else {
+			colorCode = razerGreen // price lowered and lower than average
+		}
+	}
+	newFields := formatBidField(newListing, false)
+	oldFields := formatBidField(oldListing, true)
+	em := discordgo.MessageEmbed{
+		Title:  "Second Hand Listing Price Change For " + newListing.ItemName,
+		Color:  colorCode,
+		URL:    newListing.URL,
+		Fields: append(oldFields, newFields...),
+	}
+	Discord.ChannelMessageSendEmbed(ChannelID, &em)
+}
+
 // for functions that will take too long(more than the 15 min resposne time
 // required)
 func customAcknowledge(discord *discordgo.Session, i *discordgo.InteractionCreate) error {

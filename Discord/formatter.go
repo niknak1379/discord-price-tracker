@@ -188,8 +188,9 @@ func formatBidField(Listing *types.EbayBids, priceChange bool) []*discordgo.Mess
 		Inline: false,
 	}
 	EndDate := discordgo.MessageEmbedField{
-		Name:   "End Date",
-		Value:  Listing.EndDate.Format("2006-01-02 15:04:05"),
+		Name: "End Date",
+		Value: Listing.EndDate.Weekday().String() +
+			" " + Listing.EndDate.Format("15:04:05"),
 		Inline: false,
 	}
 	conditionField := discordgo.MessageEmbedField{

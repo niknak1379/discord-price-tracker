@@ -428,11 +428,8 @@ func GetEbayBids(itemName string, ChannelID string) ([]*types.EbayBids, error) {
 	}
 	var res Item
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
-	opts := options.FindOne().SetProjection(bson.D{{Key: "EbayListings", Value: 1}})
+	opts := options.FindOne().SetProjection(bson.D{{Key: "EbayBids", Value: 1}})
 	err = Table.FindOne(ctx, filter, opts).Decode(&res)
-	if err != nil {
-		return res.EbayBids, err
-	}
 	return res.EbayBids, err
 }
 

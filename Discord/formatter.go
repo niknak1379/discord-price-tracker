@@ -151,6 +151,9 @@ func setSecondHandField(ebayArr []*types.EbayListing) []*discordgo.MessageEmbedF
 
 func setBidFields(ebayArr []*types.EbayBids) []*discordgo.MessageEmbedField {
 	bidFields := []*discordgo.MessageEmbedField{}
+	if len(ebayArr) == 0 {
+		return bidFields
+	}
 	HeaderField := discordgo.MessageEmbedField{
 		Name: embedSeparatorFormatter("Ebay Bids", 44),
 	}

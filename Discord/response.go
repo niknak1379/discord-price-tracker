@@ -20,6 +20,7 @@ var (
 	red        = 10038562 // red
 	aqua       = 1752220  // aqua
 	darkGold   = 12745742 // dark gold
+	blue       = 3447003
 	yellow     = 16776960 // yellow
 	extremeRed = 16711680 // very red
 	pink       = 15277667 // pink
@@ -308,9 +309,9 @@ func NewEbayListingAlert(newListing *types.EbayListing,
 func NewBidAlert(newListing *types.EbayBids,
 	ChannelID string, aggregate *database.AggregateReport,
 ) {
-	color := pink
+	color := darkGold
 	if newListing.Price < aggregate.AveragePrice {
-		color = green
+		color = blue
 	}
 	fields := formatBidField(newListing, false)
 	em := discordgo.MessageEmbed{
@@ -328,9 +329,9 @@ func BidPriceChangeAlert(newListing *types.EbayBids,
 	var colorCode int
 	if oldListing.Price < newListing.Price {
 		if newListing.Price > aggregate.AveragePrice {
-			colorCode = extremeRed // price higher and higher than average
+			colorCode = darkGold // price higher and higher than average
 		} else {
-			colorCode = aqua // price higher but lower than average
+			colorCode = blue // price higher but lower than average
 		}
 	} else {
 		if newListing.Price > aggregate.AveragePrice {

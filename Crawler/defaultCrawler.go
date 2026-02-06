@@ -90,11 +90,11 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 		if proxy {
 			slog.Warn("error in getting price in crawler, triggering no proxy crawl",
 				slog.Any("Error", err), slog.Any("PriceErr", priceErr))
-			return GetPrice(uri, querySelector, false)
+			return ChromeDPFailover(uri, querySelector, true)
 		} else {
 			slog.Warn("no proxy also failed, triggering chromeDPFailover crawl",
 				slog.Any("Error", err2), slog.Int("Price", res))
-			res, err2 = ChromeDPFailover(uri, querySelector, true)
+			res, err2 = ChromeDPFailover(uri, querySelector, false)
 			return int(float64(res) * TaxRate), err2
 		}
 	}
@@ -221,7 +221,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 				slog.Any("priceText", priceText),
 				slog.Any("write err1", err2),
 				slog.Any("write err 2", err3))
-			return ChromeDPFailover(url, selector, false)
+			return GetPrice(url, selector, false)
 		} else {
 			slog.Error("no proxy ChromeDB also failed")
 			err2 := os.WriteFile("failoverSS.png", screenShot, 0o644)

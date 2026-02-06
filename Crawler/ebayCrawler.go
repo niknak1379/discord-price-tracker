@@ -86,7 +86,7 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 		isBid := false
 		e.ForEachWithBreak("div.s-card__attribute-row", func(i int, child *colly.HTMLElement) bool {
 			if i == 1 {
-				if strings.Contains(child.Text, "bids") {
+				if strings.Contains(child.Text, "bid") {
 					isBid = true
 				}
 				return false // Stop after index 1

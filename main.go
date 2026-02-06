@@ -61,7 +61,7 @@ func crawlerTest() {
 	//"li.price-current strong", true)
 	url := "https://www.ebay.com/sch/i.html?_nkw=Radeon+rx+9070+xt&LH_ItemCondition=3000%7C2030%7C2020%7C2010%7C2000%7C1500%7C1000_udlo%3D200&_udhi=801&_stpos=90274&_fcid=1&rt=nc&LH_All=1"
 	itemArr, bids, err := crawler.EbayFailover(url,
-		1000, "Radeon 9070 xt", []string{})
+		1000, "Radeon 9070 xt", []string{}, false)
 	// itemArr, bids, err := crawler.GetEbayListings(
 	// "radeon 9070 xt",
 	// 1000,

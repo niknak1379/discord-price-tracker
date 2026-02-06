@@ -242,13 +242,15 @@ func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Chann
 	if err != nil {
 		discord.CrawlErrorAlert(item.Name, "Second Hand Listings", err, Channel.ChannelID)
 	} else {
-		for i := range ebayBids {
-			oldBid, ok := BidsMap[ebayBids[i].URL]
-			if !ok {
-				discord.NewBidAlert(ebayBids[i], Channel.ChannelID, &item.SevenDayAggregate)
-			} else {
-				if oldBid.Price != ebayBids[i].Price {
-					discord.BidPriceChangeAlert(ebayBids[i], oldBid, Channel.ChannelID, &item.SevenDayAggregate)
+		if !item.SuppressNotifications {
+			for i := range ebayBids {
+				oldBid, ok := BidsMap[ebayBids[i].URL]
+				if !ok {
+					discord.NewBidAlert(ebayBids[i], Channel.ChannelID, &item.SevenDayAggregate)
+				} else {
+					if oldBid.Price != ebayBids[i].Price {
+						discord.BidPriceChangeAlert(ebayBids[i], oldBid, Channel.ChannelID, &item.SevenDayAggregate)
+					}
 				}
 			}
 		}

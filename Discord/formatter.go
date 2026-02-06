@@ -180,6 +180,7 @@ func formatBidField(Listing *types.EbayBids, priceChange bool) []*discordgo.Mess
 		Inline: false,
 	}
 	if priceChange {
+		Price.Name = "Old Price"
 		return append(retArr, &NameField, &Price)
 	}
 	BidNumber := discordgo.MessageEmbedField{

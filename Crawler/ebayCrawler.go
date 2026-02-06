@@ -148,8 +148,7 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 						}
 						endTime = time.Now().Add(
 							time.Duration(day)*time.Hour*24 +
-								time.Duration(hour)*time.Hour -
-								8*time.Hour,
+								time.Duration(hour)*time.Hour,
 						)
 
 					} else {
@@ -172,8 +171,7 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 						}
 						endTime = time.Now().Add(
 							time.Duration(hour)*time.Hour +
-								time.Duration(minute)*time.Minute -
-								8*time.Hour,
+								time.Duration(minute)*time.Minute,
 						)
 					}
 

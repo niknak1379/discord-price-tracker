@@ -13,9 +13,27 @@
   - to make an instance yourself, (maybe ill add it later)
   - everything else is handled tho, as long as it can make a connection
 
+1. <https://www.geoapify.com/get-started-with-maps-api/>
+2. <https://discord.com/developers/docs/quick-start/getting-started>
+3. <https://www.mongodb.com/products/platform/atlas-database>
+4. or self host your own MongoDB instance, has to be version 8.0 or higher
+5. keep in mind in atlas free you can only make 3 channels per mongodb deployment
+
 ## Setup Guide
 
-I'll make this later I'm too lazy right now
+For deploying the but, just copy and paste the API keys into the docker compose
+file and `docker compose pull && docker compose up`
+You can also just compile the Golang binary using `go build .`
+but the application needs a chrome runtime to function properly
+(this is included in the docker image)
+after installing the bot you have to call setup in the channels you want
+the bot to message.
+you will need your location code from a Facebook marketplace
+<https://www.facebook.com/marketplace/107711145919004/search?maxPrice=754&query=Asus%20XG27AQDMG&exact=false>
+this is the digits immediately following marketplace/ so in this case 107711145919004.
+You also need the city and state in Los Angeles, CA format and the max distance for
+how far the marketplace listings will be.
+For the rest just read the Available Functions section below
 
 ## Available Functions
 
@@ -44,7 +62,7 @@ I'll make this later I'm too lazy right now
        - Ebay
        - Default
 
-6. **get**: get all links for an item
+6. **get**: get item prices and details
    - Required Inputs:
      - Name: item name
 
@@ -108,7 +126,7 @@ I'll make this later I'm too lazy right now
     - Required Inputs:
       - months: how many months back for the aggregations
 
-18. **setup**: create new tracking table
+18. **setup**: setup new discord channel for the bot
     - Required Inputs:
       - location: marketplace location (format: City Name, State)
       - marketplace-location-code: location code the marketplace uses

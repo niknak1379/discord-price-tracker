@@ -217,8 +217,14 @@ func updatePrice(Name string, Tracker *database.TrackingInfo, oldLow database.Pr
 }
 
 func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Channel) {
-	oldEbayListings, _ := database.GetEbayListings(item.Name, Channel.ChannelID)
-	oldEbayBids, _ := database.GetEbayBids(item.Name, Channel.ChannelID)
+	oldEbayListings, err := database.GetEbayListings(item.Name, Channel.ChannelID)
+	oldEbayBids, err1 := database.GetEbayBids(item.Name, Channel.ChannelID)
+	if err != nil || err1 != nil {
+		slog.Error("error getting from db",
+			slog.Any("err", err),
+			slog.Any("err1", err1),
+		)
+	}
 	ListingsMap := map[string]*types.EbayListing{} // maps titles to price for checking if price exists or was updated
 	BidsMap := map[string]*types.EbayBids{}
 	for i := range oldEbayListings {

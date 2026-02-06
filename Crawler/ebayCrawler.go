@@ -111,29 +111,40 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 				case 1:
 					// index 1 is where auction end and how many bids data is held
 					// 34 bids · Time left2d 23h left
-					slog.Info("child text", slog.String("text", child.Text))
 					bidInfo := strings.Split(child.Text, "·")
-					slog.Info("bidInfo", slog.Any("text", bidInfo))
 					// 34
 					bidStr := strings.Split(bidInfo[0], " ")[0]
-					slog.Info("bidstr test", slog.String("text", bidStr))
-
 					bids, err = strconv.Atoi(bidStr)
 					if err != nil {
-						slog.Warn("Cant process bid number", slog.Any("error", err))
+						slog.Warn("Cant process bid number",
+							slog.Any("bidInfo", bidInfo),
+							slog.String("bidStr", bidStr),
+							slog.Any("error", err),
+						)
 					}
+					bidInfo[1] = strings.ReplaceAll(bidInfo[1], " \nTime left\n", "")
 					timeLeftStr := strings.Split(bidInfo[1], "left")
-					slog.Info("timeLeft", slog.Any("text", timeLeftStr))
 					if strings.Contains(timeLeftStr[0], "d") {
 						// 2d 16h left
 						timeLeftStr = strings.Split(timeLeftStr[0], " ")
 						day, err := strconv.Atoi(strings.Split(timeLeftStr[0], "d")[0])
 						if err != nil {
-							slog.Warn("Cant process bid Day", slog.Any("error", err))
+							slog.Warn("Cant process bid Day",
+
+								slog.Any("bidInfo", bidInfo),
+								slog.String("bidStr", bidStr),
+								slog.Any("timeLeftStr", timeLeftStr),
+								slog.Any("error", err),
+							)
 						}
 						hour, err := strconv.Atoi(strings.Split(timeLeftStr[1], "h")[0])
 						if err != nil {
-							slog.Warn("Cant process bid hour", slog.Any("error", err))
+							slog.Warn("Cant process bid hour",
+								slog.Any("bidInfo", bidInfo),
+								slog.String("bidStr", bidStr),
+								slog.Any("timeLeftStr", timeLeftStr),
+								slog.Any("error", err),
+							)
 						}
 						endTime = time.Now().Add(
 							time.Duration(day)*time.Hour*24 +
@@ -144,11 +155,19 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 						timeLeftStr = strings.Split(timeLeftStr[0], " ")
 						hour, err := strconv.Atoi(strings.Split(timeLeftStr[0], "h")[0])
 						if err != nil {
-							slog.Warn("Cant process bid hour", slog.Any("error", err))
+							slog.Warn("Cant process bid hour",
+								slog.Any("bidInfo", bidInfo),
+								slog.String("bidStr", bidStr),
+								slog.Any("timeLeftStr", timeLeftStr),
+								slog.Any("error", err))
 						}
 						minute, err := strconv.Atoi(strings.Split(timeLeftStr[1], "m")[0])
 						if err != nil {
-							slog.Warn("Cant process bid minute", slog.Any("error", err))
+							slog.Warn("Cant process bid min",
+								slog.Any("bidInfo", bidInfo),
+								slog.String("bidStr", bidStr),
+								slog.Any("timeLeftStr", timeLeftStr),
+								slog.Any("error", err))
 						}
 						endTime = time.Now().Add(
 							time.Duration(hour)*time.Hour +

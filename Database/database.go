@@ -443,6 +443,9 @@ func UpdateEbayBids(itemName string, bidArr []*types.EbayBids, ChannelID string)
 	slices.SortFunc(bidArr, func(a, b *types.EbayBids) int {
 		return b.Price - a.Price
 	})
+	slog.Info("returned Bids",
+		slog.Any("bids", bidArr),
+	)
 	update := bson.M{
 		"$set": bson.M{
 			"EbayBids": bidArr,

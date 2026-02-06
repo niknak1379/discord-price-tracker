@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -275,22 +276,28 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 	if err != nil || !visited {
 		if !Proxy {
 			slog.Warn("Colly failed even without proxy triggering chromeDP")
-			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, alternateNames)
+			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, alternateNames, false)
 			return listingArr, bidArr, err
 		}
 		slog.Warn("ebay failed, redoing request without proxy")
-		listingArr, bidArr, err = GetEbayListings(Name, desiredPrice, alternateNames, false)
+		listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, alternateNames, true)
 		return listingArr, bidArr, err
 	}
 	return listingArr, bidArr, err
 }
 
-func EbayFailover(url string, desiredPrice int, Name string, alternateNames []string) (
+func EbayFailover(url string, desiredPrice int, Name string, alternateNames []string, proxy bool) (
 	[]*types.EbayListing, []*types.EbayBids, error,
 ) {
 	crawlDate := time.Now()
 	slog.Info("chromedp failover for ebay", slog.String("URL", url))
-	ctx, cancel := NewChromedpContext(90 * time.Second)
+	var ctx context.Context
+	var cancel context.CancelFunc
+	if proxy {
+		ctx, cancel = NewChromedpContext(90*time.Second, chromedp.ProxyServer("http://gluetun:8888"))
+	} else {
+		ctx, cancel = NewChromedpContext(90 * time.Second)
+	}
 
 	var first []byte
 	var second []byte
@@ -374,11 +381,16 @@ func EbayFailover(url string, desiredPrice int, Name string, alternateNames []st
 	var retBidArr []*types.EbayBids
 
 	if err != nil {
-		fileErr1 := os.WriteFile("ebayFirst.png", first, 0o644)
-		fileErr2 := os.WriteFile("ebaySecond.png", second, 0o644)
-		slog.Error("Error in ebay failover", slog.Any("error value", err),
-			slog.Any("file error 1", fileErr1), slog.Any("file error 2", fileErr2))
-		return retListingArr, retBidArr, errors.Join(err, errors.New("Problem in Ebay chromeDP Failover"))
+		if proxy {
+			slog.Warn("Proxy ebay chrome failover failed, calling nonproxy default")
+			return GetEbayListings(Name, desiredPrice, alternateNames, false)
+		} else {
+			fileErr1 := os.WriteFile("ebayFirst.png", first, 0o644)
+			fileErr2 := os.WriteFile("ebaySecond.png", second, 0o644)
+			slog.Error("Error in ebay failover", slog.Any("error value", err),
+				slog.Any("file error 1", fileErr1), slog.Any("file error 2", fileErr2))
+			return retListingArr, retBidArr, errors.Join(err, errors.New("Problem in Ebay chromeDP Failover"))
+		}
 	} else if len(items) == 0 {
 		return retListingArr, retBidArr, errors.New("no items returned from Ebay chromeDP, check screenshots for sanity check")
 	}

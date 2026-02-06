@@ -88,11 +88,11 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 		var err2 error
 		os.WriteFile("collyHTML.html", []byte(collyHTML), 0o644)
 		if proxy {
-			slog.Warn("error in getting price in crawler, triggering no proxy crawl",
+			slog.Warn("error in getting price in crawler, triggering proxy chrome",
 				slog.Any("Error", err), slog.Any("PriceErr", priceErr))
 			return ChromeDPFailover(uri, querySelector, true)
 		} else {
-			slog.Warn("no proxy also failed, triggering chromeDPFailover crawl",
+			slog.Warn("no proxy default crawler failed, triggering chromeDPFailover no proxy",
 				slog.Any("Error", err2), slog.Int("Price", res))
 			res, err2 = ChromeDPFailover(uri, querySelector, false)
 			return int(float64(res) * TaxRate), err2
@@ -216,7 +216,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 			err2 := os.WriteFile("proxyFailoverSS.png", screenShot, 0o644)
 			err3 := os.WriteFile("proxyFailoverHTML.html", []byte(HTMLContent), 0o644)
 			time.Sleep(5 * time.Second)
-			slog.Warn("ChromDP proxy failed, triggering non proxy",
+			slog.Warn("ChromDP proxy failed, triggering no proxy default crawler",
 				slog.Any("error", err),
 				slog.Any("priceText", priceText),
 				slog.Any("write err1", err2),

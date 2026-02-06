@@ -283,7 +283,6 @@ func EbayListingPriceChangeAlert(newListing *types.EbayListing,
 	em := discordgo.MessageEmbed{
 		Title:  "Second Hand Listing Price Change For " + newListing.ItemName,
 		Color:  colorCode,
-		URL:    newListing.URL,
 		Fields: append(oldFields, newFields...),
 	}
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
@@ -300,7 +299,6 @@ func NewEbayListingAlert(newListing *types.EbayListing,
 	em := discordgo.MessageEmbed{
 		Title:  "New Second Hand Listing Found For " + newListing.ItemName,
 		Color:  color,
-		URL:    newListing.URL,
 		Fields: fields,
 	}
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
@@ -317,7 +315,6 @@ func NewBidAlert(newListing *types.EbayBids,
 	em := discordgo.MessageEmbed{
 		Title:  "New Bid Found For " + newListing.ItemName,
 		Color:  color,
-		URL:    newListing.URL,
 		Fields: fields,
 	}
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
@@ -345,7 +342,6 @@ func BidPriceChangeAlert(newListing *types.EbayBids,
 	em := discordgo.MessageEmbed{
 		Title:  "Second Hand Listing Price Change For " + newListing.ItemName,
 		Color:  colorCode,
-		URL:    newListing.URL,
 		Fields: append(oldFields, newFields...),
 	}
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)

@@ -122,7 +122,7 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 							slog.Any("error", err),
 						)
 					}
-					bidInfo[1] = strings.ReplaceAll(bidInfo[1], " \nTime left\n", "")
+					bidInfo[1] = strings.ReplaceAll(bidInfo[1], " Time left", "")
 					timeLeftStr := strings.Split(bidInfo[1], "left")
 					if strings.Contains(timeLeftStr[0], "d") {
 						// 2d 16h left

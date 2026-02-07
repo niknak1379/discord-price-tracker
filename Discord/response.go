@@ -313,7 +313,7 @@ func NewBidAlert(newListing *types.EbayBids,
 	}
 	fields := formatBidField(newListing, false)
 	em := discordgo.MessageEmbed{
-		Title:  "New Bid Found For " + newListing.ItemName,
+		Title:  "New Bid For " + newListing.ItemName,
 		Color:  color,
 		Fields: fields,
 	}
@@ -340,7 +340,7 @@ func BidPriceChangeAlert(newListing *types.EbayBids,
 	newFields := formatBidField(newListing, false)
 	oldFields := formatBidField(oldListing, true)
 	em := discordgo.MessageEmbed{
-		Title:  "Second Hand Listing Price Change For " + newListing.ItemName,
+		Title:  "Bid Update for " + newListing.ItemName,
 		Color:  colorCode,
 		Fields: append(oldFields, newFields...),
 	}

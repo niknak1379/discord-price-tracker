@@ -229,6 +229,25 @@ var (
 			},
 		},
 		{
+			Name:        "edit_facebook_crawl",
+			Description: "weather to crawl marketplace for this item or not",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "old_name",
+					Description:  "name of item to be changed",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:        "crawl",
+					Description: "bool",
+					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Required:    true,
+				},
+			},
+		},
+		{
 			Name:        "add_additional_name",
 			Description: "Add Additional Names for Tracking regex",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -473,7 +492,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				slog.Error("Error in Sending ChannelInfo", slog.Any("error", err))
 			}
 		}
-	}, "get_logs": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	},
+	"get_logs": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		customAcknowledge(discord, i)
 		CrawlErrorAlert("Logs", "User Requested",
 			errors.New(i.ApplicationCommandData().Options[0].StringValue()), i.ChannelID)
@@ -537,6 +557,29 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				content = err.Error()
 			} else {
 				content = fmt.Sprintf("Price Update Notification Timer: %d Hours", int(options[1].IntValue()))
+			}
+			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+				Content: content,
+			})
+		}
+	},
+	"edit_facebook_crawl": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoComplete(options[0].StringValue(), 0, i, discord)
+		default:
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
+			// add tracker to database
+			err := database.SetFacebookCrawl(options[0].StringValue(), options[1].BoolValue(), i.ChannelID)
+			content := ""
+			if err != nil {
+				content = err.Error()
+			} else {
+				content = fmt.Sprintf("Facebook crawl value: %t Hours", options[1].BoolValue())
 			}
 			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 				Content: content,

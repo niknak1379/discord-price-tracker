@@ -52,6 +52,7 @@ type Item struct {
 	ListingsHistory          []*types.EbayListing `bson:"ListingsHistory"`
 	SevenDayAggregate        AggregateReport      `bson:"SevenDayAggregate"`
 	SuppressNotifications    bool                 `bson:"SuppressNotifications"`
+	FacebookCrawl            bool                 `bson:"FacebookCrawl"`
 }
 
 var (
@@ -82,7 +83,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 		append([]string{}, itemName),
 		p.Price, Channel.Lat, Channel.Long,
 		Channel.Distance, Type,
-		Channel.LocationCode,
+		Channel.LocationCode, false,
 	)
 	slices.SortFunc(ebayListings, func(a, b *types.EbayListing) int {
 		return b.Price - a.Price
@@ -103,6 +104,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 		ListingsHistory:          ebayListings,
 		EbayBids:                 bids,
 		SuppressNotifications:    false,
+		FacebookCrawl:            false,
 	}
 	_, err = Table.InsertOne(ctx, i)
 	if err != nil {
@@ -162,6 +164,21 @@ func SetDesiredPrice(Name, ChannelID string, price int) error {
 		)
 	}
 	return err
+}
+
+func SetFacebookCrawl(Name string, Crawl bool, ChannelID string) error {
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		slog.Error("Could not load channel from db", slog.Any("Error", err))
+		return err
+	}
+	update := bson.M{
+		"$set": bson.M{
+			"FacebookCrawl": Crawl,
+		},
+	}
+	res := Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update)
+	return res.Err()
 }
 
 func EditTimer(Name string, NewTimer int, ChannelID string) error {

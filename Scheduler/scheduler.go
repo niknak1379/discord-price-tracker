@@ -237,7 +237,7 @@ func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Chann
 		append(item.AlternateTrackingQueries, item.Name),
 		item.CurrentLowestPrice.Price,
 		Channel.Lat, Channel.Long, Channel.Distance,
-		item.Type, Channel.LocationCode,
+		item.Type, Channel.LocationCode, item.FacebookCrawl,
 	)
 	if err != nil {
 		discord.CrawlErrorAlert(item.Name, "Second Hand Listings", err, Channel.ChannelID)

@@ -22,21 +22,23 @@ import (
 
 // I cant refractor this to be like that since it causes an import cycle
 func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong float64,
-	maxDistance int, itemType string, LocationCode string,
+	maxDistance int, itemType string, LocationCode string, facebookCrawl bool,
 ) ([]*types.EbayListing, []*types.EbayBids, error) {
 	retListingArr := []*types.EbayListing{}
 	retBidArr := []*types.EbayBids{}
 	var err error
 	for _, Name := range Names {
 
-		var depop []*types.EbayListing
-		var err3 error
+		var depop, fb []*types.EbayListing
+		var err3, err2 error
 		if itemType == "Clothes" {
 			Price = Price / 2
 			depop, err3 = CrawlDepop(Name, Price, Names)
 		}
-		fb, err2 := MarketPlaceCrawl(Name, Price, homeLat, homeLong,
-			maxDistance, LocationCode, true, Names)
+		if facebookCrawl {
+			fb, err2 = MarketPlaceCrawl(Name, Price, homeLat, homeLong,
+				maxDistance, LocationCode, true, Names)
+		}
 		ebay, bids, err4 := GetEbayListings(Name, Price, Names, true)
 
 		if err != nil || err2 != nil || err3 != nil {

@@ -407,7 +407,8 @@ func EbayFailover(url string, desiredPrice int, Name string, alternateNames []st
 
 	if err != nil {
 		if proxy {
-			slog.Warn("Proxy ebay chrome failover failed, calling nonproxy default")
+			slog.Warn("Proxy ebay chrome failover failed, calling nonproxy default",
+				slog.Any("error", err))
 			return GetEbayListings(Name, desiredPrice, alternateNames, false)
 		} else {
 			fileErr1 := os.WriteFile("ebayFirst.png", first, 0o644)

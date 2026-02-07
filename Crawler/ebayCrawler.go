@@ -152,6 +152,31 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 								time.Duration(hour)*time.Hour,
 						)
 
+					} else if strings.Contains(timeLeftStr[0], "s") {
+						timeLeftStr = strings.Split(timeLeftStr[0], " ")
+						minute, err := strconv.Atoi(strings.Split(timeLeftStr[0], "m")[0])
+						if err != nil {
+							slog.Warn("Cant process bid Minute",
+
+								slog.Any("bidInfo", bidInfo),
+								slog.String("bidStr", bidStr),
+								slog.Any("timeLeftStr", timeLeftStr),
+								slog.Any("error", err),
+							)
+						}
+						second, err := strconv.Atoi(strings.Split(timeLeftStr[1], "s")[0])
+						if err != nil {
+							slog.Warn("Cant process bid second",
+								slog.Any("bidInfo", bidInfo),
+								slog.String("bidStr", bidStr),
+								slog.Any("timeLeftStr", timeLeftStr),
+								slog.Any("error", err),
+							)
+						}
+						endTime = time.Now().Add(
+							time.Duration(minute)*time.Minute +
+								time.Duration(second)*time.Second,
+						)
 					} else {
 						timeLeftStr = strings.Split(timeLeftStr[0], " ")
 						hour, err := strconv.Atoi(strings.Split(timeLeftStr[0], "h")[0])
@@ -429,6 +454,15 @@ func EbayFailover(url string, desiredPrice int, Name string, alternateNames []st
 						endTime = time.Now().Add(
 							time.Duration(day)*time.Hour*24 +
 								time.Duration(hour)*time.Hour,
+						)
+					} else if strings.Contains(timeLeftStr[0], "s") {
+						// 2d 16h left
+						timeLeftStr = strings.Split(timeLeftStr[0], " ")
+						minute, _ := strconv.Atoi(strings.Split(timeLeftStr[0], "m")[0])
+						second, _ := strconv.Atoi(strings.Split(timeLeftStr[1], "s")[0])
+						endTime = time.Now().Add(
+							time.Duration(minute)*time.Minute +
+								time.Duration(second)*time.Second,
 						)
 					} else {
 						timeLeftStr = strings.Split(timeLeftStr[0], " ")

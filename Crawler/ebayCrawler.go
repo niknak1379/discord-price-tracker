@@ -276,7 +276,7 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 					slog.Int("baseprice", basePrice), slog.String("URL", link))
 				return
 			} else if basePrice+shippingCost >= desiredPrice ||
-				basePrice+shippingCost <= int(float64(desiredPrice)*float64(0.25)) {
+				basePrice <= int(float64(desiredPrice)*float64(0.25)) {
 				slog.Info("price too high skipping title", slog.String("Title", title))
 				return
 			}

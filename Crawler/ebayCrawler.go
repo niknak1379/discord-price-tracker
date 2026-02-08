@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -561,11 +560,23 @@ func titleCorrectnessCheck(listingTitle string, itemNames []string) bool {
 outerloop:
 	for _, itemName := range itemNames {
 		words := strings.Fields(strings.ToLower(itemName))
+		// for _, word := range words {
+		// 	if strings.ContainsAny(word, "./-,\"'()[]{}") {
+		// 		if !strings.Contains(listingTitle, word) {
+		// 			continue outerloop
+		// 		}
+		// 	} else {
+		// 		// Use word boundaries for normal words
+		// 		pattern := `\b` + regexp.QuoteMeta(word) + `\b`
+		// 		matched, _ := regexp.MatchString(pattern, listingTitle)
+		// 		if !matched {
+		// 			continue outerloop
+		// 		}
+		// 	}
+		// }
 		for _, word := range words {
-			pattern := `\b` + regexp.QuoteMeta(word) + `\b`
-			matched, _ := regexp.MatchString(pattern, listingTitle)
-			if !matched {
-				continue outerloop // Word not found
+			if !strings.Contains(listingTitle, word) {
+				continue outerloop
 			}
 		}
 		atLeastOneMatched = true

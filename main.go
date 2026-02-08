@@ -1,10 +1,17 @@
 package main
 
 import (
+	"context"
 	"log/slog"
+	"os"
+	"os/signal"
+	"sync"
 
 	crawler "priceTracker/Crawler"
+	database "priceTracker/Database"
+	discord "priceTracker/Discord"
 	logger "priceTracker/Logger"
+	scheduler "priceTracker/Scheduler"
 
 	"github.com/joho/godotenv"
 )
@@ -14,25 +21,25 @@ func main() {
 	godotenv.Load()
 	// amazonTest()
 	// BestBuyTest()
-	crawlerTest()
-	// discord.BotToken = os.Getenv("PUBLIC_KEY")
-	// ctx, cancel := context.WithCancel(context.Background())
-	// database.InitDB(ctx)
-	// go scheduler.SetChannelScheduler(ctx)
-	// var wg sync.WaitGroup
-	// wg.Go(func() {
-	// 	discord.Run(ctx)
-	// })
-	//
-	// // make the program run unless sigINT is recieved
-	// stop := make(chan os.Signal, 1)
-	// signal.Notify(stop, os.Interrupt)
-	// slog.Info("Graceful Shutdown setup")
-	//
-	// <-stop
-	// slog.Info("Shutdown")
-	// cancel()
-	// wg.Wait()
+	// crawlerTest()
+	discord.BotToken = os.Getenv("PUBLIC_KEY")
+	ctx, cancel := context.WithCancel(context.Background())
+	database.InitDB(ctx)
+	go scheduler.SetChannelScheduler(ctx)
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		discord.Run(ctx)
+	})
+
+	// make the program run unless sigINT is recieved
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	slog.Info("Graceful Shutdown setup")
+
+	<-stop
+	slog.Info("Shutdown")
+	cancel()
+	wg.Wait()
 }
 
 func amazonTest() {

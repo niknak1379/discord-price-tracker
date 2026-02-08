@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -26,7 +27,7 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 ) ([]*types.EbayListing, []*types.EbayBids, error) {
 	retListingArr := []*types.EbayListing{}
 	retBidArr := []*types.EbayBids{}
-	initTitleRegex(Names)
+	normal, special := initTitleRegex(Names)
 	var err error
 	for _, Name := range Names {
 
@@ -34,13 +35,14 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 		var err3, err2 error
 		if itemType == "Clothes" {
 			Price = Price / 2
-			depop, err3 = CrawlDepop(Name, Price, Names)
+			depop, err3 = CrawlDepop(Name, Price, normal, special)
 		}
 		if facebookCrawl {
 			fb, err2 = MarketPlaceCrawl(Name, Price, homeLat, homeLong,
-				maxDistance, LocationCode, true, Names)
+				maxDistance, LocationCode, true, normal, special)
 		}
-		ebay, bids, err4 := GetEbayListings(Name, Price, Names, true)
+		ebay, bids, err4 := GetEbayListings(Name, Price, true,
+			normal, special)
 
 		if err != nil || err2 != nil || err3 != nil {
 			slog.Error("errors from getting second hand listing",
@@ -85,7 +87,9 @@ func FacebookURLGenerator(Name string, Price int, LocationCode string) string {
 
 // JS loaded cannot use colly for this
 func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
-	maxDistance int, LocationCode string, proxy bool, alternateNames []string,
+	maxDistance int, LocationCode string, proxy bool,
+	allRegexPatterns [][]*regexp.Regexp,
+	allSpecialWords [][]string,
 ) ([]*types.EbayListing, error) {
 	crawlDate := time.Now()
 	url := FacebookURLGenerator(Name, desiredPrice, LocationCode)
@@ -140,7 +144,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 				slog.Any("write err 2", fileErr2),
 				slog.Any("write err 3", fileErr3),
 			)
-			return MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode, false, alternateNames)
+			return MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode, false, allRegexPatterns, allSpecialWords)
 		} else {
 			fileErr1 := os.WriteFile("facebookFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("facebookSecond.png", second, 0o644)
@@ -156,7 +160,8 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	}
 	// <------------------ sanitize the list ------------>
 	for i := range items {
-		if titleCorrectnessCheck(items[i].Title) && items[i].Price != 0 &&
+		if titleCorrectnessCheck(items[i].Title, allRegexPatterns, allSpecialWords) &&
+			items[i].Price != 0 &&
 			items[i].Price < desiredPrice &&
 			items[i].Price >= int(float64(desiredPrice)*float64(0.25)) {
 			distance, distStr, err := ValidateDistance(items[i].Condition, homeLat,

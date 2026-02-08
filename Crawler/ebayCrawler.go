@@ -60,7 +60,9 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 // returns a map of urls and prices + shipping cost
 // it returns an error on items that are local pickup only
 // since they dont have a shipping fee div
-func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Proxy bool,
+func GetEbayListings(Name string, desiredPrice int, Proxy bool,
+	allRegexPatterns [][]*regexp.Regexp,
+	allSpecialWords [][]string,
 ) ([]*types.EbayListing, []*types.EbayBids, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
 
@@ -78,7 +80,7 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 		title := e.ChildText(".s-card__title span.primary")
 
 		// check to see if listing is viable
-		if !titleCorrectnessCheck(title) {
+		if !titleCorrectnessCheck(title, allRegexPatterns, allSpecialWords) {
 			slog.Info("skipping title criteria not met", slog.String("Title", title))
 			return
 		}
@@ -301,17 +303,20 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 	if err != nil || !visited {
 		if !Proxy {
 			slog.Warn("Colly failed even without proxy triggering chromeDP without proxy")
-			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, alternateNames, false)
+			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, false, allRegexPatterns, allSpecialWords)
 			return listingArr, bidArr, err
 		}
 		slog.Warn("ebay failed, redoing request with chromedp with proxy")
-		listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, alternateNames, true)
+		listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, true, allRegexPatterns, allSpecialWords)
 		return listingArr, bidArr, err
 	}
 	return listingArr, bidArr, err
 }
 
-func EbayFailover(url string, desiredPrice int, Name string, alternateNames []string, proxy bool) (
+func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
+	allRegexPatterns [][]*regexp.Regexp,
+	allSpecialWords [][]string,
+) (
 	[]*types.EbayListing, []*types.EbayBids, error,
 ) {
 	crawlDate := time.Now()
@@ -409,7 +414,7 @@ func EbayFailover(url string, desiredPrice int, Name string, alternateNames []st
 		if proxy {
 			slog.Warn("Proxy ebay chrome failover failed, calling nonproxy default",
 				slog.Any("error", err))
-			return GetEbayListings(Name, desiredPrice, alternateNames, false)
+			return GetEbayListings(Name, desiredPrice, false, allRegexPatterns, allSpecialWords)
 		} else {
 			fileErr1 := os.WriteFile("ebayFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("ebaySecond.png", second, 0o644)
@@ -424,7 +429,7 @@ func EbayFailover(url string, desiredPrice int, Name string, alternateNames []st
 
 	// Sanitize the list
 	for i := range items {
-		if !titleCorrectnessCheck(items[i].Title) {
+		if !titleCorrectnessCheck(items[i].Title, allRegexPatterns, allSpecialWords) {
 			continue
 		}
 
@@ -545,17 +550,14 @@ func init() {
 	}
 }
 
-var (
-	allRegexPatterns [][]*regexp.Regexp
-	allSpecialWords  [][]string
-)
-
 func initTitleRegex(itemNames []string) ([][]*regexp.Regexp, [][]string) {
-	slog.Info("initializing regex queries for",
-		slog.Any("name arr", itemNames))
-	allRegexPatterns = [][]*regexp.Regexp{}
-	allSpecialWords = [][]string{}
+	var (
+		allRegexPatterns [][]*regexp.Regexp
+		allSpecialWords  [][]string
+	)
 	for _, itemName := range itemNames {
+		slog.Info("initializing regex queries for",
+			slog.Any("name arr", itemNames))
 		words := strings.Fields(strings.ToLower(itemName))
 		var regexPatterns []*regexp.Regexp
 		var specialWords []string
@@ -596,7 +598,10 @@ func initTitleRegex(itemNames []string) ([][]*regexp.Regexp, [][]string) {
 // it is a lot slower tho, but since its running longterm
 // it doesnt really matter i think
 
-func titleCorrectnessCheck(listingTitle string) bool {
+func titleCorrectnessCheck(listingTitle string,
+	allRegexPatterns [][]*regexp.Regexp,
+	allSpecialWords [][]string,
+) bool {
 	listingTitle = strings.ToLower(listingTitle)
 
 	atLeastOneMatched := false

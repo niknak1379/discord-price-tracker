@@ -63,13 +63,13 @@ func crawlerTest() {
 	// url := "https://www.ebay.com/sch/i.html?_nkw=sigma%20f%2F1.4%2030mm%20Sony&LH_ItemCondition=3000|2030|2020|2010|2000|1500|1000_udlo=104&rt=nc&_udhi=416&LH_ALL=1&_stpos=90274&_fcid=1"
 	// itemArr, bids, err := crawler.EbayFailover(url,
 	// 1000, "Radeon 9070 xt", []string{}, false)
-	itemArr, bids, err := crawler.GetEbayListings(
-		"sigma f/1.4 30mm sony",
-		1000,
-		[]string{},
-		false)
-	slog.Info("ebay test",
-		slog.Any("itemArr", itemArr),
-		slog.Any("bid arr", bids),
-		slog.Any("err", err))
+	// itemArr, bids, err := crawler.GetEbayListings(
+	// 	"sigma f/1.4 30mm sony",
+	// 	1000,
+	// 	[]string{},
+	// 	// 	false)
+	// 	slog.Info("ebay test",
+	// 		slog.Any("itemArr", itemArr),
+	// 		slog.Any("bid arr", bids),
+	// 		slog.Any("err", err))
 }

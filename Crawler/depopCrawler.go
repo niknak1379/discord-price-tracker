@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"net/url"
+	"regexp"
 	"time"
 
 	types "priceTracker/Types"
@@ -21,11 +22,14 @@ func depopURLGenerator(Name string, price int) string {
 	return base + Name + Price
 }
 
-func CrawlDepop(Name string, Price int, alternateNames []string) ([]*types.EbayListing, error) {
+func CrawlDepop(Name string,
+	Price int,
+	allRegexPatterns [][]*regexp.Regexp,
+	allSpecialWords [][]string,
+) ([]*types.EbayListing, error) {
 	url := depopURLGenerator(Name, Price)
 	c := initCrawler()
 
-	// initTitleRegex(append(alternateNames, Name))
 	crawlDate := time.Now()
 	retArr := []*types.EbayListing{}
 	visited := false
@@ -54,7 +58,7 @@ func CrawlDepop(Name string, Price int, alternateNames []string) ([]*types.EbayL
 
 		productCollector.OnHTML("p.styles_textWrapper__v3kxJ", func(pe *colly.HTMLElement) {
 			condition = pe.Text
-			if titleCorrectnessCheck(condition) {
+			if titleCorrectnessCheck(condition, allRegexPatterns, allSpecialWords) {
 				approved = true
 			}
 		})

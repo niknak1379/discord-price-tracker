@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -299,11 +300,11 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 	c.Wait()
 	if err != nil || !visited {
 		if !Proxy {
-			slog.Warn("Colly failed even without proxy triggering chromeDP")
+			slog.Warn("Colly failed even without proxy triggering chromeDP without proxy")
 			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, alternateNames, false)
 			return listingArr, bidArr, err
 		}
-		slog.Warn("ebay failed, redoing request without proxy")
+		slog.Warn("ebay failed, redoing request with chromedp with proxy")
 		listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, alternateNames, true)
 		return listingArr, bidArr, err
 	}
@@ -560,25 +561,29 @@ func titleCorrectnessCheck(listingTitle string, itemNames []string) bool {
 outerloop:
 	for _, itemName := range itemNames {
 		words := strings.Fields(strings.ToLower(itemName))
-		// for _, word := range words {
-		// 	if strings.ContainsAny(word, "./-,\"'()[]{}") {
-		// 		if !strings.Contains(listingTitle, word) {
-		// 			continue outerloop
-		// 		}
-		// 	} else {
-		// 		// Use word boundaries for normal words
-		// 		pattern := `\b` + regexp.QuoteMeta(word) + `\b`
-		// 		matched, _ := regexp.MatchString(pattern, listingTitle)
-		// 		if !matched {
-		// 			continue outerloop
-		// 		}
-		// 	}
-		// }
 		for _, word := range words {
-			if !strings.Contains(listingTitle, word) {
-				continue outerloop
+			if strings.ContainsAny(word, "./-,\"'()[]{}") {
+				if !strings.Contains(listingTitle, word) {
+					continue outerloop
+				}
+			} else {
+				// Use word boundaries for normal words
+				// i needed to use boundries and cant just use simple
+				// strings.contains bc otherwise it includes 321up with 321upx
+				// it is a lot slower tho, but since its running longterm
+				// it doesnt really matter i think
+				pattern := `\b` + regexp.QuoteMeta(word) + `\b`
+				matched, _ := regexp.MatchString(pattern, listingTitle)
+				if !matched {
+					continue outerloop
+				}
 			}
 		}
+		// for _, word := range words {
+		// 	if !strings.Contains(listingTitle, word) {
+		// 		continue outerloop
+		// 	}
+		// }
 		atLeastOneMatched = true
 		break
 	}

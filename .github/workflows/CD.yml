@@ -34,18 +34,19 @@ jobs:
           type=gha
           type=registry,ref=nikanostovan/price-tracker:latest
         cache-to: type=gha,mode=max
-    - name: Tailscale
-      uses: tailscale/github-action@v4
-      with:
-        oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT }}
-        oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
-        tags: tag:master
 
   deploy:
     runs-on: ubuntu-latest
     environment: .env
     needs: dockerize
     steps:
+      - name: Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:master
+
       - name: Checkout repository
         uses: actions/checkout@v5
 

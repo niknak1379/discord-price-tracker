@@ -25,6 +25,7 @@ func CrawlDepop(Name string, Price int, alternateNames []string) ([]*types.EbayL
 	url := depopURLGenerator(Name, Price)
 	c := initCrawler()
 
+	// initTitleRegex(append(alternateNames, Name))
 	crawlDate := time.Now()
 	retArr := []*types.EbayListing{}
 	visited := false
@@ -53,7 +54,7 @@ func CrawlDepop(Name string, Price int, alternateNames []string) ([]*types.EbayL
 
 		productCollector.OnHTML("p.styles_textWrapper__v3kxJ", func(pe *colly.HTMLElement) {
 			condition = pe.Text
-			if titleCorrectnessCheck(condition, append(alternateNames, Name)) {
+			if titleCorrectnessCheck(condition) {
 				approved = true
 			}
 		})

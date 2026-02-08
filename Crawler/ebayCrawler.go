@@ -78,7 +78,7 @@ func GetEbayListings(Name string, desiredPrice int, alternateNames []string, Pro
 		title := e.ChildText(".s-card__title span.primary")
 
 		// check to see if listing is viable
-		if !titleCorrectnessCheck(title, append(alternateNames, Name)) {
+		if !titleCorrectnessCheck(title) {
 			slog.Info("skipping title criteria not met", slog.String("Title", title))
 			return
 		}
@@ -424,7 +424,7 @@ func EbayFailover(url string, desiredPrice int, Name string, alternateNames []st
 
 	// Sanitize the list
 	for i := range items {
-		if !titleCorrectnessCheck(items[i].Title, append(alternateNames, Name)) {
+		if !titleCorrectnessCheck(items[i].Title) {
 			continue
 		}
 
@@ -545,48 +545,87 @@ func init() {
 	}
 }
 
-// checks the title to make sure the name is in the title and
-// no unwanted returned results by ebay
-func titleCorrectnessCheck(listingTitle string, itemNames []string) bool {
-	listingTitle = strings.ToLower(listingTitle)
-	replacer := strings.NewReplacer(
-		".", " ",
-		"'", " ",
-		"'", " ",
-	)
-	listingTitle = replacer.Replace(listingTitle)
+var (
+	allRegexPatterns [][]*regexp.Regexp
+	allSpecialWords  [][]string
+)
 
-	// Check all words from itemName arr are in listingTitle
-	atLeastOneMatched := false
-outerloop:
+func initTitleRegex(itemNames []string) ([][]*regexp.Regexp, [][]string) {
+	slog.Info("initializing regex queries for",
+		slog.Any("name arr", itemNames))
 	for _, itemName := range itemNames {
 		words := strings.Fields(strings.ToLower(itemName))
+		var regexPatterns []*regexp.Regexp
+		var specialWords []string
+
 		for _, word := range words {
 			if strings.ContainsAny(word, "./-,\"'()[]{}") {
-				if !strings.Contains(listingTitle, word) {
-					continue outerloop
-				}
+				// Has special characters - add to string array
+				specialWords = append(specialWords, word)
 			} else {
-				// Use word boundaries for normal words
-				// i needed to use boundries and cant just use simple
-				// strings.contains bc otherwise it includes 321up with 321upx
-				// it is a lot slower tho, but since its running longterm
-				// it doesnt really matter i think
-				pattern := `\b` + regexp.QuoteMeta(word) + `\b`
-				matched, _ := regexp.MatchString(pattern, listingTitle)
-				if !matched {
-					continue outerloop
-				}
+				// Normal word - compile regex with word boundaries
+				pattern := regexp.MustCompile(`\b` + regexp.QuoteMeta(word) + `\b`)
+				regexPatterns = append(regexPatterns, pattern)
 			}
 		}
-		// for _, word := range words {
-		// 	if !strings.Contains(listingTitle, word) {
-		// 		continue outerloop
-		// 	}
-		// }
+
+		allRegexPatterns = append(allRegexPatterns, regexPatterns)
+		allSpecialWords = append(allSpecialWords, specialWords)
+	}
+
+	return allRegexPatterns, allSpecialWords
+}
+
+// checks the title to make sure the name is in the title and
+// no unwanted returned results by ebay
+//
+// this one i added when i was making the depop stuff, dont remember why
+// replacer := strings.NewReplacer(
+// 	".", " ",
+// 	"'", " ",
+// 	"'", " ",
+// )
+// listingTitle = replacer.Replace(listingTitle)
+//
+//
+// Use word boundaries for normal words
+// i needed to use boundries and cant just use simple
+// strings.contains bc otherwise it includes 321up with 321upx
+// it is a lot slower tho, but since its running longterm
+// it doesnt really matter i think
+
+func titleCorrectnessCheck(listingTitle string) bool {
+	listingTitle = strings.ToLower(listingTitle)
+
+	atLeastOneMatched := false
+outerloop:
+	for i := range allRegexPatterns {
+		// Check regex patterns for this itemName
+		for _, pattern := range allRegexPatterns[i] {
+			if !pattern.MatchString(listingTitle) {
+				slog.Info("not matching keyword",
+					slog.String("title", listingTitle),
+					slog.String("pattern", pattern.String()),
+				)
+				continue outerloop
+			}
+		}
+
+		// Check special character words for this itemName
+		for _, word := range allSpecialWords[i] {
+			if !strings.Contains(listingTitle, word) {
+				slog.Info("not matching special char keyword",
+					slog.String("title", listingTitle),
+					slog.String("word missing", word),
+				)
+				continue outerloop
+			}
+		}
+
 		atLeastOneMatched = true
 		break
 	}
+
 	if !atLeastOneMatched {
 		return false
 	}
@@ -597,7 +636,6 @@ outerloop:
 		if err != nil {
 			continue
 		}
-
 		if match {
 			return false // Excluded keyword found
 		}

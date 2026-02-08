@@ -26,6 +26,7 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 ) ([]*types.EbayListing, []*types.EbayBids, error) {
 	retListingArr := []*types.EbayListing{}
 	retBidArr := []*types.EbayBids{}
+	initTitleRegex(Names)
 	var err error
 	for _, Name := range Names {
 
@@ -155,7 +156,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	}
 	// <------------------ sanitize the list ------------>
 	for i := range items {
-		if titleCorrectnessCheck(items[i].Title, append(alternateNames, Name)) && items[i].Price != 0 &&
+		if titleCorrectnessCheck(items[i].Title) && items[i].Price != 0 &&
 			items[i].Price < desiredPrice &&
 			items[i].Price >= int(float64(desiredPrice)*float64(0.25)) {
 			distance, distStr, err := ValidateDistance(items[i].Condition, homeLat,

@@ -1,17 +1,10 @@
 package main
 
 import (
-	"context"
 	"log/slog"
-	"os"
-	"os/signal"
-	"sync"
 
 	crawler "priceTracker/Crawler"
-	database "priceTracker/Database"
-	discord "priceTracker/Discord"
 	logger "priceTracker/Logger"
-	scheduler "priceTracker/Scheduler"
 
 	"github.com/joho/godotenv"
 )
@@ -21,25 +14,25 @@ func main() {
 	godotenv.Load()
 	// amazonTest()
 	// BestBuyTest()
-	// crawlerTest()
-	discord.BotToken = os.Getenv("PUBLIC_KEY")
-	ctx, cancel := context.WithCancel(context.Background())
-	database.InitDB(ctx)
-	go scheduler.SetChannelScheduler(ctx)
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		discord.Run(ctx)
-	})
-
-	// make the program run unless sigINT is recieved
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-	slog.Info("Graceful Shutdown setup")
-
-	<-stop
-	slog.Info("Shutdown")
-	cancel()
-	wg.Wait()
+	crawlerTest()
+	// discord.BotToken = os.Getenv("PUBLIC_KEY")
+	// ctx, cancel := context.WithCancel(context.Background())
+	// database.InitDB(ctx)
+	// go scheduler.SetChannelScheduler(ctx)
+	// var wg sync.WaitGroup
+	// wg.Go(func() {
+	// 	discord.Run(ctx)
+	// })
+	//
+	// // make the program run unless sigINT is recieved
+	// stop := make(chan os.Signal, 1)
+	// signal.Notify(stop, os.Interrupt)
+	// slog.Info("Graceful Shutdown setup")
+	//
+	// <-stop
+	// slog.Info("Shutdown")
+	// cancel()
+	// wg.Wait()
 }
 
 func amazonTest() {
@@ -59,14 +52,15 @@ func crawlerTest() {
 	//"span[class^='price_']", true)
 	//crawler.GetPrice("https://www.newegg.com/fractal-design-atx-mid-tower-meshify-3-steel-pc-case-white-fd-c-mes3a-04/p/N82E16811352227",
 	//"li.price-current strong", true)
-	url := "https://www.ebay.com/sch/i.html?_nkw=Radeon+rx+9070+xt&LH_ItemCondition=3000%7C2030%7C2020%7C2010%7C2000%7C1500%7C1000_udlo%3D200&_udhi=801&_stpos=90274&_fcid=1&rt=nc&LH_All=1"
-	itemArr, bids, err := crawler.EbayFailover(url,
-		1000, "Radeon 9070 xt", []string{}, false)
-	// itemArr, bids, err := crawler.GetEbayListings(
-	// "radeon 9070 xt",
-	// 1000,
-	// []string{},
-	// false)
+	// url := "https://www.ebay.com/sch/i.html?_nkw=Radeon+rx+9070+xt&LH_ItemCondition=3000%7C2030%7C2020%7C2010%7C2000%7C1500%7C1000_udlo%3D200&_udhi=801&_stpos=90274&_fcid=1&rt=nc&LH_All=1"
+	// url := "https://www.ebay.com/sch/i.html?_nkw=sigma%20f%2F1.4%2030mm%20Sony&LH_ItemCondition=3000|2030|2020|2010|2000|1500|1000_udlo=104&rt=nc&_udhi=416&LH_ALL=1&_stpos=90274&_fcid=1"
+	// itemArr, bids, err := crawler.EbayFailover(url,
+	// 1000, "Radeon 9070 xt", []string{}, false)
+	itemArr, bids, err := crawler.GetEbayListings(
+		"sigma f/1.4 30mm sony",
+		1000,
+		[]string{},
+		false)
 	slog.Info("ebay test",
 		slog.Any("itemArr", itemArr),
 		slog.Any("bid arr", bids),

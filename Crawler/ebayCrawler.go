@@ -553,6 +553,8 @@ var (
 func initTitleRegex(itemNames []string) ([][]*regexp.Regexp, [][]string) {
 	slog.Info("initializing regex queries for",
 		slog.Any("name arr", itemNames))
+	allRegexPatterns = [][]*regexp.Regexp{}
+	allSpecialWords = [][]string{}
 	for _, itemName := range itemNames {
 		words := strings.Fields(strings.ToLower(itemName))
 		var regexPatterns []*regexp.Regexp

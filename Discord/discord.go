@@ -579,7 +579,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			if err != nil {
 				content = err.Error()
 			} else {
-				content = fmt.Sprintf("Facebook crawl value: %t Hours", options[1].BoolValue())
+				content = fmt.Sprintf("Facebook crawl value: %t", options[1].BoolValue())
 			}
 			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 				Content: content,

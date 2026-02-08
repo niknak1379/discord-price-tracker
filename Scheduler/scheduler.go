@@ -210,7 +210,7 @@ func updatePrice(Name string, Tracker *database.TrackingInfo, oldLow database.Pr
 
 	// notify discord if price has changed more than %5
 	if !Suppress && oldLow.Price != newPrice &&
-		float64((oldLow.Price-newPrice)/oldLow.Price) > 0.05 {
+		math.Abs(float64(oldLow.Price-newPrice))/float64(oldLow.Price) > 0.05 {
 		discord.PriceChangeAlert(Name, newPrice, oldLow, Tracker.URI, ChannelID)
 	}
 	return p, err

@@ -537,7 +537,7 @@ func init() {
 		`water block`,
 		`waterblock`,
 		`\boem\b`,
-		`\bboard\b`,
+		`board`,
 		`\bdock\b`,
 	}
 

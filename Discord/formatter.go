@@ -93,6 +93,13 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 
 func setAlternateNamesFields(Item *database.Item) []*discordgo.MessageEmbedField {
 	Fields := []*discordgo.MessageEmbedField{}
+	// im also gonna set timer fields here too
+	timer := discordgo.MessageEmbedField{
+		Name:   embedSeparatorFormatter("Timer", 43),
+		Value:  strconv.Itoa(Item.Timer) + " h",
+		Inline: false,
+	}
+	Fields = append(Fields, &timer)
 	for _, Name := range Item.AlternateTrackingQueries {
 		field := discordgo.MessageEmbedField{
 			Name:   embedSeparatorFormatter("Alternative Name", 43),

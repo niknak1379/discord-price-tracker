@@ -193,5 +193,6 @@ func updateChannelLength(ChannelID string, Diff int) error {
 		return err
 	}
 	res := Table.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
+	ChannelMap[ChannelID].TotalItems = Diff + Len
 	return res.Err()
 }

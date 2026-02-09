@@ -29,12 +29,14 @@ func SetChannelScheduler(ctx context.Context) {
 
 	activeRoutines := make(map[string]context.CancelFunc) // Track running goroutines
 	itemMap := make(map[string]*database.Item)
-	for _, Channel := range database.ChannelMap {
-		itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
-		for _, item := range itemsArr {
-			updateSingleItem(item, Channel)
-		}
-	}
+	// for running it once immediately on deployment
+	//
+	// for _, Channel := range database.ChannelMap {
+	// 	itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
+	// 	for _, item := range itemsArr {
+	// 		updateSingleItem(item, Channel)
+	// 	}
+	// }
 	// Initial load for scheduler this runs after the timers hit tho not immediately
 	loadAndStartItems(ctx, activeRoutines, itemMap)
 

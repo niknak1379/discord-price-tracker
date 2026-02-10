@@ -178,10 +178,7 @@ func updateSingleItem(item *database.Item, Channel *database.Channel) {
 		r := rand.IntN(180)
 		time.Sleep(time.Duration(r) * time.Second)
 
-		// yesterdays lowest price
-		oldLow := item.CurrentLowestPrice
-
-		np, err := updatePrice(item.Name, t, oldLow, date, Channel.ChannelID, item.SuppressNotifications)
+		np, err := updatePrice(item.Name, t, date, Channel.ChannelID)
 		if currLow.Price > np.Price && err == nil {
 			currLow = np
 		}
@@ -191,13 +188,20 @@ func updateSingleItem(item *database.Item, Channel *database.Channel) {
 		currLow.Price = item.CurrentLowestPrice.Price
 	}
 
+	// notify discord if price has changed more than %5
+	if !item.SuppressNotifications &&
+		item.CurrentLowestPrice != currLow &&
+		math.Abs(float64(item.CurrentLowestPrice.Price-currLow.Price))/float64(item.CurrentLowestPrice.Price) > 0.05 {
+		discord.PriceChangeAlert(item.Name, currLow.Price,
+			item.CurrentLowestPrice, currLow.Url, Channel.ChannelID)
+	}
 	item.CurrentLowestPrice = currLow
 	database.UpdateLowestPrice(item.Name, &currLow, Channel.ChannelID)
 	handleSecondHandListingsUpdate(item, Channel)
 	database.UpdateAggregateReport(item.Name, Channel.ChannelID)
 }
 
-func updatePrice(Name string, Tracker *database.TrackingInfo, oldLow database.Price, date time.Time, ChannelID string, Suppress bool) (database.Price, error) {
+func updatePrice(Name string, Tracker *database.TrackingInfo, date time.Time, ChannelID string) (database.Price, error) {
 	newPrice, err := crawler.GetPrice(Tracker.URI, Tracker.HtmlQuery, true)
 	if err != nil && strings.Contains(Tracker.URI, "amazon") {
 		newPrice, err = crawler.GetPrice(Tracker.URI, backUpAmazonQuery, true)
@@ -210,11 +214,6 @@ func updatePrice(Name string, Tracker *database.TrackingInfo, oldLow database.Pr
 	}
 	p, _ := database.AddNewPrice(Name, Tracker.URI, newPrice, date, ChannelID)
 
-	// notify discord if price has changed more than %5
-	if !Suppress && oldLow.Price != newPrice &&
-		math.Abs(float64(oldLow.Price-newPrice))/float64(oldLow.Price) > 0.05 {
-		discord.PriceChangeAlert(Name, newPrice, oldLow, Tracker.URI, ChannelID)
-	}
 	return p, err
 }
 

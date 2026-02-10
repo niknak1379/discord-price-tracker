@@ -344,7 +344,7 @@ func BidPriceChangeAlert(newListing *types.EbayBids,
 	em := discordgo.MessageEmbed{
 		Title:  "Bid Update for " + newListing.ItemName,
 		Color:  colorCode,
-		Fields: append(oldFields, newFields...),
+		Fields: append(newFields, oldFields...),
 	}
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }

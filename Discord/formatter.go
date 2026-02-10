@@ -186,6 +186,11 @@ func formatBidField(Listing *types.EbayBids, priceChange bool) []*discordgo.Mess
 		Value:  "$ " + strconv.Itoa(Listing.Price),
 		Inline: false,
 	}
+	separatorField := discordgo.MessageEmbedField{
+		Name:   embedSeparatorFormatter("", 44),
+		Value:  "",
+		Inline: false,
+	}
 	if priceChange {
 		Price.Name = "Old Price"
 		return append(retArr, &Price)
@@ -211,7 +216,7 @@ func formatBidField(Listing *types.EbayBids, priceChange bool) []*discordgo.Mess
 		Value:  truncateString(Listing.URL, MaxFieldValueLen),
 		Inline: false,
 	}
-	return append(retArr, &NameField, &BidNumber, &EndDate, &conditionField, &urlField, &Price)
+	return append(retArr, &NameField, &BidNumber, &EndDate, &conditionField, &urlField, &Price, &separatorField)
 }
 
 // new listing is there so that it  doesnt return duplicate fields in discord.response

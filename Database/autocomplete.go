@@ -69,13 +69,25 @@ func FuzzyMatchName(Name string, ChannelID string) []string {
 // not really critical functionality i feel like i dont really
 // need to propogate the errors for this and the other autocomplete
 func AutoCompleteURL(Name string, ChannelID string) []string {
-	item, err := GetItem(Name, ChannelID)
+	item, err := GetItem(Name, ChannelID, "PriceHistory", "ListingsHistory", "EbayListings", "EbayBids")
 	res := []string{}
 	if err != nil {
 		return res
 	}
 	for _, tracker := range item.TrackingList {
 		res = append(res, tracker.URI)
+	}
+	return res
+}
+
+func AutoCompleteAlternateTrackingQueries(Name string, ChannelID string) []string {
+	item, err := GetItem(Name, ChannelID, "PriceHistory", "ListingsHistory", "EbayListings", "EbayBids")
+	res := []string{}
+	if err != nil {
+		return res
+	}
+	for _, query := range item.AlternateTrackingQueries {
+		res = append(res, query)
 	}
 	return res
 }

@@ -267,6 +267,26 @@ var (
 			},
 		},
 		{
+			Name:        "remove_alternative_name",
+			Description: "Remove Additional Names for Tracking regex",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "name",
+					Description:  "name of item to be changed",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:         "index",
+					Description:  "index of alternative name to remove",
+					Type:         discordgo.ApplicationCommandOptionInteger,
+					Required:     true,
+					Autocomplete: true,
+				},
+			},
+		},
+		{
 			Name:        "edit_tracking",
 			Description: "Edit a currently Existing Tracker",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -633,6 +653,45 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			})
 		}
 	},
+	"remove_alternative_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			switch {
+			case options[0].Focused:
+				autoComplete(options[0].StringValue(), 0, i, discord)
+			case options[1].Focused:
+				autoComplete(options[0].StringValue(), 3, i, discord)
+			}
+		default:
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
+			// remove alternative tracking name from database
+			name := options[0].StringValue()
+			index := int(options[1].IntValue())
+			res, err := database.RemoveAlternateTrackingName(name, index, i.ChannelID)
+			em := setEmbed(&res)
+			if err != nil {
+				content := err.Error()
+				discord.ChannelMessageSendEmbed(i.ChannelID, &discordgo.MessageEmbed{
+					Title: "Error",
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:  "Error",
+							Value: content,
+						},
+					},
+					Color: 10038562, // red
+				})
+			} else {
+				for _, embed := range em {
+					discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+				}
+			}
+		}
+	},
 	"get": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
@@ -645,7 +704,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			if err != nil {
 				slog.Error("ack error", slog.Any("error value", err))
 			}
-			getRes, err := database.GetItem(options[0].StringValue(), i.ChannelID)
+			getRes, err := database.GetItem(options[0].StringValue(), i.ChannelID, "PriceHistory", "ListingsHistory")
 			if err != nil {
 				content := err.Error()
 				discord.ChannelMessageSend(i.ChannelID, content)

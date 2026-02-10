@@ -181,12 +181,14 @@ func SendGraphPng(discord *discordgo.Session, ChannelID string) {
 func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *discordgo.Session) {
 	var choices []*discordgo.ApplicationCommandOptionChoice
 	var items []string
-	// t int value 0 maps to name type, 1 to url type, 2 to css
+	// t int value 0 maps to name type, 1 to url type, 2 to css, 3 to alternate tracking queries
 	switch t {
 	case 0:
 		items = database.FuzzyMatchName(Name, i.ChannelID)
 	case 1:
 		items = database.AutoCompleteURL(Name, i.ChannelID)
+	case 3:
+		items = database.AutoCompleteAlternateTrackingQueries(Name, i.ChannelID)
 	}
 
 	if len(items) != 0 {
@@ -203,8 +205,8 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 					Value: item,
 				}
 			}
-			// if its a url do by index instead
-			if t == 1 {
+			// if its a url or alternate tracking query do by index instead
+			if t == 1 || t == 3 {
 				choice.Value = index
 			}
 			choices = append(choices, &choice)

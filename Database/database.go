@@ -112,7 +112,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 	}
 	updateChannelLength(Channel.ChannelID, 1)
 	UpdateAggregateReport(itemName, Channel.ChannelID)
-	i, err = GetItem(itemName, Channel.ChannelID)
+	i, err = GetItem(itemName, Channel.ChannelID, "PriceHistory", "ListingsHistory")
 	return i, err
 }
 
@@ -133,9 +133,46 @@ func AddAlternateTrackingName(Name, AlternateName, ChannelID string) error {
 	return res.Err()
 }
 
+// remove different tracking queries
+func RemoveAlternateTrackingName(Name string, index int, ChannelID string) (Item, error) {
+	var result Item
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		slog.Error("couldnt load channel", slog.Any("Error", err))
+		return Item{}, err
+	}
+	filter := bson.M{
+		"Name": bson.M{"$regex": "^" + Name + "$", "$options": "i"},
+	}
+
+	update1 := bson.M{
+		"$unset": bson.M{
+			fmt.Sprintf("AlternateTrackingQueries.%d", index): "",
+		},
+	}
+	_, err = Table.UpdateOne(ctx, filter, update1)
+	if err != nil {
+		return result, err
+	}
+
+	update2 := bson.M{
+		"$pull": bson.M{
+			"AlternateTrackingQueries": nil,
+		},
+	}
+	opts := options.FindOneAndUpdate().
+		SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).
+		SetReturnDocument(options.After)
+	err = Table.FindOneAndUpdate(ctx, filter, update2, opts).Decode(&result)
+	if err != nil {
+		return result, err
+	}
+	return result, err
+}
+
 // removes all trackers and manually sets the price to filter second hand listingsArr
 func SetDesiredPrice(Name, ChannelID string, price int) error {
-	item, err := GetItem(Name, ChannelID)
+	item, err := GetItem(Name, ChannelID, "PriceHistory", "ListingsHistory", "EbayListings", "EbayBids")
 	if err != nil {
 		slog.Error("Error getting Item in setdesiredprice",
 			slog.Any("error", err),
@@ -572,7 +609,7 @@ func UpdateEbayListings(itemName string, listingsArr []*types.EbayListing, Chann
 	return err
 }
 
-func GetItem(itemName string, ChannelID string) (Item, error) {
+func GetItem(itemName string, ChannelID string, excludedFields ...string) (Item, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
 		slog.Error("couldnt load channel", slog.Any("Error", err))
@@ -580,11 +617,13 @@ func GetItem(itemName string, ChannelID string) (Item, error) {
 	}
 	var res Item
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
-	opts := options.FindOne().SetProjection(
-		bson.D{
-			{Key: "PriceHistory", Value: 0},
-			{Key: "ListingsHistory", Value: 0},
-		})
+
+	projection := bson.D{}
+	for _, field := range excludedFields {
+		projection = append(projection, bson.E{Key: field, Value: 0})
+	}
+
+	opts := options.FindOne().SetProjection(projection)
 	err = Table.FindOne(ctx, filter, opts).Decode(&res)
 	if err != nil {
 		return res, err

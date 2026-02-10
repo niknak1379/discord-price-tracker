@@ -274,16 +274,16 @@ func EbayListingPriceChangeAlert(newListing *types.EbayListing,
 			colorCode = razerGreen // price lowered and lower than average
 		}
 	}
-	newFields := formatSecondHandField(newListing, "New Price", true)
+	newFields := formatSecondHandField(newListing, "New Price", true, true)
 	oldP := &types.EbayListing{
 		Price: oldPrice,
 		Title: newListing.Title,
 	}
-	oldFields := formatSecondHandField(oldP, "Old Price", false)
+	oldFields := formatSecondHandField(oldP, "Old Price", false, false)
 	em := discordgo.MessageEmbed{
 		Title:  "Second Hand Listing Price Change For " + newListing.ItemName,
 		Color:  colorCode,
-		Fields: append(oldFields, newFields...),
+		Fields: append(newFields, oldFields...),
 	}
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
@@ -295,7 +295,7 @@ func NewEbayListingAlert(newListing *types.EbayListing,
 	if newListing.Price < aggregate.AveragePrice {
 		color = green
 	}
-	fields := formatSecondHandField(newListing, "Price", true)
+	fields := formatSecondHandField(newListing, "Price", true, false)
 	em := discordgo.MessageEmbed{
 		Title:  "New Second Hand Listing Found For " + newListing.ItemName,
 		Color:  color,

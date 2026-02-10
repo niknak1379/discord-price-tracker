@@ -150,7 +150,7 @@ func setSecondHandField(ebayArr []*types.EbayListing) []*discordgo.MessageEmbedF
 	res = append(res, &HeaderField)
 
 	for _, Listing := range ebayArr {
-		listFields := formatSecondHandField(Listing, "Price", true)
+		listFields := formatSecondHandField(Listing, "Price", true, true)
 		res = append(res, listFields...)
 	}
 	return res
@@ -216,19 +216,29 @@ func formatBidField(Listing *types.EbayBids, priceChange bool) []*discordgo.Mess
 
 // new listing is there so that it  doesnt return duplicate fields in discord.response
 // for alerts
-func formatSecondHandField(Listing *types.EbayListing, Message string, newListing bool) []*discordgo.MessageEmbedField {
+func formatSecondHandField(
+	Listing *types.EbayListing,
+	Message string,
+	newListing bool,
+	priceChange bool,
+) []*discordgo.MessageEmbedField {
 	var ret []*discordgo.MessageEmbedField
-	AcceptsOffer := "No"
+	AcceptsOfferStr := "No"
 	if Listing.AcceptsOffers {
-		AcceptsOffer = "Yes"
+		AcceptsOfferStr = "Yes"
 	}
 	currOrOld := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter(Message, 43),
 		Value:  "",
 		Inline: false,
 	}
+	titleField := discordgo.MessageEmbedField{
+		Value:  truncateString(Listing.Title, MaxFieldNameLen),
+		Name:   "Title",
+		Inline: false,
+	}
 	priceField := discordgo.MessageEmbedField{
-		Name:   truncateString(Listing.Title, MaxFieldNameLen),
+		Name:   "Price",
 		Value:  "$" + strconv.Itoa(Listing.Price+1),
 		Inline: false,
 	}
@@ -237,49 +247,52 @@ func formatSecondHandField(Listing *types.EbayListing, Message string, newListin
 		Value:  "",
 		Inline: false,
 	}
-	if newListing {
-		conditionField := discordgo.MessageEmbedField{
-			Name:   "Condition/Location:",
-			Value:  truncateString(Listing.Condition, MaxFieldValueLen),
-			Inline: false,
-		}
-		urlField := discordgo.MessageEmbedField{
-			Name:   "From URL:",
-			Value:  truncateString(Listing.URL, MaxFieldValueLen),
-			Inline: false,
-		}
-		durationField := discordgo.MessageEmbedField{
-			Value: strconv.Itoa(int(Listing.Duration.Hours()/24)) + " Days and " +
-				strconv.Itoa(int(Listing.Duration.Hours())%24) + " Hours",
-			Name:   "Listing Duration:",
-			Inline: false,
-		}
-		priceDecField := discordgo.MessageEmbedField{
-			Name:   "# of Price Decreases:",
-			Value:  strconv.Itoa(Listing.PriceDecreaseNum),
-			Inline: false,
-		}
-		AcceptsOffer := discordgo.MessageEmbedField{
-			Name:   "Does Listing Accept Offers",
-			Value:  AcceptsOffer,
-			Inline: false,
-		}
-		priceIncField := discordgo.MessageEmbedField{
-			Name:   "# of Price Increases:",
-			Value:  strconv.Itoa(Listing.PriceIncreaseNum),
-			Inline: false,
-		}
-		totalPriceChange := discordgo.MessageEmbedField{
-			Name:   "Total Price Change $",
-			Value:  strconv.Itoa(Listing.TotalPriceChange),
-			Inline: false,
-		}
-		return append(ret, &currOrOld, &priceField, &AcceptsOffer, &conditionField, &urlField,
-			&durationField, &priceDecField, &priceIncField, &totalPriceChange, &separatorField)
+	conditionField := discordgo.MessageEmbedField{
+		Name:   "Condition/Location:",
+		Value:  truncateString(Listing.Condition, MaxFieldValueLen),
+		Inline: false,
 	}
-
-	return append(ret, &currOrOld, &priceField,
-		&separatorField)
+	urlField := discordgo.MessageEmbedField{
+		Name:   "From URL:",
+		Value:  truncateString(Listing.URL, MaxFieldValueLen),
+		Inline: false,
+	}
+	durationField := discordgo.MessageEmbedField{
+		Value: strconv.Itoa(int(Listing.Duration.Hours()/24)) + " Days and " +
+			strconv.Itoa(int(Listing.Duration.Hours())%24) + " Hours",
+		Name:   "Listing Duration:",
+		Inline: false,
+	}
+	priceDecField := discordgo.MessageEmbedField{
+		Name:   "# of Price Decreases:",
+		Value:  strconv.Itoa(Listing.PriceDecreaseNum),
+		Inline: false,
+	}
+	AcceptsOffer := discordgo.MessageEmbedField{
+		Name:   "Does Listing Accept Offers",
+		Value:  AcceptsOfferStr,
+		Inline: false,
+	}
+	priceIncField := discordgo.MessageEmbedField{
+		Name:   "# of Price Increases:",
+		Value:  strconv.Itoa(Listing.PriceIncreaseNum),
+		Inline: false,
+	}
+	totalPriceChange := discordgo.MessageEmbedField{
+		Name:   "Total Price Change $",
+		Value:  strconv.Itoa(Listing.TotalPriceChange),
+		Inline: false,
+	}
+	if newListing && !priceChange {
+		return append(ret, &currOrOld, &titleField, &priceField, &AcceptsOffer, &conditionField, &urlField,
+			&separatorField)
+	} else if newListing && priceChange {
+		return append(ret, &currOrOld, &titleField, &priceField, &AcceptsOffer, &conditionField, &urlField,
+			&durationField, &priceDecField, &priceIncField, &totalPriceChange, &separatorField)
+	} else { // if old Listing
+		return append(ret, &currOrOld, &priceField,
+			&separatorField)
+	}
 }
 
 func formatAggregateFields(Aggregate *database.AggregateReport, message string) []*discordgo.MessageEmbedField {

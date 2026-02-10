@@ -90,7 +90,8 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 		if proxy {
 			slog.Warn("error in getting price in crawler, triggering proxy chrome",
 				slog.Any("Error", err), slog.Any("PriceErr", priceErr))
-			return ChromeDPFailover(uri, querySelector, true)
+			res, err2 = ChromeDPFailover(uri, querySelector, true)
+			return int(float64(res) * TaxRate), err2
 		} else {
 			slog.Warn("no proxy default crawler failed, triggering chromeDPFailover no proxy",
 				slog.Any("Error", err2), slog.Int("Price", res))

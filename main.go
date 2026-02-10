@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"log"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -17,6 +19,9 @@ import (
 )
 
 func main() {
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 	slog.SetDefault(logger.Logger)
 	godotenv.Load()
 	// amazonTest()

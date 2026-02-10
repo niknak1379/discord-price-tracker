@@ -5,14 +5,19 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"sync"
 
 	crawler "priceTracker/Crawler"
+
 	database "priceTracker/Database"
+
 	discord "priceTracker/Discord"
+
 	logger "priceTracker/Logger"
+
 	scheduler "priceTracker/Scheduler"
 
 	"github.com/joho/godotenv"

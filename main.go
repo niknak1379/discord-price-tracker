@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
@@ -24,10 +23,13 @@ import (
 )
 
 func main() {
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
 	slog.SetDefault(logger.Logger)
+	go func() {
+		slog.Info("Starting pprof on :6060")
+		if err := http.ListenAndServe("0.0.0.0:6060", nil); err != nil {
+			slog.Error("pprof failed:", slog.Any("error", err))
+		}
+	}()
 	godotenv.Load()
 	// amazonTest()
 	// BestBuyTest()

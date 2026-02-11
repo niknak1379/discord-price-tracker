@@ -289,11 +289,11 @@ func formatSecondHandField(
 		Inline: false,
 	}
 	if newListing && !priceChange {
-		return append(ret, &currOrOld, &titleField, &priceField, &AcceptsOffer, &conditionField, &urlField,
-			&separatorField)
+		return append(ret, &currOrOld, &titleField, &AcceptsOffer, &conditionField, &urlField,
+			&priceField, &separatorField)
 	} else if newListing && priceChange {
-		return append(ret, &currOrOld, &titleField, &priceField, &AcceptsOffer, &conditionField, &urlField,
-			&durationField, &priceDecField, &priceIncField, &totalPriceChange, &separatorField)
+		return append(ret, &currOrOld, &titleField, &AcceptsOffer, &conditionField, &urlField,
+			&durationField, &priceDecField, &priceIncField, &totalPriceChange, &priceField, &separatorField)
 	} else { // if old Listing
 		return append(ret, &currOrOld, &priceField,
 			&separatorField)

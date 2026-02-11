@@ -3,7 +3,7 @@ services:
     image: nikanostovan/price-tracker:latest
     container_name: price-tracker
     restart: unless-stopped
-    shm_size: "2gb"
+    mem_limit: 128m 
     env_file:
       - .env
     environment:
@@ -52,8 +52,9 @@ services:
     volumes: ["/var/run/docker.sock:/var/run/docker.sock"]
     command:
       [
+        # restart the vpn IP every three hours
         "/bin/sh",
         "-c",
-        "while true; do sleep 21600; docker restart price-tracker-gluetun-1; done",
+        "while true; do sleep 10800; docker restart price-tracker-gluetun-1; done",
       ]
     restart: unless-stopped

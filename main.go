@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log/slog"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -24,12 +23,14 @@ import (
 
 func main() {
 	slog.SetDefault(logger.Logger)
-	go func() {
-		slog.Info("Starting pprof on :6060")
-		if err := http.ListenAndServe("0.0.0.0:6060", nil); err != nil {
-			slog.Error("pprof failed:", slog.Any("error", err))
-		}
-	}()
+	// https://medium.com/@bobzsj87/demist-the-memory-ghost-d6b7cf45dd2a
+	// not an actual memory leak its just docker being weird
+	// go func() {
+	// 	slog.Info("Starting pprof on :6060")
+	// 	if err := http.ListenAndServe("0.0.0.0:6060", nil); err != nil {
+	// 		slog.Error("pprof failed:", slog.Any("error", err))
+	// 	}
+	// }()
 	godotenv.Load()
 	// amazonTest()
 	// BestBuyTest()

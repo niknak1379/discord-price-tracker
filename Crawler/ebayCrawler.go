@@ -669,8 +669,18 @@ func titleCorrectnessCheck(listingTitle string,
 	exclusionRegexes []*regexp.Regexp,
 	exclusionSpecialWords []string,
 ) bool {
-	listingTitle = strings.ToLower(listingTitle)
+	// Normalize all quote variations to standard keyboard quotes
+	// Double quotes - curly quotes and escaped quotes
+	listingTitle = strings.ReplaceAll(listingTitle, "\u201C", `"`) // Left curly double quote "
+	listingTitle = strings.ReplaceAll(listingTitle, "\u201D", `"`) // Right curly double quote "
+	listingTitle = strings.ReplaceAll(listingTitle, `\"`, `"`)     // Escaped \"
 
+	// Single quotes - curly quotes and escaped quotes
+	listingTitle = strings.ReplaceAll(listingTitle, "\u2018", `'`) // Left curly single quote '
+	listingTitle = strings.ReplaceAll(listingTitle, "\u2019", `'`) // Right curly single quote '
+	listingTitle = strings.ReplaceAll(listingTitle, `\'`, `'`)     // Escaped \'
+
+	listingTitle = strings.ToLower(listingTitle)
 	atLeastOneMatched := false
 outerloop:
 	for i := range allRegexPatterns {

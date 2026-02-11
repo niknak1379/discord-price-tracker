@@ -9,14 +9,11 @@ import (
 	"sync"
 
 	crawler "priceTracker/Crawler"
-
 	database "priceTracker/Database"
-
 	discord "priceTracker/Discord"
+	scheduler "priceTracker/Scheduler"
 
 	logger "priceTracker/Logger"
-
-	scheduler "priceTracker/Scheduler"
 
 	"github.com/joho/godotenv"
 )
@@ -35,6 +32,7 @@ func main() {
 	// amazonTest()
 	// BestBuyTest()
 	// crawlerTest()
+	// InchMeasurement()
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
@@ -80,9 +78,24 @@ func crawlerTest() {
 	// 	"sigma f/1.4 30mm sony",
 	// 	1000,
 	// 	[]string{},
-	// 	// 	false)
+	// 	false)
 	// 	slog.Info("ebay test",
 	// 		slog.Any("itemArr", itemArr),
 	// 		slog.Any("bid arr", bids),
 	// 		slog.Any("err", err))
+}
+
+func InchMeasurement() {
+	slog.Info("=== Testing GetSecondHandListings with 32 inch monitor ===")
+	listings, bids, err := crawler.GetSecondHandListings(
+		[]string{"Samsung 32\" Odyssey OLED"},
+		1000, 0, 0, 100,
+		"Tech", "", false,
+		[]string{},
+	)
+
+	slog.Info("Test results",
+		slog.Int("listings_count", len(listings)),
+		slog.Int("bids_count", len(bids)),
+		slog.Any("error", err))
 }

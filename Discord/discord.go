@@ -477,14 +477,14 @@ var (
 var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.InteractionCreate){
 	"setup": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		})
 		options := i.ApplicationCommandData().Options
 		location := options[0].StringValue()
 		locationCode := options[1].StringValue()
 		maxDistance := int(options[2].IntValue())
 
-		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		})
 		// add tracker to database
 		err := database.UpdateChannelOrCreateChannelItemTableIfMissing(i.ChannelID,
 			location,
@@ -847,11 +847,11 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
 		itemName := options[0].StringValue()
-		desiredPrice := int(options[1].IntValue())
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(itemName, 0, i, discord)
 		default:
+			desiredPrice := int(options[1].IntValue())
 			err := customAcknowledge(discord, i)
 			if err != nil {
 				slog.Error("ack error", slog.Any("error value", err))
@@ -868,13 +868,13 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	}, "edit_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
 		oldName := options[0].StringValue()
-		newName := options[1].StringValue()
 
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(oldName, 0, i, discord)
 			return
 		case discordgo.InteractionApplicationCommand:
+			newName := options[1].StringValue()
 			getRes, err := database.EditName(oldName, newName, i.ChannelID)
 			var embedArr []*discordgo.MessageEmbed
 			var content string
@@ -1036,7 +1036,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"graph": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
 		itemName := options[0].StringValue()
-		months := int(options[1].IntValue())
 
 		// handle autocomplete for name and normal request
 		switch i.Type {
@@ -1048,6 +1047,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
 			// get command inputs from discord
+			months := int(options[1].IntValue())
 			err := charts.PriceHistoryChart([]string{itemName}, months, i.ChannelID)
 			if err != nil {
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
@@ -1080,7 +1080,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		options := i.ApplicationCommandData().Options
 		firstItemName := options[0].StringValue()
 		secondItemName := options[1].StringValue()
-		months := int(options[2].IntValue())
 		// handle autocomplete for name and normal request
 		switch i.Type {
 
@@ -1098,6 +1097,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
 			// get command inputs from discord
+			months := int(options[2].IntValue())
 			err := charts.PriceHistoryChart([]string{
 				firstItemName,
 				secondItemName,
@@ -1128,8 +1128,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"aggregate": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
 		itemName := options[0].StringValue()
-		monthsDuration := int(options[1].IntValue())
-		endingMonthOffset := int(options[2].IntValue())
 
 		// handle autocomplete for name and normal request
 		switch i.Type {
@@ -1142,6 +1140,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			})
 			// get command inputs from discord
 			//
+			monthsDuration := int(options[1].IntValue())
+			endingMonthOffset := int(options[2].IntValue())
 			endDate := time.Now().AddDate(0, -1*endingMonthOffset, 0)
 			Aggregate, err := database.GenerateSecondHandPriceReport(
 				itemName,

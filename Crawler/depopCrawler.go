@@ -22,6 +22,21 @@ func depopURLGenerator(Name string, price int) string {
 	return base + Name + Price
 }
 
+// CrawlDepop retrieves clothing listings from Depop.
+// It crawls the search results and visits each product page to verify
+// CrawlDepop retrieves clothing listings from Depop.
+// It crawls the search results and visits each product page to verify
+// the item matches the expected patterns.
+//
+// Parameters:
+//   - Name: the item name to search for
+//   - Price: the maximum price for listings
+//   - allRegexPatterns: compiled regex patterns for inclusion matching
+//   - allSpecialWords: special character words for inclusion matching
+//   - exclusionRegexes: compiled regex patterns for exclusion matching
+//   - exclusionSpecialWords: special character words for exclusion matching
+//
+// Returns the listings and any error encountered.
 func CrawlDepop(Name string,
 	Price int,
 	allRegexPatterns [][]*regexp.Regexp,

@@ -21,7 +21,22 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-// I cant refractor this to be like that since it causes an import cycle
+// GetSecondHandListings aggregates listings from multiple second-hand sources.
+// It searches eBay, Facebook Marketplace (if enabled), and Depop (for clothing items).
+// Results are deduplicated by URL and filtered by price range.
+//
+// Parameters:
+//   - Names: list of item names to search for
+//   - Price: the maximum price for listings
+//   - homeLat: home latitude for distance calculation
+//   - homeLong: home longitude for distance calculation
+//   - maxDistance: maximum distance from home in miles
+//   - itemType: the item category (Tech or Clothes)
+//   - LocationCode: the Facebook Marketplace location code
+//   - facebookCrawl: whether to crawl Facebook Marketplace
+//   - exclusionQueries: patterns to exclude from results
+//
+// Returns the listings, bids, and any error encountered.
 func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong float64,
 	maxDistance int, itemType string, LocationCode string, facebookCrawl bool,
 	exclusionQueries []string,
@@ -79,6 +94,14 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 	return dedupArr, dedupBidArr, err
 }
 
+// FacebookURLGenerator builds a Facebook Marketplace search URL.
+//
+// Parameters:
+//   - Name: the item name to search for
+//   - Price: the maximum price for listings
+//   - LocationCode: the Facebook Marketplace location code
+//
+// Returns the constructed Facebook Marketplace search URL.
 func FacebookURLGenerator(Name string, Price int, LocationCode string) string {
 	baseURL := "https://www.facebook.com/marketplace/107711145919004/search"
 	priceQuery := fmt.Sprintf("?maxPrice=%d", Price)
@@ -86,7 +109,24 @@ func FacebookURLGenerator(Name string, Price int, LocationCode string) string {
 	return baseURL + priceQuery + query
 }
 
-// JS loaded cannot use colly for this
+// MarketPlaceCrawl retrieves listings from Facebook Marketplace using chromedp.
+// Facebook Marketplace requires JavaScript rendering, so standard HTTP scraping won't work.
+// Listings are filtered by distance from the specified location.
+//
+// Parameters:
+//   - Name: the item name to search for
+//   - desiredPrice: the maximum price for listings
+//   - homeLat: home latitude for distance calculation
+//   - homeLong: home longitude for distance calculation
+//   - maxDistance: maximum distance from home in miles
+//   - LocationCode: the Facebook Marketplace location code
+//   - proxy: whether to use a proxy for the request
+//   - allRegexPatterns: compiled regex patterns for inclusion matching
+//   - allSpecialWords: special character words for inclusion matching
+//   - exclusionRegexes: compiled regex patterns for exclusion matching
+//   - exclusionSpecialWords: special character words for exclusion matching
+//
+// Returns the listings and any error encountered.
 func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	maxDistance int, LocationCode string, proxy bool,
 	allRegexPatterns [][]*regexp.Regexp,
@@ -185,6 +225,13 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	return retArr, err
 }
 
+// GetCoordinates converts a location string (e.g., "Los Angeles, CA") to latitude and longitude.
+// Uses the Geoapify geocoding API.
+//
+// Parameters:
+//   - Location: the location string to geocode
+//
+// Returns the latitude, longitude, and any error encountered.
 func GetCoordinates(Location string) (float64, float64, error) {
 	base := "https://api.geoapify.com/v1/geocode/search?text="
 
@@ -231,6 +278,15 @@ func GetCoordinates(Location string) (float64, float64, error) {
 	return target.Lat, target.Lon, err
 }
 
+// ValidateDistance checks if a location is within the specified maximum distance from home coordinates.
+//
+// Parameters:
+//   - location: the location string to check
+//   - homeLat: home latitude
+//   - homeLong: home longitude
+//   - maxDistance: maximum distance in miles
+//
+// Returns true if within range, the distance string for display, and any error.
 func ValidateDistance(location string, homeLat float64, homeLong float64, maxDistance int) (bool, string, error) {
 	// --------------- get distance from api------------------
 	api := "&format=json&apiKey=" + os.Getenv("GEO_API_KEY")

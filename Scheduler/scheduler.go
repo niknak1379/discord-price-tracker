@@ -20,6 +20,11 @@ var (
 	exludedFields     = []string{"PriceHistory, ListingsHistory, EbayListings"}
 )
 
+// SetChannelScheduler initializes and runs the scheduler for all channels.
+// It periodically checks for new/deleted items and updates tracked items.
+//
+// Parameters:
+//   - ctx: the context for managing the scheduler lifecycle
 func SetChannelScheduler(ctx context.Context) {
 	slog.Info("first crawl start time", slog.Any("start time", time.Now()))
 

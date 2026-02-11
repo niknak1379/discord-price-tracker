@@ -17,8 +17,11 @@ import (
 	"github.com/gocolly/colly/v2/extensions"
 )
 
+// TaxRate is applied to prices to account for taxes (10% by default).
 var TaxRate = 1.1
 
+// initCrawler creates a colly collector with rate limiting and headers configured
+// to avoid detection. Uses a proxy by default.
 func initCrawler() *colly.Collector {
 	// --------------------------- initiaize scrapper headers and settings ------- //
 	var c *colly.Collector
@@ -59,6 +62,17 @@ func initCrawler() *colly.Collector {
 	return c
 }
 
+// GetPrice retrieves the price from a product page using the specified CSS selector.
+// It first attempts with colly, then falls back to chromedp if needed.
+// GetPrice retrieves the price from a product page using the specified CSS selector.
+// It first attempts with colly, then falls back to chromedp if needed.
+//
+// Parameters:
+//   - uri: the URL to scrape
+//   - querySelector: the CSS selector for extracting the price
+//   - proxy: whether to use a proxy for the request
+//
+// Returns the price and any error encountered.
 func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 	var err, priceErr error
 	res := 0
@@ -102,6 +116,14 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 	return int(float64(res) * TaxRate), err
 }
 
+// NewChromedpContext creates a chromedp context with anti-detection settings configured.
+// It sets up a headless browser with stealth options to avoid bot detection.
+//
+// Parameters:
+//   - timeout: the timeout for the context
+//   - extraOpts: optional additional chromedp options
+//
+// Returns the context and cancel function.
 func NewChromedpContext(timeout time.Duration, extraOpts ...chromedp.ExecAllocatorOption) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
@@ -127,6 +149,10 @@ func NewChromedpContext(timeout time.Duration, extraOpts ...chromedp.ExecAllocat
 	return ctx, cancel
 }
 
+// StealthActions returns chromedp actions that help evade bot detection.
+// It masks the headless browser by setting typical browser properties.
+//
+// Returns a chromedp action that executes stealth JavaScript.
 func StealthActions() chromedp.Action {
 	return chromedp.Evaluate(`
 		// Webdriver
@@ -171,6 +197,16 @@ func StealthActions() chromedp.Action {
 	`, nil)
 }
 
+// ChromeDPFailover attempts to retrieve a price using chromedp when colly fails.
+// It uses a headless browser for JavaScript-heavy pages.
+// Screenshots and HTML are saved on failure for debugging.
+//
+// Parameters:
+//   - url: the URL to scrape
+//   - selector: the CSS selector for extracting the price
+//   - proxy: whether to use a proxy for the request
+//
+// Returns the price and any error encountered.
 func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	slog.Warn("ChromDP Triggered for default crawler",
 		slog.String("URL", url), slog.String("Selector", selector),
@@ -246,6 +282,13 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	return int(float64(price) * TaxRate), nil
 }
 
+// GetOpenGraphPic retrieves the product image URL from a webpage.
+// Supports Amazon, Best Buy, and generic Open Graph image tags.
+//
+// Parameters:
+//   - url: the URL to extract the image from
+//
+// Returns the image URL or an empty string if not found.
 func GetOpenGraphPic(url string) string {
 	c := initCrawler()
 	visited := false

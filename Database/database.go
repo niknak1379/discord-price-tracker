@@ -1,3 +1,5 @@
+// Package database provides MongoDB operations for the price tracker.
+// It handles CRUD operations for items, prices, and channel configuration.
 package database
 
 import (
@@ -20,15 +22,20 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
+// TrackingInfo stores a single price tracking source.
 type TrackingInfo struct {
 	URI       string `bson:"URI"`
 	HtmlQuery string `bson:"HtmlQuery"`
 }
+
+// Price represents a price point at a specific time.
 type Price struct {
 	Date  time.Time `bson:"Date"`
 	Price int       `bson:"Price"`
 	Url   string    `bson:"Url"`
 }
+
+// AggregateReport contains statistics for second-hand listings.
 type AggregateReport struct {
 	UniqueListings              int `bson:"UniqueListings"`
 	AverageDaysUP               int `bson:"AverageDaysUP"`
@@ -37,6 +44,8 @@ type AggregateReport struct {
 	AveragePriceWhenSold        int `bson:"AveragePriceWhenSold"`
 	LowestPriceDuringTimePeriod int `bson:"LowestPriceDuringTimePeriod"`
 }
+
+// Item represents a tracked product with all its data.
 type Item struct {
 	Name                     string               `bson:"Name"`
 	AlternateTrackingQueries []string             `bson:"AlternateTrackingQueries"`
@@ -62,6 +71,18 @@ var (
 	ctx    context.Context
 )
 
+// AddItem creates a new tracked item in the database.
+// It validates the URL and performs an initial price scrape and second-hand listing search.
+//
+// Parameters:
+//   - itemName: the name of the item to track
+//   - uri: the URL to scrape for price data
+//   - query: the CSS selector for extracting the price
+//   - Type: the item category (Tech or Clothes)
+//   - Timer: the scrape interval in hours
+//   - Channel: the channel configuration
+//
+// Returns the created item and any error encountered.
 func AddItem(itemName string, uri string, query string, Type string, Timer int, Channel *Channel) (Item, error) {
 	Table, err := loadChannelTable(Channel.ChannelID)
 	if err != nil {
@@ -119,7 +140,15 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 	return i, err
 }
 
-// add different tracking queries
+// AddAlternateTrackingName adds an alternate name for tracking regex matching.
+// This allows the same item to be found under different name variations.
+//
+// Parameters:
+//   - Name: the primary item name
+//   - AlternateName: the alternate name variation to add
+//   - ChannelID: the Discord channel ID
+//
+// Returns any error encountered.
 func AddAlternateTrackingName(Name, AlternateName, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -136,7 +165,14 @@ func AddAlternateTrackingName(Name, AlternateName, ChannelID string) error {
 	return res.Err()
 }
 
-// remove different tracking queries
+// RemoveAlternateTrackingName removes an alternate tracking name by index.
+//
+// Parameters:
+//   - Name: the item name
+//   - index: the index of the alternate name to remove
+//   - ChannelID: the Discord channel ID
+//
+// Returns the updated item and any error encountered.
 func RemoveAlternateTrackingName(Name string, index int, ChannelID string) (Item, error) {
 	var result Item
 	Table, err := loadChannelTable(ChannelID)
@@ -173,7 +209,14 @@ func RemoveAlternateTrackingName(Name string, index int, ChannelID string) (Item
 	return result, err
 }
 
-// add exclusion tracking query
+// AddTrackingExclusionQuery adds an exclusion pattern to filter out unwanted listings.
+//
+// Parameters:
+//   - Name: the item name
+//   - ExclusionQuery: the regex pattern to exclude (e.g., "broken", "for parts")
+//   - ChannelID: the Discord channel ID
+//
+// Returns any error encountered.
 func AddTrackingExclusionQuery(Name, ExclusionQuery, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -190,7 +233,14 @@ func AddTrackingExclusionQuery(Name, ExclusionQuery, ChannelID string) error {
 	return res.Err()
 }
 
-// remove exclusion tracking query
+// RemoveTrackingExclusionQuery removes an exclusion query by index.
+//
+// Parameters:
+//   - Name: the item name
+//   - index: the index of the exclusion query to remove
+//   - ChannelID: the Discord channel ID
+//
+// Returns the updated item and any error encountered.
 func RemoveTrackingExclusionQuery(Name string, index int, ChannelID string) (Item, error) {
 	var result Item
 	Table, err := loadChannelTable(ChannelID)
@@ -227,7 +277,13 @@ func RemoveTrackingExclusionQuery(Name string, index int, ChannelID string) (Ite
 	return result, err
 }
 
-// get tracking exclusion queries
+// GetTrackingExclusionQueries retrieves all exclusion patterns for an item.
+//
+// Parameters:
+//   - Name: the item name
+//   - ChannelID: the Discord channel ID
+//
+// Returns the list of exclusion queries and any error encountered.
 func GetTrackingExclusionQueries(Name, ChannelID string) ([]string, error) {
 	item, err := GetItem(Name, ChannelID, "PriceHistory", "ListingsHistory", "EbayListings", "EbayBids")
 	if err != nil {
@@ -236,7 +292,15 @@ func GetTrackingExclusionQueries(Name, ChannelID string) ([]string, error) {
 	return item.TrackingExclusionQueries, nil
 }
 
-// removes all trackers and manually sets the price to filter second hand listingsArr
+// SetDesiredPrice removes all trackers and manually sets the price for an item.
+// This is used when you want to filter second-hand listings by a specific price.
+//
+// Parameters:
+//   - Name: the item name
+//   - ChannelID: the Discord channel ID
+//   - price: the desired price to set
+//
+// Returns any error encountered.
 func SetDesiredPrice(Name, ChannelID string, price int) error {
 	item, err := GetItem(Name, ChannelID, "PriceHistory", "ListingsHistory", "EbayListings", "EbayBids")
 	if err != nil {
@@ -269,6 +333,14 @@ func SetDesiredPrice(Name, ChannelID string, price int) error {
 	return err
 }
 
+// SetFacebookCrawl enables or disables Facebook Marketplace crawling for an item.
+//
+// Parameters:
+//   - Name: the item name
+//   - Crawl: whether to enable Facebook Marketplace crawling
+//   - ChannelID: the Discord channel ID
+//
+// Returns any error encountered.
 func SetFacebookCrawl(Name string, Crawl bool, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -284,6 +356,14 @@ func SetFacebookCrawl(Name string, Crawl bool, ChannelID string) error {
 	return res.Err()
 }
 
+// EditTimer updates the scraping interval for an item.
+//
+// Parameters:
+//   - Name: the item name
+//   - NewTimer: the new interval in hours (must be > 0)
+//   - ChannelID: the Discord channel ID
+//
+// Returns any error encountered.
 func EditTimer(Name string, NewTimer int, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -302,6 +382,14 @@ func EditTimer(Name string, NewTimer int, ChannelID string) error {
 	return res.Err()
 }
 
+// EditSuppress enables or disables notifications for an item.
+//
+// Parameters:
+//   - Name: the item name
+//   - Suppress: whether to suppress notifications
+//   - ChannelID: the Discord channel ID
+//
+// Returns any error encountered.
 func EditSuppress(Name string, Suppress bool, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -317,6 +405,14 @@ func EditSuppress(Name string, Suppress bool, ChannelID string) error {
 	return res.Err()
 }
 
+// EditName renames an item in the database.
+//
+// Parameters:
+//   - oldName: the current item name
+//   - newName: the new name for the item
+//   - ChannelID: the Discord channel ID
+//
+// Returns the updated item and any error encountered.
 func EditName(oldName string, newName string, ChannelID string) (Item, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -341,7 +437,18 @@ func EditName(oldName string, newName string, ChannelID string) (Item, error) {
 	return res, err
 }
 
-// method itself checks if the price is a duplicate and if so does not add it
+// AddNewPrice adds a new price entry to an item's price history.
+// It checks if the price is a duplicate for the same day and skips if so.
+// Also updates the lowest historical price if this is a new low.
+//
+// Parameters:
+//   - Name: the item name
+//   - uri: the URL where the price was found
+//   - newPrice: the new price value
+//   - date: the date of the price
+//   - ChannelID: the Discord channel ID
+//
+// Returns the added price and any error encountered.
 func AddNewPrice(Name string, uri string, newPrice int, date time.Time, ChannelID string) (Price, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -423,6 +530,13 @@ func AddNewPrice(Name string, uri string, newPrice int, date time.Time, ChannelI
 	return price, nil
 }
 
+// GetLowestHistoricalPrice retrieves the lowest historical price for an item.
+//
+// Parameters:
+//   - Name: the item name
+//   - ChannelID: the Discord channel ID
+//
+// Returns the lowest price and any error encountered.
 func GetLowestHistoricalPrice(Name string, ChannelID string) (Price, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -439,6 +553,14 @@ func GetLowestHistoricalPrice(Name string, ChannelID string) (Price, error) {
 	return res.LowestPrice, err
 }
 
+// UpdateLowestHistoricalPrice updates the lowest historical price for an item.
+//
+// Parameters:
+//   - Name: the item name
+//   - newLow: the new lowest price
+//   - ChannelID: the Discord channel ID
+//
+// Returns the updated item and any error encountered.
 func UpdateLowestHistoricalPrice(Name string, newLow Price, ChannelID string) (Item, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -461,6 +583,13 @@ func UpdateLowestHistoricalPrice(Name string, newLow Price, ChannelID string) (I
 	return res, err
 }
 
+// GetLowestPrice retrieves the current lowest price for an item.
+//
+// Parameters:
+//   - Name: the item name
+//   - ChannelID: the Discord channel ID
+//
+// Returns the current lowest price and any error encountered.
 func GetLowestPrice(Name string, ChannelID string) (Price, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -478,6 +607,14 @@ func GetLowestPrice(Name string, ChannelID string) (Price, error) {
 	return res.LowestPrice, err
 }
 
+// UpdateLowestPrice updates the current lowest price for an item.
+//
+// Parameters:
+//   - Name: the item name
+//   - newLow: the new lowest price
+//   - ChannelID: the Discord channel ID
+//
+// Returns the updated item and any error encountered.
 func UpdateLowestPrice(Name string, newLow *Price, ChannelID string) (Item, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -500,6 +637,8 @@ func UpdateLowestPrice(Name string, newLow *Price, ChannelID string) (Item, erro
 	return res, err
 }
 
+// GetAllItems retrieves all items for a channel.
+// The excludedFields parameter allows omitting large fields to improve performance.
 func GetAllItems(ChannelID string, exludedFields []string) []*Item {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -524,6 +663,13 @@ func GetAllItems(ChannelID string, exludedFields []string) []*Item {
 	return result
 }
 
+// GetEbayListings retrieves the eBay listings stored for an item.
+//
+// Parameters:
+//   - itemName: the item name
+//   - ChannelID: the Discord channel ID
+//
+// Returns the eBay listings and any error encountered.
 func GetEbayListings(itemName string, ChannelID string) ([]*types.EbayListing, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -540,6 +686,13 @@ func GetEbayListings(itemName string, ChannelID string) ([]*types.EbayListing, e
 	return res.EbayListings, err
 }
 
+// GetEbayBids retrieves the eBay bids stored for an item.
+//
+// Parameters:
+//   - itemName: the item name
+//   - ChannelID: the Discord channel ID
+//
+// Returns the eBay bids and any error encountered.
 func GetEbayBids(itemName string, ChannelID string) ([]*types.EbayBids, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -553,6 +706,14 @@ func GetEbayBids(itemName string, ChannelID string) ([]*types.EbayBids, error) {
 	return res.EbayBids, err
 }
 
+// UpdateEbayBids updates the eBay bids for an item in the database.
+//
+// Parameters:
+//   - itemName: the name of the item to update
+//   - bidArr: slice of EbayBids structs containing bid information
+//   - ChannelID: the Discord channel ID
+//
+// Returns any error encountered during the update operation.
 func UpdateEbayBids(itemName string, bidArr []*types.EbayBids, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -582,6 +743,14 @@ func UpdateEbayBids(itemName string, bidArr []*types.EbayBids, ChannelID string)
 	return err
 }
 
+// UpdateEbayListings updates the eBay listings for an item in the database.
+//
+// Parameters:
+//   - itemName: the name of the item to update
+//   - listingsArr: slice of EbayListing structs containing listing information
+//   - ChannelID: the Discord channel ID
+//
+// Returns any error encountered during the update operation.
 func UpdateEbayListings(itemName string, listingsArr []*types.EbayListing, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -675,6 +844,15 @@ func UpdateEbayListings(itemName string, listingsArr []*types.EbayListing, Chann
 	return err
 }
 
+// GetItem retrieves a single item by name from the database.
+// Excluded fields can be specified to reduce data transfer for large fields like PriceHistory.
+//
+// Parameters:
+//   - itemName: the name of the item to retrieve
+//   - ChannelID: the Discord channel ID
+//   - excludedFields: optional list of fields to exclude from the result
+//
+// Returns the item and any error encountered.
 func GetItem(itemName string, ChannelID string, excludedFields ...string) (Item, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -697,6 +875,13 @@ func GetItem(itemName string, ChannelID string, excludedFields ...string) (Item,
 	return res, err
 }
 
+// RemoveItem removes an item from the database.
+//
+// Parameters:
+//   - itemName: the name of the item to remove
+//   - ChannelID: the Discord channel ID
+//
+// Returns the number of documents deleted (0 or 1).
 func RemoveItem(itemName string, ChannelID string) int64 {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -712,6 +897,15 @@ func RemoveItem(itemName string, ChannelID string) int64 {
 	return results.DeletedCount
 }
 
+// AddTrackingInfo adds a new tracking source (URL and selector) to an item.
+//
+// Parameters:
+//   - itemName: the name of the item to update
+//   - uri: the URL to scrape
+//   - querySelector: the CSS selector for extracting the price
+//   - ChannelID: the Discord channel ID
+//
+// Returns the updated item, the current price, and any error encountered.
 func AddTrackingInfo(itemName string, uri string, querySelector string, ChannelID string) (Item, Price, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -737,6 +931,14 @@ func AddTrackingInfo(itemName string, uri string, querySelector string, ChannelI
 	return result, *p, err
 }
 
+// RemoveTrackingInfo removes a tracking source from an item by index.
+//
+// Parameters:
+//   - itemName: the name of the item to update
+//   - index: the index of the tracking source to remove
+//   - ChannelID: the Discord channel ID
+//
+// Returns the updated item and any error encountered.
 func RemoveTrackingInfo(itemName string, index int, ChannelID string) (Item, error) {
 	var result Item
 	Table, err := loadChannelTable(ChannelID)
@@ -773,6 +975,11 @@ func RemoveTrackingInfo(itemName string, index int, ChannelID string) (Item, err
 	return result, err
 }
 
+// InitDB initializes the MongoDB connection and loads channel configurations.
+// It panics if the connection fails or if channel data cannot be loaded.
+//
+// Parameters:
+//   - context: the context for database operations
 func InitDB(context context.Context) {
 	godotenv.Load()
 	ctx = context

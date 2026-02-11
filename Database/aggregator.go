@@ -8,6 +8,14 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
+// GetPriceHistory retrieves price history for an item from a specific date.
+//
+// Parameters:
+//   - Name: the item name
+//   - date: the start date for retrieving history
+//   - ChannelID: the Discord channel ID
+//
+// Returns the price history and any error encountered.
 func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -195,6 +203,15 @@ func GetPriceHistory(Name string, date time.Time, ChannelID string) ([]*Price, e
 	return append(newRes, usedLowestRes...), err
 }
 
+// GenerateSecondHandPriceReport generates aggregate statistics for second-hand listings.
+//
+// Parameters:
+//   - Name: the item name
+//   - endDate: the end date for the report period
+//   - Days: the number of days to include in the report
+//   - ChannelID: the Discord channel ID
+//
+// Returns the aggregate report and any error encountered.
 func GenerateSecondHandPriceReport(Name string, endDate time.Time, Days int, ChannelID string) (AggregateReport, error) {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -325,6 +342,13 @@ func GenerateSecondHandPriceReport(Name string, endDate time.Time, Days int, Cha
 	return *res[0], err
 }
 
+// UpdateAggregateReport updates the 7-day aggregate report for an item.
+//
+// Parameters:
+//   - Name: the item name
+//   - ChannelID: the Discord channel ID
+//
+// Returns any error encountered.
 func UpdateAggregateReport(Name, ChannelID string) error {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {

@@ -2,6 +2,13 @@ package scheduler
 
 import database "priceTracker/Database"
 
+// HaveItemPropertiesChanged checks if any item properties have changed between two versions.
+//
+// Parameters:
+//   - currItem: the current item state
+//   - oldItem: the previous item state
+//
+// Returns true if any properties have changed.
 func HaveItemPropertiesChanged(currItem, oldItem *database.Item) bool {
 	if currItem.SuppressNotifications != oldItem.SuppressNotifications ||
 		currItem.Timer != oldItem.Timer ||

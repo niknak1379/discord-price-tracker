@@ -9,6 +9,12 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
+// ThisWeekAggregateTable generates a table with 7-day aggregate statistics for all items.
+//
+// Parameters:
+//   - ChannelID: the Discord channel ID
+//
+// Returns a slice of formatted table strings for Discord display.
 func ThisWeekAggregateTable(ChannelID string) []string {
 	retArr := []string{}
 	t := table.NewWriter()
@@ -42,6 +48,13 @@ func ThisWeekAggregateTable(ChannelID string) []string {
 	return retArr
 }
 
+// CustomAggregateTable generates a table with aggregate statistics for a custom time period.
+//
+// Parameters:
+//   - ChannelID: the Discord channel ID
+//   - months: the number of months to aggregate
+//
+// Returns a slice of formatted table strings for Discord display.
 func CustomAggregateTable(ChannelID string, months int) []string {
 	retArr := []string{}
 	t := table.NewWriter()

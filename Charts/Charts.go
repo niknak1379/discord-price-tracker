@@ -33,9 +33,17 @@ func getPriceHistory(Names []string, month int, ChannelID string) ([]*database.P
 	return priceList, err
 }
 
+// PriceHistoryChart generates a price history chart for one or more items.
+// The chart is saved as "my-chart.png" in the working directory.
+//
+// Parameters:
+//   - Names: list of item names to include in the chart
+//   - month: how many months of history to display
+//   - ChannelID: the Discord channel ID
+//
+// Returns any error encountered.
 func PriceHistoryChart(Names []string, month int, ChannelID string) error {
 	line := charts.NewLine()
-	
 
 	priceList, err := getPriceHistory(Names, month, ChannelID)
 	if err != nil || len(priceList) == 0 {
@@ -149,6 +157,12 @@ func PriceHistoryChart(Names []string, month int, ChannelID string) error {
 	return err
 }
 
+// ExtractDomainName extracts the domain name from a URL.
+//
+// Parameters:
+//   - url: the URL to extract the domain from
+//
+// Returns the domain name (e.g., "amazon" from "https://www.amazon.com/...").
 func ExtractDomainName(url string) string {
 	// Remove protocol
 	url = strings.TrimPrefix(url, "https://")

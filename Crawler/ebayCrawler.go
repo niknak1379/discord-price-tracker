@@ -1,3 +1,6 @@
+// Package crawler provides web scraping functionality for price tracking.
+// It supports multiple sources including eBay, Facebook Marketplace, and Depop.
+// The package uses colly for standard HTTP scraping and chromedp for JavaScript-heavy pages.
 package crawler
 
 import (
@@ -12,10 +15,6 @@ import (
 	"strings"
 	"time"
 
-	// "log/slog"
-
-	// "os"
-
 	types "priceTracker/Types"
 
 	"github.com/chromedp/chromedp"
@@ -23,10 +22,12 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
+// GeocodeResponse represents the response from the geocoding API.
 type GeocodeResponse struct {
 	Results []Location `json:"results"`
 }
 
+// Location represents a geographic coordinate.
 type Location struct {
 	Lat float64 `json:"lat"`
 	Lon float64 `json:"lon"`
@@ -48,6 +49,14 @@ type distanceRes struct {
 	Sources_to_targets [][]dist `json:"sources_to_targets"`
 }
 
+// ConstructEbaySearchURL builds an eBay search URL with filters for used items.
+// The price range is set to 25%-100% of the desired price to find comparable used listings.
+//
+// Parameters:
+//   - Name: the item name to search for
+//   - newPrice: the desired price to base the search range on
+//
+// Returns the constructed eBay search URL.
 func ConstructEbaySearchURL(Name string, newPrice int) string {
 	baseURL := "https://www.ebay.com/sch/i.html?_nkw="
 	usedQuery := "&LH_ItemCondition=3000|2030|2020|2010|2000|1500|1000"
@@ -57,9 +66,21 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 	return baseURL + url.PathEscape(Name) + usedQuery + priceQuery + noAuction + location
 }
 
-// returns a map of urls and prices + shipping cost
-// it returns an error on items that are local pickup only
-// since they dont have a shipping fee div
+// GetEbayListings retrieves eBay listings matching the search criteria.
+// It first attempts to scrape using colly, then falls back to chromedp if needed.
+// Listings are filtered by price range (25%-100% of desired price) and validated
+// against inclusion/exclusion patterns.
+//
+// Parameters:
+//   - Name: the item name to search for
+//   - desiredPrice: the maximum price for listings
+//   - Proxy: whether to use a proxy for the request
+//   - allRegexPatterns: compiled regex patterns for inclusion matching
+//   - allSpecialWords: special character words for inclusion matching
+//   - exclusionRegexes: compiled regex patterns for exclusion matching
+//   - exclusionSpecialWords: special character words for exclusion matching
+//
+// Returns the listings, bids, and any error encountered.
 func GetEbayListings(Name string, desiredPrice int, Proxy bool,
 	allRegexPatterns [][]*regexp.Regexp,
 	allSpecialWords [][]string,
@@ -315,6 +336,21 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool,
 	return listingArr, bidArr, err
 }
 
+// EbayFailover attempts to retrieve eBay listings using chromedp when colly fails.
+// It provides a headless browser fallback for JavaScript-heavy pages.
+// Screenshots are saved on failure for debugging purposes.
+//
+// Parameters:
+//   - url: the eBay search URL to scrape
+//   - desiredPrice: the maximum price for listings
+//   - Name: the item name for logging
+//   - proxy: whether to use a proxy for the request
+//   - allRegexPatterns: compiled regex patterns for inclusion matching
+//   - allSpecialWords: special character words for inclusion matching
+//   - exclusionRegexes: compiled regex patterns for exclusion matching
+//   - exclusionSpecialWords: special character words for exclusion matching
+//
+// Returns the listings, bids, and any error encountered.
 func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
 	allRegexPatterns [][]*regexp.Regexp,
 	allSpecialWords [][]string,
@@ -554,6 +590,9 @@ func init() {
 	}
 }
 
+// initTitleRegex compiles regex patterns for item matching and exclusion.
+// Words with special characters are matched exactly; others use word boundaries.
+// Returns inclusion patterns, inclusion special words, exclusion patterns, and exclusion special words.
 func initTitleRegex(itemNames []string, exclusionQueries []string) ([][]*regexp.Regexp, [][]string, []*regexp.Regexp, []string) {
 	var (
 		allRegexPatterns [][]*regexp.Regexp
@@ -619,6 +658,11 @@ func initTitleRegex(itemNames []string, exclusionQueries []string) ([][]*regexp.
 // it is a lot slower tho, but since its running longterm
 // it doesnt really matter i think
 
+// titleCorrectnessCheck validates if a listing title matches inclusion patterns
+// and does not match exclusion patterns. It uses word boundaries for normal words
+// to prevent partial matches (e.g., "32UP" matching "32UPX").
+//
+// Returns true if the title passes all checks (matches inclusion, no exclusions).
 func titleCorrectnessCheck(listingTitle string,
 	allRegexPatterns [][]*regexp.Regexp,
 	allSpecialWords [][]string,

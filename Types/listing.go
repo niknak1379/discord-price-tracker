@@ -18,7 +18,7 @@ type EbayListing struct {
 type EbayBids struct {
 	ItemName  string    `bson:"ItemName"`
 	Title     string    `bson:"Title"`
-	Condition string    `bson:Condition"`
+	Condition string    `bson:"Condition"`
 	Price     int       `bson:"Price"`
 	URL       string    `bson:"URL"`
 	Bids      int       `bson:"Bids"`

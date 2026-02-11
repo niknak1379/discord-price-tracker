@@ -7,6 +7,13 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
+// FuzzyMatchName performs fuzzy search on item names for autocomplete suggestions.
+//
+// Parameters:
+//   - Name: the partial name to search for (empty string returns all names)
+//   - ChannelID: the Discord channel ID
+//
+// Returns a list of matching item names.
 func FuzzyMatchName(Name string, ChannelID string) []string {
 	Table, err := loadChannelTable(ChannelID)
 	if err != nil {
@@ -68,6 +75,13 @@ func FuzzyMatchName(Name string, ChannelID string) []string {
 
 // not really critical functionality i feel like i dont really
 // need to propogate the errors for this and the other autocomplete
+// AutoCompleteURL retrieves tracking URLs for an item for autocomplete.
+//
+// Parameters:
+//   - Name: the item name
+//   - ChannelID: the Discord channel ID
+//
+// Returns a list of tracking URLs for the item.
 func AutoCompleteURL(Name string, ChannelID string) []string {
 	item, err := GetItem(Name, ChannelID, "PriceHistory", "ListingsHistory", "EbayListings", "EbayBids")
 	res := []string{}
@@ -80,6 +94,13 @@ func AutoCompleteURL(Name string, ChannelID string) []string {
 	return res
 }
 
+// AutoCompleteAlternateTrackingQueries retrieves alternate tracking names for autocomplete.
+//
+// Parameters:
+//   - Name: the item name
+//   - ChannelID: the Discord channel ID
+//
+// Returns a list of alternate tracking names for the item.
 func AutoCompleteAlternateTrackingQueries(Name string, ChannelID string) []string {
 	item, err := GetItem(Name, ChannelID, "PriceHistory", "ListingsHistory", "EbayListings", "EbayBids")
 	res := []string{}
@@ -92,6 +113,13 @@ func AutoCompleteAlternateTrackingQueries(Name string, ChannelID string) []strin
 	return res
 }
 
+// AutoCompleteTrackingExclusionQueries retrieves exclusion queries for autocomplete.
+//
+// Parameters:
+//   - Name: the item name
+//   - ChannelID: the Discord channel ID
+//
+// Returns a list of exclusion queries for the item.
 func AutoCompleteTrackingExclusionQueries(Name string, ChannelID string) []string {
 	item, err := GetItem(Name, ChannelID, "PriceHistory", "ListingsHistory", "EbayListings", "EbayBids")
 	res := []string{}
@@ -104,6 +132,9 @@ func AutoCompleteTrackingExclusionQueries(Name string, ChannelID string) []strin
 	return res
 }
 
+// AutoCompleteQuery returns a map of CSS query selectors for common websites.
+//
+// Returns a map of domain names to their price CSS selectors.
 func AutoCompleteQuery() map[string]string {
 	ret := map[string]string{
 		//div[data-feature-name='corePriceDisplay_desktop'] span.priceToPay

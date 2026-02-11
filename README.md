@@ -91,7 +91,22 @@ For the rest just read the Available Functions section below
       - Name: item name
       - additional_name: additional name variant
 
-12. **edit_tracking**: edit an existing tracker
+12. **remove_alternative_name**: remove additional names from tracking regex
+    - Required Inputs:
+      - Name: item name
+      - index: index of alternative name to remove
+
+13. **add_exclusion_query**: add regex exclusion pattern for filtering listings
+    - Required Inputs:
+      - Name: item name
+      - exclusion_query: regex pattern to exclude (e.g., "broken", "for parts")
+
+14. **remove_exclusion_query**: remove regex exclusion pattern
+    - Required Inputs:
+      - Name: item name
+      - index: index of exclusion query to remove
+
+15. **edit_tracking**: edit an existing tracker
     - Subcommands:
       - **add**: add new pair of tracking URI and HTML
         - Required Inputs:
@@ -103,36 +118,41 @@ For the rest just read the Available Functions section below
           - Name: item name
           - uri: tracking URI index
 
-13. **graph**: graph price history of an item
+16. **graph**: graph price history of an item
     - Required Inputs:
       - Name: item name
       - months: duration of history to display
 
-14. **graph-compare**: compare price graphs of multiple items
+17. **graph-compare**: compare price graphs of multiple items
     - Required Inputs:
       - Name1: first item name
       - Name2: second item name
       - months: duration of history to display
 
-15. **aggregate**: get aggregate data for used listings of an item
+18. **aggregate**: get aggregate data for used listings of an item
     - Required Inputs:
       - Name: item name
       - months: duration of history to aggregate
       - ending_month: how many months ago the aggregation should end
 
-16. **channel_item_summary_one_week**: get aggregate data for the past week
+19. **channel_item_summary_one_week**: get aggregate data for the past week
 
-17. **channel_item_summary_custom_ln**: get aggregate data for custom time period
+20. **channel_item_summary_custom_ln**: get aggregate data for custom time period
     - Required Inputs:
       - months: how many months back for the aggregations
 
-18. **setup**: setup new discord channel for the bot
+21. **edit_facebook_crawl**: toggle Facebook marketplace crawling for an item
+    - Required Inputs:
+      - Name: item name
+      - crawl: boolean to enable/disable
+
+22. **setup**: setup new discord channel for the bot
     - Required Inputs:
       - location: marketplace location (format: City Name, State)
       - marketplace-location-code: location code the marketplace uses
       - distance: maximum marketplace search distance
 
-19. **restart**: saves progress and stops the bot
+23. **restart**: saves progress and stops the bot
 
 ## License
 

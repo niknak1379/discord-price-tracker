@@ -58,11 +58,27 @@ func loadDBTables() {
 	}
 }
 
+// GetChannelInfo retrieves the channel configuration for a given channel ID.
+//
+// Parameters:
+//   - ChannelID: the Discord channel ID
+//
+// Returns the channel configuration or nil if not found.
 func GetChannelInfo(ChannelID string) *Channel {
 	slog.Info("Getting Channel Info", slog.String("Channel ID", ChannelID))
 	return ChannelMap[ChannelID]
 }
 
+// UpdateChannelOrCreateChannelItemTableIfMissing creates or updates a channel configuration.
+// It geocodes the location and stores the channel settings in the database.
+//
+// Parameters:
+//   - ChannelID: the Discord channel ID
+//   - Location: the location string (e.g., "Los Angeles, CA")
+//   - LocationCode: the Facebook Marketplace location code
+//   - maxDistance: the maximum search distance in miles
+//
+// Returns any error encountered.
 func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location string, LocationCode string, maxDistance int) error {
 	slog.Info("setup Channel Called", slog.String("ChannelID", ChannelID))
 	Lat, Long, err := crawler.GetCoordinates(Location)
@@ -134,6 +150,10 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 	return err
 }
 
+// ChannelDeleteHandler removes a channel from the database and memory.
+//
+// Parameters:
+//   - ChannelID: the Discord channel ID to delete
 func ChannelDeleteHandler(ChannelID string) {
 	if _, ok := Tables[ChannelID]; ok {
 		ChannelTable := Client.Database("tracker").Collection("ChannelIDs")

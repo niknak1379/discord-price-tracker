@@ -1,3 +1,5 @@
+// Package discord implements the Discord bot interface for the price tracker.
+// It handles command registration, user interactions, and sends price alerts to channels.
 package discord
 
 import (
@@ -1181,6 +1183,11 @@ func channelDeleteHandler(discord *discordgo.Session, i *discordgo.ChannelDelete
 	database.ChannelDeleteHandler(i.Channel.ID)
 }
 
+// Run starts the Discord bot, registers commands, and handles interactions.
+// It blocks until the context is cancelled, then gracefully shuts down.
+//
+// Parameters:
+//   - ctx: the context for managing the bot lifecycle
 func Run(ctx context.Context) {
 	// create a session
 	var err error

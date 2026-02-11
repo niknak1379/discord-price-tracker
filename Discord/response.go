@@ -34,6 +34,14 @@ func ready(discord *discordgo.Session, ready *discordgo.Ready) {
 	discord.UpdateGameStatus(1, "stonks")
 }
 
+// PriceChangeAlert sends a Discord embed notification when an item's price changes.
+//
+// Parameters:
+//   - itemName: the name of the item
+//   - newPrice: the new price value
+//   - oldPrice: the previous price
+//   - URL: the URL of the product
+//   - ChannelID: the Discord channel ID
 func PriceChangeAlert(itemName string, newPrice int, oldPrice database.Price, URL string, ChannelID string) {
 	var color int
 	if newPrice > oldPrice.Price {
@@ -60,6 +68,13 @@ func PriceChangeAlert(itemName string, newPrice int, oldPrice database.Price, UR
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
 
+// CrawlErrorAlert sends a Discord embed notification when a crawler error occurs.
+//
+// Parameters:
+//   - itemName: the name of the item
+//   - URL: the URL being crawled
+//   - err: the error that occurred
+//   - ChannelID: the Discord channel ID
 func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	var s string
 	if err != nil {
@@ -170,6 +185,11 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	})
 }
 
+// SendGraphPng sends a price history graph as a file to a Discord channel.
+//
+// Parameters:
+//   - discord: the Discord session
+//   - ChannelID: the Discord channel ID
 func SendGraphPng(discord *discordgo.Session, ChannelID string) {
 	reader, err := os.Open("my-chart.png")
 	if err != nil {
@@ -178,10 +198,17 @@ func SendGraphPng(discord *discordgo.Session, ChannelID string) {
 	discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
 }
 
+// autoComplete handles Discord autocomplete interactions for command options.
+// t specifies the field type: 0=item name, 1=url, 2=css selector, 3=alternate tracking queries, 4=exclusion queries.
+//
+// Parameters:
+//   - Name: the current input value
+//   - t: the type of autocomplete (0=name, 1=url, 2=css, 3=alt tracking, 4=exclusion)
+//   - i: the Discord interaction
+//   - discord: the Discord session
 func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *discordgo.Session) {
 	var choices []*discordgo.ApplicationCommandOptionChoice
 	var items []string
-	// t int value 0 maps to name type, 1 to url type, 2 to css, 3 to alternate tracking queries, 4 to exclusion queries
 	switch t {
 	case 0:
 		items = database.FuzzyMatchName(Name, i.ChannelID)
@@ -240,6 +267,8 @@ func autoComplete(Name string, t int, i *discordgo.InteractionCreate, discord *d
 	}
 }
 
+// autoCompleteQuerySelector handles auto compelte for discord handler
+// when user inputs HTMLQuery values
 func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordgo.Session) {
 	items := database.AutoCompleteQuery()
 	var choices []*discordgo.ApplicationCommandOptionChoice
@@ -261,6 +290,13 @@ func autoCompleteQuerySelector(i *discordgo.InteractionCreate, discord *discordg
 	}
 }
 
+// EbayListingPriceChangeAlert sends an alert when a second-hand listing price changes.
+//
+// Parameters:
+//   - newListing: the updated listing information
+//   - oldPrice: the previous price
+//   - ChannelID: the Discord channel ID
+//   - aggregate: the aggregate report for pricing context
 func EbayListingPriceChangeAlert(newListing *types.EbayListing,
 	oldPrice int, ChannelID string, aggregate *database.AggregateReport,
 ) {
@@ -292,6 +328,12 @@ func EbayListingPriceChangeAlert(newListing *types.EbayListing,
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
 
+// NewEbayListingAlert sends an alert when a new second-hand listing is found.
+//
+// Parameters:
+//   - newListing: the new listing information
+//   - ChannelID: the Discord channel ID
+//   - aggregate: the aggregate report for pricing context
 func NewEbayListingAlert(newListing *types.EbayListing,
 	ChannelID string, aggregate *database.AggregateReport,
 ) {
@@ -308,6 +350,12 @@ func NewEbayListingAlert(newListing *types.EbayListing,
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
 
+// NewBidAlert sends an alert when a new bid is found for an item.
+//
+// Parameters:
+//   - newListing: the new bid information
+//   - ChannelID: the Discord channel ID
+//   - aggregate: the aggregate report for pricing context
 func NewBidAlert(newListing *types.EbayBids,
 	ChannelID string, aggregate *database.AggregateReport,
 ) {
@@ -324,6 +372,13 @@ func NewBidAlert(newListing *types.EbayBids,
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
 
+// BidPriceChangeAlert sends an alert when a bid price changes.
+//
+// Parameters:
+//   - newListing: the updated bid information
+//   - oldListing: the previous bid information
+//   - ChannelID: the Discord channel ID
+//   - aggregate: the aggregate report for pricing context
 func BidPriceChangeAlert(newListing *types.EbayBids,
 	oldListing *types.EbayBids, ChannelID string, aggregate *database.AggregateReport,
 ) {
@@ -351,8 +406,16 @@ func BidPriceChangeAlert(newListing *types.EbayBids,
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
 
+// customAcknowledge sends an immediate acknowledgment response to Discord.
+// Used for commands that may take longer than 3 seconds to complete.
 // for functions that will take too long(more than the 15 min resposne time
 // required)
+//
+// Parameters:
+//   - discord: the Discord session
+//   - i: the Discord interaction
+//
+// Returns any error encountered.
 func customAcknowledge(discord *discordgo.Session, i *discordgo.InteractionCreate) error {
 	em := discordgo.MessageEmbed{}
 	data := i.ApplicationCommandData().Options

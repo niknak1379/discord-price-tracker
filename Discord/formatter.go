@@ -17,6 +17,13 @@ const (
 	MaxEmbedSize      = 6000 // Total characters across all fields
 )
 
+// setEmbed creates Discord embed(s) for displaying item information.
+// Splits fields across multiple embeds if Discord limits are exceeded.
+//
+// Parameters:
+//   - Item: the item to display
+//
+// Returns a slice of Discord embeds.
 func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 	var fields []*discordgo.MessageEmbedField
 	var retArr []*discordgo.MessageEmbed
@@ -91,6 +98,13 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 	return retArr
 }
 
+// setAlternateNamesFields creates fields for alternate tracking names and exclusion queries.
+// Also includes the timer field.
+//
+// Parameters:
+//   - Item: the item containing alternate names and exclusion queries
+//
+// Returns a slice of Discord embed fields.
 func setAlternateNamesFields(Item *database.Item) []*discordgo.MessageEmbedField {
 	Fields := []*discordgo.MessageEmbedField{}
 	// im also gonna set timer fields here too
@@ -119,6 +133,12 @@ func setAlternateNamesFields(Item *database.Item) []*discordgo.MessageEmbedField
 	return Fields
 }
 
+// setTrackerFields creates fields for tracking URLs and their CSS selectors.
+//
+// Parameters:
+//   - Item: the item containing tracking information
+//
+// Returns a slice of Discord embed fields.
 func setTrackerFields(Item *database.Item) []*discordgo.MessageEmbedField {
 	var fields []*discordgo.MessageEmbedField
 
@@ -146,6 +166,12 @@ func setTrackerFields(Item *database.Item) []*discordgo.MessageEmbedField {
 	return fields
 }
 
+// setSecondHandField creates fields for eBay second-hand listings.
+//
+// Parameters:
+//   - ebayArr: slice of eBay listings to display
+//
+// Returns a slice of Discord embed fields.
 func setSecondHandField(ebayArr []*types.EbayListing) []*discordgo.MessageEmbedField {
 	var res []*discordgo.MessageEmbedField
 	if len(ebayArr) == 0 {
@@ -164,6 +190,12 @@ func setSecondHandField(ebayArr []*types.EbayListing) []*discordgo.MessageEmbedF
 	return res
 }
 
+// setBidFields creates fields for eBay bids.
+//
+// Parameters:
+//   - ebayArr: slice of eBay bids to display
+//
+// Returns a slice of Discord embed fields.
 func setBidFields(ebayArr []*types.EbayBids) []*discordgo.MessageEmbedField {
 	bidFields := []*discordgo.MessageEmbedField{}
 	if len(ebayArr) == 0 {
@@ -182,6 +214,13 @@ func setBidFields(ebayArr []*types.EbayBids) []*discordgo.MessageEmbedField {
 	return bidFields
 }
 
+// formatBidField creates formatted fields for a single eBay bid.
+//
+// Parameters:
+//   - Listing: the bid to format
+//   - priceChange: whether this is for a price change alert (old vs new price)
+//
+// Returns a slice of Discord embed fields.
 func formatBidField(Listing *types.EbayBids, priceChange bool) []*discordgo.MessageEmbedField {
 	retArr := []*discordgo.MessageEmbedField{}
 	NameField := discordgo.MessageEmbedField{
@@ -227,8 +266,16 @@ func formatBidField(Listing *types.EbayBids, priceChange bool) []*discordgo.Mess
 	return append(retArr, &NameField, &BidNumber, &EndDate, &conditionField, &urlField, &Price, &separatorField)
 }
 
-// new listing is there so that it  doesnt return duplicate fields in discord.response
-// for alerts
+// formatSecondHandField creates formatted fields for a second-hand listing.
+// Optimized to avoid duplicate fields for Discord response alerts.
+//
+// Parameters:
+//   - Listing: the eBay listing to format
+//   - Message: the message header (e.g., "Price", "Old Price")
+//   - newListing: whether this is a new listing alert
+//   - priceChange: whether this is a price change alert
+//
+// Returns a slice of Discord embed fields.
 func formatSecondHandField(
 	Listing *types.EbayListing,
 	Message string,
@@ -308,6 +355,13 @@ func formatSecondHandField(
 	}
 }
 
+// formatAggregateFields creates fields for aggregate report statistics.
+//
+// Parameters:
+//   - Aggregate: the aggregate report containing statistics
+//   - message: the header message for the field group
+//
+// Returns a slice of Discord embed fields.
 func formatAggregateFields(Aggregate *database.AggregateReport, message string) []*discordgo.MessageEmbedField {
 	Message := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter(message, 43),
@@ -354,6 +408,13 @@ func formatAggregateFields(Aggregate *database.AggregateReport, message string) 
 	return res
 }
 
+// setPriceField creates fields for displaying a price with source URL and date.
+//
+// Parameters:
+//   - p: the price to display
+//   - message: the message prefix (e.g., "Current", "Historically Lowest")
+//
+// Returns a slice of Discord embed fields.
 func setPriceField(p *database.Price, message string) []*discordgo.MessageEmbedField {
 	priceField := discordgo.MessageEmbedField{
 		Name: embedSeparatorFormatter(fmt.Sprintf("%s Price", message), 44),
@@ -382,6 +443,12 @@ func setPriceField(p *database.Price, message string) []*discordgo.MessageEmbedF
 	return fields
 }
 
+// formatChannelInfo creates an embed displaying channel configuration information.
+//
+// Parameters:
+//   - Channel: the channel configuration to display
+//
+// Returns a Discord embed.
 func formatChannelInfo(Channel *database.Channel) *discordgo.MessageEmbed {
 	locationField := discordgo.MessageEmbedField{
 		Name:   "Facebook Locaiton Code",
@@ -410,7 +477,13 @@ func formatChannelInfo(Channel *database.Channel) *discordgo.MessageEmbed {
 	return em
 }
 
-// Truncate string to max length with ellipsis
+// truncateString truncates a string to max length with ellipsis.
+//
+// Parameters:
+//   - s: the string to truncate
+//   - maxLen: the maximum length of the output string
+//
+// Returns the truncated string.
 func truncateString(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
@@ -421,8 +494,14 @@ func truncateString(s string, maxLen int) string {
 	return s[:maxLen-3] + "..."
 }
 
-// <-------- s --------->
-// formats strings like above and total output string length of l
+// embedSeparatorFormatter formats a string with dashes on both sides for visual separation.
+// Formats strings like "<-------- s --------->" where the total length is l.
+//
+// Parameters:
+//   - s: the string to format
+//   - l: the total length of the output string
+//
+// Returns the formatted separator string.
 func embedSeparatorFormatter(s string, l int) string {
 	flip := false
 	initLen := len(s)

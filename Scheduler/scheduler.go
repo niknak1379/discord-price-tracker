@@ -31,12 +31,14 @@ func SetChannelScheduler(ctx context.Context) {
 	itemMap := make(map[string]*database.Item)
 	// for running it once immediately on deployment
 	//
-	// for _, Channel := range database.ChannelMap {
-	// 	itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
-	// 	for _, item := range itemsArr {
-	// 		updateSingleItem(item, Channel)
-	// 	}
-	// }
+	go func() {
+		for _, Channel := range database.ChannelMap {
+			itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
+			for _, item := range itemsArr {
+				updateSingleItem(item, Channel)
+			}
+		}
+	}()
 	// Initial load for scheduler this runs after the timers hit tho not immediately
 	loadAndStartItems(ctx, activeRoutines, itemMap)
 

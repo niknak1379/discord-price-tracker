@@ -471,6 +471,10 @@ var (
 			Name:        "restart",
 			Description: "Saves Progress and Stops the Bot",
 		},
+		{
+			Name:        "help",
+			Description: "Show help and available commands",
+		},
 	}
 )
 
@@ -1176,11 +1180,83 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 
 		syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 	},
+	"help": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "**PriceTracker Commands** 🎉\n\n" +
+					"**Setup & Configuration:**\n" +
+					"• `/setup` - Configure channel location and marketplace settings\n" +
+					"• `/channel_info` - View current channel settings\n\n" +
+					"**Item Management:**\n" +
+					"• `/add` - Add a new item to track\n" +
+					"• `/remove` - Remove an item from tracking\n" +
+					"• `/list` - List all tracked items\n" +
+					"• `/get` - Get item prices and details\n\n" +
+					"**Advanced Tracking:**\n" +
+					"• `/add_additional_name` - Add alternate names for tracking\n" +
+					"• `/remove_alternative_name` - Remove alternate names\n" +
+					"• `/add_exclusion_query` - Add exclusion patterns\n" +
+					"• `/remove_exclusion_query` - Remove exclusion patterns\n\n" +
+					"**Editing Trackers:**\n" +
+					"• `/edit_name` - Rename an item\n" +
+					"• `/edit_timer` - Change scrape interval\n" +
+					"• `/edit_facebook_crawl` - Toggle Facebook crawling\n" +
+					"• `/suppress` - Enable/disable notifications\n" +
+					"• `/set_price` - Manually set desired price\n" +
+					"• `/edit_tracking` - Add/remove tracking URLs\n\n" +
+					"**Analytics & Visualization:**\n" +
+					"• `/graph` - Price history chart\n" +
+					"• `/graph-compare` - Compare two items\n" +
+					"• `/aggregate` - Second-hand market statistics\n" +
+					"• `/channel_item_summary_one_week` - Weekly summary\n" +
+					"• `/channel_item_summary_custom_ln` - Custom period summary\n\n" +
+					"**Utilities:**\n" +
+					"• `/get_logs` - Get debug logs and screenshots\n" +
+					"• `/restart` - Restart the bot\n\n" +
+					"For more information, visit: https://github.com/nikanostovan/priceTracker",
+			},
+		})
+	},
 }
 
+// channelDeleteHandler deletes the channel from DB
+// when user deltes a channel
+// Parameters
+//   - discord: session object
+//   - i: channeldlete interaction
 func channelDeleteHandler(discord *discordgo.Session, i *discordgo.ChannelDelete) {
 	slog.Info("Channel being deleted with id: ", slog.String("ChannelID", i.Channel.ID))
 	database.ChannelDeleteHandler(i.Channel.ID)
+}
+
+// guildCreateHandler handles when the bot joins a new guild.
+// Sends a welcome message if this is the first time joining.
+// Parameters:
+//   - s: the session object
+//   - g: server the bot is being added to
+func guildCreateHandler(s *discordgo.Session, g *discordgo.GuildCreate) {
+	if database.IsFirstTimeJoin(g.ID, g.SystemChannelID) {
+		slog.Info("First time join for guild", slog.String("GuildID", g.ID))
+
+		// Get system channel or find first accessible channel
+		channelID := g.SystemChannelID
+		if channelID == "" {
+			for _, channel := range g.Channels {
+				if channel.Type == discordgo.ChannelTypeGuildText {
+					channelID = channel.ID
+					break
+				}
+			}
+		}
+
+		if channelID != "" {
+			sendWelcomeMessage(s, channelID)
+		} else {
+			slog.Error("could not find channel to send welcome message",
+				slog.String("GuildID", g.ID))
+		}
+	}
 }
 
 // Run starts the Discord bot, registers commands, and handles interactions.
@@ -1201,6 +1277,7 @@ func Run(ctx context.Context) {
 	// sets bot label
 	Discord.AddHandler(ready)
 	Discord.AddHandler(channelDeleteHandler)
+	Discord.AddHandler(guildCreateHandler)
 
 	// open session
 	Discord.Open()

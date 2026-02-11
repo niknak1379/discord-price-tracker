@@ -154,6 +154,8 @@ For the rest just read the Available Functions section below
 
 23. **restart**: saves progress and stops the bot
 
+24. **help**: show help and available commands
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

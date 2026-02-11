@@ -406,6 +406,23 @@ func BidPriceChangeAlert(newListing *types.EbayBids,
 	Discord.ChannelMessageSendEmbed(ChannelID, &em)
 }
 
+// sendWelcomeMessage sends the welcome message when the bot joins a new server.
+func sendWelcomeMessage(discord *discordgo.Session, channelID string) {
+	message := "**Welcome to PriceTracker!** 🎉\n\n" +
+		"**Getting Started:**\n" +
+		"1. Run `/setup` in this channel to configure your location and marketplace settings\n" +
+		"2. Use `/add` to start tracking items\n" +
+		"3. Check `/help` for all available commands\n\n" +
+		"For more information, visit: https://github.com/nikanostovan/priceTracker"
+
+	_, err := discord.ChannelMessageSend(channelID, message)
+	if err != nil {
+		slog.Error("could not send welcome message",
+			slog.String("ChannelID", channelID),
+			slog.Any("Error", err))
+	}
+}
+
 // customAcknowledge sends an immediate acknowledgment response to Discord.
 // Used for commands that may take longer than 3 seconds to complete.
 // for functions that will take too long(more than the 15 min resposne time

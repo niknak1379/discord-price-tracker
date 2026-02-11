@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
+// Channel object with its data
 type Channel struct {
 	ChannelID    string  `bson:"ChannelID"`
 	Lat          float64 `bson:"Lat"`
@@ -22,11 +23,19 @@ type Channel struct {
 	TotalItems   int     `bson:"TotalItems"`
 }
 
+// Guild represents a Discord server where the bot is installed.
+type Guild struct {
+	GuildID         string `bson:"GuildID"`
+	SystemChannelID string `bson:"SystemChannelID"`
+}
+
 var (
 	// has the mongo table stored
 	Tables = make(map[string]*mongo.Collection)
 	// has the distance, lat, long, and other facebook info stored
 	ChannelMap = make(map[string]*Channel)
+	// in-memory cache of joined guilds
+	GuildMap = make(map[string]*Guild)
 )
 
 func loadDBTables() {
@@ -56,6 +65,57 @@ func loadDBTables() {
 			log.Panic("Could not load Channel, lat, long or distance empty")
 		}
 	}
+	loadGuilds()
+}
+
+// loadGuilds loads all tracked guilds from the database into memory.
+func loadGuilds() {
+	guildTable := Client.Database("tracker").Collection("Guilds")
+	cursor, err := guildTable.Find(ctx, bson.M{})
+	if err != nil {
+		slog.Error("could not load guilds", slog.Any("Error", err))
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var guilds []Guild
+	if err := cursor.All(ctx, &guilds); err != nil {
+		slog.Error("could not read guild results", slog.Any("Error", err))
+		return
+	}
+
+	for _, guild := range guilds {
+		GuildMap[guild.GuildID] = &guild
+	}
+	slog.Info("guilds loaded", slog.Int("count", len(guilds)))
+}
+
+// IsFirstTimeJoin checks if this is the first time the bot joined a guild.
+// If so, adds the guild to the database and returns true.
+// Returns false if the guild already exists.
+// Parameters
+//   - guildID: ID of the guild the bot was added to
+//   - systemChannelID: the default channel automated messages are sent
+func IsFirstTimeJoin(guildID, systemChannelID string) bool {
+	if _, exists := GuildMap[guildID]; exists {
+		return false
+	}
+
+	// Add guild to database and memory
+	guild := &Guild{
+		GuildID:         guildID,
+		SystemChannelID: systemChannelID,
+	}
+
+	guildTable := Client.Database("tracker").Collection("Guilds")
+	_, err := guildTable.InsertOne(ctx, guild)
+	if err != nil {
+		slog.Error("could not insert guild", slog.Any("Error", err))
+		return false
+	}
+
+	GuildMap[guildID] = guild
+	return true
 }
 
 // GetChannelInfo retrieves the channel configuration for a given channel ID.

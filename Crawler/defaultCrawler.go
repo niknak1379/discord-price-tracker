@@ -91,12 +91,12 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 			slog.Warn("error in getting price in crawler, triggering proxy chrome",
 				slog.Any("Error", err), slog.Any("PriceErr", priceErr))
 			res, err2 = ChromeDPFailover(uri, querySelector, true)
-			return int(float64(res) * TaxRate), err2
+			return res, err2
 		} else {
 			slog.Warn("no proxy default crawler failed, triggering chromeDPFailover no proxy",
 				slog.Any("Error", err2), slog.Int("Price", res))
 			res, err2 = ChromeDPFailover(uri, querySelector, false)
-			return int(float64(res) * TaxRate), err2
+			return res, err2
 		}
 	}
 	return int(float64(res) * TaxRate), err
@@ -243,7 +243,7 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 		return 0, fmt.Errorf("failed to parse price '%s': %w in default crawler", priceText, err)
 	}
 
-	return price, nil
+	return int(float64(price) * TaxRate), nil
 }
 
 func GetOpenGraphPic(url string) string {

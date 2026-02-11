@@ -11,7 +11,6 @@ import (
 
 	types "priceTracker/Types"
 
-	"github.com/dlclark/regexp2"
 	"github.com/gocolly/colly/v2"
 )
 
@@ -27,7 +26,8 @@ func CrawlDepop(Name string,
 	Price int,
 	allRegexPatterns [][]*regexp.Regexp,
 	allSpecialWords [][]string,
-	exclusionRegexes []*regexp2.Regexp,
+	exclusionRegexes []*regexp.Regexp,
+	exclusionSpecialWords []string,
 ) ([]*types.EbayListing, error) {
 	url := depopURLGenerator(Name, Price)
 	c := initCrawler()
@@ -60,7 +60,7 @@ func CrawlDepop(Name string,
 
 		productCollector.OnHTML("p.styles_textWrapper__v3kxJ", func(pe *colly.HTMLElement) {
 			condition = pe.Text
-			if titleCorrectnessCheck(condition, allRegexPatterns, allSpecialWords, exclusionRegexes) {
+			if titleCorrectnessCheck(condition, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords) {
 				approved = true
 			}
 		})

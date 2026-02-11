@@ -63,7 +63,8 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 func GetEbayListings(Name string, desiredPrice int, Proxy bool,
 	allRegexPatterns [][]*regexp.Regexp,
 	allSpecialWords [][]string,
-	exclusionRegexes []*regexp2.Regexp,
+	exclusionRegexes []*regexp.Regexp,
+	exclusionSpecialWords []string,
 ) ([]*types.EbayListing, []*types.EbayBids, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
 
@@ -81,7 +82,7 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool,
 		title := e.ChildText(".s-card__title span.primary")
 
 		// check to see if listing is viable
-		if !titleCorrectnessCheck(title, allRegexPatterns, allSpecialWords, exclusionRegexes) {
+		if !titleCorrectnessCheck(title, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords) {
 			slog.Info("skipping title criteria not met", slog.String("Title", title))
 			return
 		}
@@ -304,11 +305,11 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool,
 	if err != nil || !visited {
 		if !Proxy {
 			slog.Warn("Colly failed even without proxy triggering chromeDP without proxy")
-			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, false, allRegexPatterns, allSpecialWords, exclusionRegexes)
+			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, false, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords)
 			return listingArr, bidArr, err
 		}
 		slog.Warn("ebay failed, redoing request with chromedp with proxy")
-		listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, true, allRegexPatterns, allSpecialWords, exclusionRegexes)
+		listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, true, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords)
 		return listingArr, bidArr, err
 	}
 	return listingArr, bidArr, err
@@ -317,7 +318,8 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool,
 func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
 	allRegexPatterns [][]*regexp.Regexp,
 	allSpecialWords [][]string,
-	exclusionRegexes []*regexp2.Regexp,
+	exclusionRegexes []*regexp.Regexp,
+	exclusionSpecialWords []string,
 ) (
 	[]*types.EbayListing, []*types.EbayBids, error,
 ) {
@@ -416,7 +418,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
 		if proxy {
 			slog.Warn("Proxy ebay chrome failover failed, calling nonproxy default",
 				slog.Any("error", err))
-			return GetEbayListings(Name, desiredPrice, false, allRegexPatterns, allSpecialWords, exclusionRegexes)
+			return GetEbayListings(Name, desiredPrice, false, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords)
 		} else {
 			fileErr1 := os.WriteFile("ebayFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("ebaySecond.png", second, 0o644)
@@ -431,7 +433,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
 
 	// Sanitize the list
 	for i := range items {
-		if !titleCorrectnessCheck(items[i].Title, allRegexPatterns, allSpecialWords, exclusionRegexes) {
+		if !titleCorrectnessCheck(items[i].Title, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords) {
 			continue
 		}
 
@@ -552,7 +554,7 @@ func init() {
 	}
 }
 
-func initTitleRegex(itemNames []string, exclusionQueries []string) ([][]*regexp.Regexp, [][]string, []*regexp2.Regexp) {
+func initTitleRegex(itemNames []string, exclusionQueries []string) ([][]*regexp.Regexp, [][]string, []*regexp.Regexp, []string) {
 	var (
 		allRegexPatterns [][]*regexp.Regexp
 		allSpecialWords  [][]string
@@ -580,20 +582,23 @@ func initTitleRegex(itemNames []string, exclusionQueries []string) ([][]*regexp.
 		allSpecialWords = append(allSpecialWords, specialWords)
 	}
 
-	// Compile exclusion queries
-	var exclusionRegexes []*regexp2.Regexp
+	// Process user-defined exclusion queries with word boundaries
+	var exclusionRegexes []*regexp.Regexp
+	var exclusionSpecialWords []string
+
 	for _, query := range exclusionQueries {
-		re, err := regexp2.Compile(query, 0)
-		if err != nil {
-			slog.Error("failed to compile exclusion regex",
-				slog.String("query", query),
-				slog.Any("error", err))
-			continue
+		query = strings.ToLower(query)
+		if strings.ContainsAny(query, "./-\"'()[]{}") {
+			// Has special characters - add to string array for exact matching
+			exclusionSpecialWords = append(exclusionSpecialWords, query)
+		} else {
+			// Normal word - compile regex with word boundaries
+			pattern := regexp.MustCompile(`\b` + regexp.QuoteMeta(query) + `\b`)
+			exclusionRegexes = append(exclusionRegexes, pattern)
 		}
-		exclusionRegexes = append(exclusionRegexes, re)
 	}
 
-	return allRegexPatterns, allSpecialWords, exclusionRegexes
+	return allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords
 }
 
 // checks the title to make sure the name is in the title and
@@ -617,7 +622,8 @@ func initTitleRegex(itemNames []string, exclusionQueries []string) ([][]*regexp.
 func titleCorrectnessCheck(listingTitle string,
 	allRegexPatterns [][]*regexp.Regexp,
 	allSpecialWords [][]string,
-	exclusionRegexes []*regexp2.Regexp,
+	exclusionRegexes []*regexp.Regexp,
+	exclusionSpecialWords []string,
 ) bool {
 	listingTitle = strings.ToLower(listingTitle)
 
@@ -654,31 +660,32 @@ outerloop:
 		return false
 	}
 
-	// Check custom exclusion queries
-	for _, re := range exclusionRegexes {
-		match, err := re.MatchString(listingTitle)
-		if err != nil {
-			slog.Error("error matching exclusion regex",
-				slog.String("title", listingTitle),
-				slog.Any("error", err))
-			continue
-		}
-		if match {
-			slog.Info("excluding title due to custom exclusion query",
-				slog.String("title", listingTitle),
-				slog.String("pattern", re.String()))
-			return false // Custom exclusion query matched
-		}
-	}
-
-	// Exclude titles with unwanted keywords (global exclusions)
+	// Check hardcoded global exclusions (using regexp2)
 	for _, re := range excludeRegexes {
 		match, err := re.MatchString(listingTitle)
 		if err != nil {
 			continue
 		}
 		if match {
-			return false // Excluded keyword found
+			return false // Hardcoded exclusion matched
+		}
+	}
+
+	// Check user-defined exclusion regexes
+	for _, pattern := range exclusionRegexes {
+		if pattern.MatchString(listingTitle) {
+			slog.Info("excluding title due to user-defined exclusion pattern",
+				slog.String("title", listingTitle))
+			return false
+		}
+	}
+
+	// Check user-defined exclusion special words
+	for _, word := range exclusionSpecialWords {
+		if strings.Contains(listingTitle, word) {
+			slog.Info("excluding title due to user-defined exclusion word",
+				slog.String("title", listingTitle))
+			return false
 		}
 	}
 

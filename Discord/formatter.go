@@ -108,6 +108,9 @@ func setEmbed(Item *database.Item) []*discordgo.MessageEmbed {
 func setAlternateNamesFields(Item *database.Item) []*discordgo.MessageEmbedField {
 	Fields := []*discordgo.MessageEmbedField{}
 	// im also gonna set timer fields here too
+	if Item.Timer == 0 {
+		Item.Timer = 8
+	}
 	timer := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter("Timer", 43),
 		Value:  strconv.Itoa(Item.Timer) + " h",

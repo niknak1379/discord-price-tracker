@@ -108,6 +108,14 @@ func setAlternateNamesFields(Item *database.Item) []*discordgo.MessageEmbedField
 		}
 		Fields = append(Fields, &field)
 	}
+	for _, query := range Item.TrackingExclusionQueries {
+		field := discordgo.MessageEmbedField{
+			Name:   embedSeparatorFormatter("Exclusion Query", 43),
+			Value:  query,
+			Inline: false,
+		}
+		Fields = append(Fields, &field)
+	}
 	return Fields
 }
 

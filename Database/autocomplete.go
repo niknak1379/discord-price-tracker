@@ -92,6 +92,18 @@ func AutoCompleteAlternateTrackingQueries(Name string, ChannelID string) []strin
 	return res
 }
 
+func AutoCompleteTrackingExclusionQueries(Name string, ChannelID string) []string {
+	item, err := GetItem(Name, ChannelID, "PriceHistory", "ListingsHistory", "EbayListings", "EbayBids")
+	res := []string{}
+	if err != nil {
+		return res
+	}
+	for _, query := range item.TrackingExclusionQueries {
+		res = append(res, query)
+	}
+	return res
+}
+
 func AutoCompleteQuery() map[string]string {
 	ret := map[string]string{
 		//div[data-feature-name='corePriceDisplay_desktop'] span.priceToPay

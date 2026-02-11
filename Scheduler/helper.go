@@ -6,6 +6,7 @@ func HaveItemPropertiesChanged(currItem, oldItem *database.Item) bool {
 	if currItem.SuppressNotifications != oldItem.SuppressNotifications ||
 		currItem.Timer != oldItem.Timer ||
 		len(currItem.AlternateTrackingQueries) != len(oldItem.AlternateTrackingQueries) ||
+		len(currItem.TrackingExclusionQueries) != len(oldItem.TrackingExclusionQueries) ||
 		currItem.CurrentLowestPrice.Price != oldItem.CurrentLowestPrice.Price ||
 		currItem.FacebookCrawl != oldItem.FacebookCrawl {
 		return true

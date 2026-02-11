@@ -40,6 +40,7 @@ type AggregateReport struct {
 type Item struct {
 	Name                     string               `bson:"Name"`
 	AlternateTrackingQueries []string             `bson:"AlternateTrackingQueries"`
+	TrackingExclusionQueries []string             `bson:"TrackingExclusionQueries"`
 	TrackingList             []*TrackingInfo      `bson:"TrackingList"`
 	LowestPrice              Price                `bson:"LowestPrice"`
 	PriceHistory             []*Price             `bson:"PriceHistory"`
@@ -84,6 +85,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 		p.Price, Channel.Lat, Channel.Long,
 		Channel.Distance, Type,
 		Channel.LocationCode, false,
+		[]string{}, // empty exclusion queries for new items
 	)
 	slices.SortFunc(ebayListings, func(a, b *types.EbayListing) int {
 		return b.Price - a.Price
@@ -93,6 +95,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 	i := Item{
 		Name:                     itemName,
 		AlternateTrackingQueries: []string{},
+		TrackingExclusionQueries: []string{},
 		ImgURL:                   imgURL,
 		LowestPrice:              *p,
 		Type:                     Type,
@@ -168,6 +171,69 @@ func RemoveAlternateTrackingName(Name string, index int, ChannelID string) (Item
 		return result, err
 	}
 	return result, err
+}
+
+// add exclusion tracking query
+func AddTrackingExclusionQuery(Name, ExclusionQuery, ChannelID string) error {
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		slog.Error("Could not load channel from db", slog.Any("Error", err))
+		return err
+	}
+
+	update := bson.M{
+		"$push": bson.M{
+			"TrackingExclusionQueries": ExclusionQuery,
+		},
+	}
+	res := Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update)
+	return res.Err()
+}
+
+// remove exclusion tracking query
+func RemoveTrackingExclusionQuery(Name string, index int, ChannelID string) (Item, error) {
+	var result Item
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		slog.Error("couldnt load channel", slog.Any("Error", err))
+		return Item{}, err
+	}
+	filter := bson.M{
+		"Name": bson.M{"$regex": "^" + Name + "$", "$options": "i"},
+	}
+
+	update1 := bson.M{
+		"$unset": bson.M{
+			fmt.Sprintf("TrackingExclusionQueries.%d", index): "",
+		},
+	}
+	_, err = Table.UpdateOne(ctx, filter, update1)
+	if err != nil {
+		return result, err
+	}
+
+	update2 := bson.M{
+		"$pull": bson.M{
+			"TrackingExclusionQueries": nil,
+		},
+	}
+	opts := options.FindOneAndUpdate().
+		SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).
+		SetReturnDocument(options.After)
+	err = Table.FindOneAndUpdate(ctx, filter, update2, opts).Decode(&result)
+	if err != nil {
+		return result, err
+	}
+	return result, err
+}
+
+// get tracking exclusion queries
+func GetTrackingExclusionQueries(Name, ChannelID string) ([]string, error) {
+	item, err := GetItem(Name, ChannelID, "PriceHistory", "ListingsHistory", "EbayListings", "EbayBids")
+	if err != nil {
+		return []string{}, err
+	}
+	return item.TrackingExclusionQueries, nil
 }
 
 // removes all trackers and manually sets the price to filter second hand listingsArr

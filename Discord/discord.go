@@ -287,6 +287,45 @@ var (
 			},
 		},
 		{
+			Name:        "add_exclusion_query",
+			Description: "Add Exclusion Query for Tracking regex",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "name",
+					Description:  "name of item",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:        "exclusion_query",
+					Description: "exclusion pattern to add (regex string)",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "remove_exclusion_query",
+			Description: "Remove Exclusion Query for Tracking regex",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "name",
+					Description:  "name of item",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:         "index",
+					Description:  "index of exclusion query to remove",
+					Type:         discordgo.ApplicationCommandOptionInteger,
+					Required:     true,
+					Autocomplete: true,
+				},
+			},
+		},
+		{
 			Name:        "edit_tracking",
 			Description: "Edit a currently Existing Tracker",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -437,15 +476,18 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"setup": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
+		location := options[0].StringValue()
+		locationCode := options[1].StringValue()
+		maxDistance := int(options[2].IntValue())
 
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 		})
 		// add tracker to database
 		err := database.UpdateChannelOrCreateChannelItemTableIfMissing(i.ChannelID,
-			options[0].StringValue(),
-			options[1].StringValue(),
-			int(options[2].IntValue()))
+			location,
+			locationCode,
+			maxDistance)
 		if err != nil {
 			content := err.Error()
 			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
@@ -504,8 +546,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	},
 	"channel_item_summary_custom_ln": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		customAcknowledge(discord, i)
-		table := charts.CustomAggregateTable(i.ChannelID,
-			int(i.ApplicationCommandData().Options[0].IntValue()))
+		monthsBack := int(i.ApplicationCommandData().Options[0].IntValue())
+		table := charts.CustomAggregateTable(i.ChannelID, monthsBack)
 		for _, string := range table {
 			_, err := discord.ChannelMessageSend(i.ChannelID, string)
 			if err != nil {
@@ -515,8 +557,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	},
 	"get_logs": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		customAcknowledge(discord, i)
+		crawlType := i.ApplicationCommandData().Options[0].StringValue()
 		CrawlErrorAlert("Logs", "User Requested",
-			errors.New(i.ApplicationCommandData().Options[0].StringValue()), i.ChannelID)
+			errors.New(crawlType), i.ChannelID)
 	},
 	"add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		switch i.Type {
@@ -529,13 +572,16 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 			// get command inputs from discord
 			options := i.ApplicationCommandData().Options
-			// 0 is item name, 1 is uri, 2 is htmlqueryselector
+			// 0 is item name, 1 is uri, 2 is htmlqueryselector, 3 is timer, 4 is type
+			itemName := options[0].StringValue()
+			uri := options[1].StringValue()
+			htmlQuery := options[2].StringValue()
+			timer := int(options[3].IntValue())
+			itemType := options[4].StringValue()
 			content := ""
 			var em []*discordgo.MessageEmbed
 			// add tracker to database
-			addRes, err := database.AddItem(options[0].StringValue(),
-				options[1].StringValue(), options[2].StringValue(),
-				options[4].StringValue(), int(options[3].IntValue()),
+			addRes, err := database.AddItem(itemName, uri, htmlQuery, itemType, timer,
 				database.ChannelMap[i.ChannelID],
 			)
 			if err != nil {
@@ -543,7 +589,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 					Content: "Error adding item" + content,
 				})
-				CrawlErrorAlert(options[0].StringValue(), options[1].StringValue(), err, i.ChannelID)
+				CrawlErrorAlert(itemName, uri, err, i.ChannelID)
 				return
 			} else {
 				em = setEmbed(&addRes)
@@ -571,12 +617,14 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
 			// add tracker to database
-			err := database.EditTimer(options[0].StringValue(), int(options[1].IntValue()), i.ChannelID)
+			itemName := options[0].StringValue()
+			newTimer := int(options[1].IntValue())
+			err := database.EditTimer(itemName, newTimer, i.ChannelID)
 			content := ""
 			if err != nil {
 				content = err.Error()
 			} else {
-				content = fmt.Sprintf("Price Update Notification Timer: %d Hours", int(options[1].IntValue()))
+				content = fmt.Sprintf("Price Update Notification Timer: %d Hours", newTimer)
 			}
 			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 				Content: content,
@@ -594,12 +642,14 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
 			// add tracker to database
-			err := database.SetFacebookCrawl(options[0].StringValue(), options[1].BoolValue(), i.ChannelID)
+			itemName := options[0].StringValue()
+			enableCrawl := options[1].BoolValue()
+			err := database.SetFacebookCrawl(itemName, enableCrawl, i.ChannelID)
 			content := ""
 			if err != nil {
 				content = err.Error()
 			} else {
-				content = fmt.Sprintf("Facebook crawl value: %t", options[1].BoolValue())
+				content = fmt.Sprintf("Facebook crawl value: %t", enableCrawl)
 			}
 			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 				Content: content,
@@ -617,12 +667,14 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
 			// add tracker to database
-			err := database.EditSuppress(options[0].StringValue(), options[1].BoolValue(), i.ChannelID)
+			itemName := options[0].StringValue()
+			suppressNotifications := options[1].BoolValue()
+			err := database.EditSuppress(itemName, suppressNotifications, i.ChannelID)
 			content := ""
 			if err != nil {
 				content = err.Error()
 			} else {
-				content = fmt.Sprintf("Price Update Notification Status: %t", options[1].BoolValue())
+				content = fmt.Sprintf("Price Update Notification Status: %t", suppressNotifications)
 			}
 			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 				Content: content,
@@ -640,8 +692,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
 			// add tracker to database
-			err := database.AddAlternateTrackingName(i.ApplicationCommandData().Options[0].StringValue(),
-				i.ApplicationCommandData().Options[1].StringValue(), i.ChannelID)
+			itemName := i.ApplicationCommandData().Options[0].StringValue()
+			additionalName := i.ApplicationCommandData().Options[1].StringValue()
+			err := database.AddAlternateTrackingName(itemName, additionalName, i.ChannelID)
 			content := ""
 			if err != nil {
 				content = err.Error()
@@ -651,6 +704,70 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 				Content: content,
 			})
+		}
+	},
+	"add_exclusion_query": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoComplete(options[0].StringValue(), 0, i, discord)
+		default:
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
+			// add exclusion query to database
+			itemName := i.ApplicationCommandData().Options[0].StringValue()
+			exclusionQuery := i.ApplicationCommandData().Options[1].StringValue()
+			err := database.AddTrackingExclusionQuery(itemName, exclusionQuery, i.ChannelID)
+			content := ""
+			if err != nil {
+				content = err.Error()
+			} else {
+				content = "Exclusion Query Added"
+			}
+			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+				Content: content,
+			})
+		}
+	},
+	"remove_exclusion_query": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			switch {
+			case options[0].Focused:
+				autoComplete(options[0].StringValue(), 0, i, discord)
+			case options[1].Focused:
+				autoComplete(options[0].StringValue(), 4, i, discord)
+			}
+		default:
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
+			// remove exclusion query from database
+			name := options[0].StringValue()
+			index := int(options[1].IntValue())
+			res, err := database.RemoveTrackingExclusionQuery(name, index, i.ChannelID)
+			em := setEmbed(&res)
+			if err != nil {
+				content := err.Error()
+				discord.ChannelMessageSendEmbed(i.ChannelID, &discordgo.MessageEmbed{
+					Title: "Error",
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:  "Error",
+							Value: content,
+						},
+					},
+					Color: 10038562, // red
+				})
+			} else {
+				for _, embed := range em {
+					discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+				}
+			}
 		}
 	},
 	"remove_alternative_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -695,16 +812,16 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"get": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
-		// 0 is item name, 1 is uri, 2 is htmlqueryselector
+		itemName := options[0].StringValue()
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
-			autoComplete(options[0].StringValue(), 0, i, discord)
+			autoComplete(itemName, 0, i, discord)
 		default:
 			err := customAcknowledge(discord, i)
 			if err != nil {
 				slog.Error("ack error", slog.Any("error value", err))
 			}
-			getRes, err := database.GetItem(options[0].StringValue(), i.ChannelID, "PriceHistory", "ListingsHistory")
+			getRes, err := database.GetItem(itemName, i.ChannelID, "PriceHistory", "ListingsHistory")
 			if err != nil {
 				content := err.Error()
 				discord.ChannelMessageSend(i.ChannelID, content)
@@ -727,16 +844,17 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"set_price": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
-		// 0 is item name, 1 is uri, 2 is htmlqueryselector
+		itemName := options[0].StringValue()
+		desiredPrice := int(options[1].IntValue())
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
-			autoComplete(options[0].StringValue(), 0, i, discord)
+			autoComplete(itemName, 0, i, discord)
 		default:
 			err := customAcknowledge(discord, i)
 			if err != nil {
 				slog.Error("ack error", slog.Any("error value", err))
 			}
-			err = database.SetDesiredPrice(options[0].StringValue(), i.ChannelID, int(options[1].IntValue()))
+			err = database.SetDesiredPrice(itemName, i.ChannelID, desiredPrice)
 			if err != nil {
 				content := err.Error()
 				discord.ChannelMessageSend(i.ChannelID, content)
@@ -747,13 +865,15 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		}
 	}, "edit_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
+		oldName := options[0].StringValue()
+		newName := options[1].StringValue()
 
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
-			autoComplete(options[0].StringValue(), 0, i, discord)
+			autoComplete(oldName, 0, i, discord)
 			return
 		case discordgo.InteractionApplicationCommand:
-			getRes, err := database.EditName(options[0].StringValue(), options[1].StringValue(), i.ChannelID)
+			getRes, err := database.EditName(oldName, newName, i.ChannelID)
 			var embedArr []*discordgo.MessageEmbed
 			var content string
 			customAcknowledge(discord, i)
@@ -809,12 +929,13 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	},
 	"remove": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
+		itemName := options[0].StringValue()
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
-			autoComplete(options[0].StringValue(), 0, i, discord)
+			autoComplete(itemName, 0, i, discord)
 		default:
 			// remove tracker to database
-			deleteRes := database.RemoveItem(options[0].StringValue(), i.ChannelID)
+			deleteRes := database.RemoveItem(itemName, i.ChannelID)
 
 			// set up response to discord client
 			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -912,18 +1033,20 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	},
 	"graph": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
+		itemName := options[0].StringValue()
+		months := int(options[1].IntValue())
 
 		// handle autocomplete for name and normal request
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
-			autoComplete(options[0].StringValue(), 0, i, discord)
+			autoComplete(itemName, 0, i, discord)
 		default:
 			// set up response to discord client
 			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
 			// get command inputs from discord
-			err := charts.PriceHistoryChart([]string{options[0].StringValue()}, int(options[1].IntValue()), i.ChannelID)
+			err := charts.PriceHistoryChart([]string{itemName}, months, i.ChannelID)
 			if err != nil {
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 					Content: fmt.Sprint(err),
@@ -953,15 +1076,18 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	},
 	"graph-compare": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
+		firstItemName := options[0].StringValue()
+		secondItemName := options[1].StringValue()
+		months := int(options[2].IntValue())
 		// handle autocomplete for name and normal request
 		switch i.Type {
 
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			switch {
 			case options[0].Focused:
-				autoComplete(options[0].StringValue(), 0, i, discord)
+				autoComplete(firstItemName, 0, i, discord)
 			case options[1].Focused:
-				autoComplete(options[1].StringValue(), 0, i, discord)
+				autoComplete(secondItemName, 0, i, discord)
 			}
 
 		default:
@@ -971,9 +1097,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			})
 			// get command inputs from discord
 			err := charts.PriceHistoryChart([]string{
-				options[0].StringValue(),
-				options[1].StringValue(),
-			}, int(options[2].IntValue()), i.ChannelID)
+				firstItemName,
+				secondItemName,
+			}, months, i.ChannelID)
 			if err != nil {
 				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 					Content: fmt.Sprint(err),
@@ -999,11 +1125,14 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	},
 	"aggregate": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
+		itemName := options[0].StringValue()
+		monthsDuration := int(options[1].IntValue())
+		endingMonthOffset := int(options[2].IntValue())
 
 		// handle autocomplete for name and normal request
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
-			autoComplete(options[0].StringValue(), 0, i, discord)
+			autoComplete(itemName, 0, i, discord)
 		default:
 			// set up response to discord client
 			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -1011,17 +1140,17 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			})
 			// get command inputs from discord
 			//
-			endDate := time.Now().AddDate(0, -1*int(options[2].IntValue()), 0)
+			endDate := time.Now().AddDate(0, -1*endingMonthOffset, 0)
 			Aggregate, err := database.GenerateSecondHandPriceReport(
-				options[0].StringValue(),
+				itemName,
 				endDate,
-				int(options[1].IntValue())*30, i.ChannelID)
+				monthsDuration*30, i.ChannelID)
 			content := ""
 			var fields []*discordgo.MessageEmbedField
 			if err != nil {
 				content = err.Error()
 			} else {
-				startDate := endDate.AddDate(0, 0, -30*int(options[1].IntValue()))
+				startDate := endDate.AddDate(0, 0, -30*monthsDuration)
 				message := startDate.Format("2006-01-02") + " - " + endDate.Format("2006-01-02")
 				fields = formatAggregateFields(&Aggregate, message)
 			}

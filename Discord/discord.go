@@ -427,6 +427,18 @@ var (
 			},
 		},
 		{
+			Name:        "get_failure_report",
+			Description: "Get failure report with incident charts",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "days",
+					Description: "how many days of history to include",
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Required:    true,
+				},
+			},
+		},
+		{
 			Name:        "aggregate",
 			Description: "Get Aggregate Data for the Used Listings of the Item",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -1129,6 +1141,117 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 		}
 	},
+	"get_failure_report": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		options := i.ApplicationCommandData().Options
+		days := int(options[0].IntValue())
+
+		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Generating failure report for the last " + fmt.Sprint(days) + " days...",
+			},
+		})
+
+		endDate := time.Now()
+		startDate := endDate.AddDate(0, 0, -days)
+
+		domainData, err := database.GetIncidentsByDomainOverTime(startDate, endDate)
+		if err != nil {
+			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: fmt.Sprint(err),
+			})
+			return
+		}
+
+		crawlerData, err := database.GetLastAttemptByCrawler()
+		if err != nil {
+			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: "Error getting crawler stats: " + fmt.Sprint(err),
+			})
+			return
+		}
+
+		proxyData, err := database.GetProxyFailureRate()
+		if err != nil {
+			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: "Error getting proxy stats: " + fmt.Sprint(err),
+			})
+			return
+		}
+
+		if len(domainData) == 0 && len(crawlerData) == 0 && len(proxyData) == 0 {
+			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: "No incident data found for the specified time period.",
+			})
+			return
+		}
+
+		if len(domainData) > 0 {
+			err = charts.IncidentsByDomainChart(domainData)
+			if err != nil {
+				slog.Error("failed to generate domain chart", slog.Any("error", err))
+			}
+		}
+
+		if len(crawlerData) > 0 {
+			err = charts.LastAttemptByCrawlerChart(crawlerData)
+			if err != nil {
+				slog.Error("failed to generate crawler chart", slog.Any("error", err))
+			}
+		}
+
+		if len(proxyData) > 0 {
+			err = charts.ProxyFailureRateChart(proxyData)
+			if err != nil {
+				slog.Error("failed to generate proxy chart", slog.Any("error", err))
+			}
+		}
+
+		var files []*discordgo.File
+
+		if len(domainData) > 0 {
+			reader, err := os.Open("incidents_by_domain.png")
+			if err == nil {
+				files = append(files, &discordgo.File{
+					Name:        "incidents_by_domain.png",
+					ContentType: "image/png",
+					Reader:      reader,
+				})
+			}
+		}
+
+		if len(crawlerData) > 0 {
+			reader, err := os.Open("last_attempt_by_crawler.png")
+			if err == nil {
+				files = append(files, &discordgo.File{
+					Name:        "last_attempt_by_crawler.png",
+					ContentType: "image/png",
+					Reader:      reader,
+				})
+			}
+		}
+
+		if len(proxyData) > 0 {
+			reader, err := os.Open("proxy_failure_rate.png")
+			if err == nil {
+				files = append(files, &discordgo.File{
+					Name:        "proxy_failure_rate.png",
+					ContentType: "image/png",
+					Reader:      reader,
+				})
+			}
+		}
+
+		if len(files) > 0 {
+			_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: "**Failure Report (Last " + fmt.Sprint(days) + " days)**",
+				Files:   files,
+			})
+			if err != nil {
+				slog.Error("failed to send failure report", slog.Any("error", err))
+			}
+		}
+	},
 	"aggregate": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
 		itemName := options[0].StringValue()
@@ -1209,6 +1332,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 					"• `/graph` - Price history chart\n" +
 					"• `/graph-compare` - Compare two items\n" +
 					"• `/aggregate` - Second-hand market statistics\n" +
+					"• `/get_failure_report` - Crawler failure report\n" +
 					"• `/channel_item_summary_one_week` - Weekly summary\n" +
 					"• `/channel_item_summary_custom_ln` - Custom period summary\n\n" +
 					"**Utilities:**\n" +

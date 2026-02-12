@@ -173,3 +173,222 @@ func ExtractDomainName(url string) string {
 	parts := strings.Split(url, ".")
 	return parts[0]
 }
+
+func IncidentsByDomainChart(data []database.DomainTimeSeries) error {
+	if len(data) == 0 {
+		return errors.New("no incident data available")
+	}
+
+	line := charts.NewLine()
+
+	line.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title:    "Incidents by Domain Over Time",
+			Subtitle: "Daily incident counts per domain",
+			TitleStyle: &opts.TextStyle{
+				Color:      "Black",
+				FontWeight: "bold",
+				FontSize:   28,
+				Padding:    10,
+			},
+			TextAlign: "center",
+			Left:      "center",
+			Top:       "20px",
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			BackgroundColor: "white",
+			Width:           "1100px",
+			Height:          "600px",
+		}),
+		charts.WithGridOpts(opts.Grid{
+			Show:         opts.Bool(true),
+			ContainLabel: opts.Bool(true),
+			Top:          "100px",
+			Bottom:       "100px",
+		}),
+		charts.WithLegendOpts(
+			opts.Legend{
+				Bottom:  "0%",
+				Show:    opts.Bool(true),
+				Padding: 10,
+			},
+		),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Show:    opts.Bool(true),
+			Trigger: "axis",
+		}),
+		charts.WithAnimation(false),
+	)
+
+	domainData := make(map[string]map[string]int)
+	allDates := make(map[string]bool)
+
+	for _, d := range data {
+		dateStr := d.Date.Format("2006-01-02")
+		allDates[dateStr] = true
+		if domainData[d.Domain] == nil {
+			domainData[d.Domain] = make(map[string]int)
+		}
+		domainData[d.Domain][dateStr] = d.Count
+	}
+
+	var dates []string
+	for date := range allDates {
+		dates = append(dates, date)
+	}
+	slices.Sort(dates)
+
+	for domain, countByDate := range domainData {
+		values := make([]opts.LineData, len(dates))
+		for i, date := range dates {
+			if count, ok := countByDate[date]; ok {
+				values[i] = opts.LineData{Value: count}
+			} else {
+				values[i] = opts.LineData{Value: 0}
+			}
+		}
+		line.AddSeries(domain, values)
+	}
+
+	line.SetXAxis(dates)
+	line.SetSeriesOptions(
+		charts.WithLineChartOpts(opts.LineChart{
+			ShowSymbol:   opts.Bool(true),
+			SymbolSize:   6,
+			Smooth:       opts.Bool(false),
+			ConnectNulls: opts.Bool(false),
+		}),
+	)
+
+	err := render.MakeChartSnapshot(line.RenderContent(), "incidents_by_domain.png")
+	return err
+}
+
+func LastAttemptByCrawlerChart(data []database.CrawlerProxyStats) error {
+	if len(data) == 0 {
+		return errors.New("no crawler data available")
+	}
+
+	bar := charts.NewBar()
+
+	bar.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title:    "Last Attempt by Crawler",
+			Subtitle: "Proxy vs no_proxy usage per crawler type",
+			TitleStyle: &opts.TextStyle{
+				Color:      "Black",
+				FontWeight: "bold",
+				FontSize:   28,
+				Padding:    10,
+			},
+			TextAlign: "center",
+			Left:      "center",
+			Top:       "20px",
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			BackgroundColor: "white",
+			Width:           "1100px",
+			Height:          "600px",
+		}),
+		charts.WithGridOpts(opts.Grid{
+			Show:         opts.Bool(true),
+			ContainLabel: opts.Bool(true),
+			Top:          "100px",
+			Bottom:       "100px",
+		}),
+		charts.WithLegendOpts(
+			opts.Legend{
+				Bottom:  "0%",
+				Show:    opts.Bool(true),
+				Padding: 10,
+			},
+		),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Show:    opts.Bool(true),
+			Trigger: "axis",
+		}),
+		charts.WithAnimation(false),
+	)
+
+	crawlers := make([]string, len(data))
+	proxyCounts := make([]opts.BarData, len(data))
+	noProxyCounts := make([]opts.BarData, len(data))
+
+	for i, stats := range data {
+		crawlers[i] = stats.Crawler
+		var proxy, noProxy int
+		for _, ps := range stats.ProxyStats {
+			if ps.ProxyType == "proxy" {
+				proxy = ps.Count
+			} else if ps.ProxyType == "no_proxy" {
+				noProxy = ps.Count
+			}
+		}
+		proxyCounts[i] = opts.BarData{Value: proxy}
+		noProxyCounts[i] = opts.BarData{Value: noProxy}
+	}
+
+	bar.SetXAxis(crawlers)
+	bar.AddSeries("proxy", proxyCounts).AddSeries("no_proxy", noProxyCounts)
+
+	err := render.MakeChartSnapshot(bar.RenderContent(), "last_attempt_by_crawler.png")
+	return err
+}
+
+func ProxyFailureRateChart(data []database.ProxyStats) error {
+	if len(data) == 0 {
+		return errors.New("no proxy data available")
+	}
+
+	bar := charts.NewBar()
+
+	bar.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title:    "Proxy vs no_proxy Failure Rate",
+			Subtitle: "Success rate based on final attempt proxy configuration",
+			TitleStyle: &opts.TextStyle{
+				Color:      "Black",
+				FontWeight: "bold",
+				FontSize:   28,
+				Padding:    10,
+			},
+			TextAlign: "center",
+			Left:      "center",
+			Top:       "20px",
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			BackgroundColor: "white",
+			Width:           "1100px",
+			Height:          "600px",
+		}),
+		charts.WithGridOpts(opts.Grid{
+			Show:         opts.Bool(true),
+			ContainLabel: opts.Bool(true),
+			Top:          "100px",
+			Bottom:       "100px",
+		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Show:      opts.Bool(true),
+			Trigger:   "axis",
+			Formatter: "{b}: {c}% success ({d} incidents)",
+		}),
+		charts.WithAnimation(false),
+		charts.WithYAxisOpts(opts.YAxis{
+			Max: 100,
+		}),
+	)
+
+	proxyTypes := make([]string, len(data))
+	successRates := make([]opts.BarData, len(data))
+
+	for i, stats := range data {
+		proxyTypes[i] = stats.ProxyType
+		successRates[i] = opts.BarData{Value: stats.SuccessRate}
+	}
+
+	bar.SetXAxis(proxyTypes)
+	bar.AddSeries("Success Rate %", successRates)
+
+	err := render.MakeChartSnapshot(bar.RenderContent(), "proxy_failure_rate.png")
+	return err
+}

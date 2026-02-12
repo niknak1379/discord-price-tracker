@@ -45,6 +45,29 @@ type AggregateReport struct {
 	LowestPriceDuringTimePeriod int `bson:"LowestPriceDuringTimePeriod"`
 }
 
+type DomainTimeSeries struct {
+	Domain string    `bson:"Domain"`
+	Date   time.Time `bson:"Date"`
+	Count  int       `bson:"Count"`
+}
+
+type CrawlerProxyStats struct {
+	Crawler    string       `bson:"Crawler"`
+	ProxyStats []ProxyCount `bson:"ProxyStats"`
+}
+
+type ProxyCount struct {
+	ProxyType string `bson:"ProxyType"`
+	Count     int    `bson:"Count"`
+}
+
+type ProxyStats struct {
+	ProxyType   string  `bson:"ProxyType"`
+	Total       int     `bson:"Total"`
+	Failed      int     `bson:"Failed"`
+	SuccessRate float64 `bson:"SuccessRate"`
+}
+
 // Item represents a tracked product with all its data.
 type Item struct {
 	Name                     string               `bson:"Name"`
@@ -1025,7 +1048,7 @@ func validateURI(uri string, querySelector string) (*Price, *TrackingInfo, error
 
 // SaveAttempt saves an attempt to the incidents collection as a new document.
 func SaveAttempt(Incident *types.Incident) {
-	collection := Client.Database("tracker").Collection("incidents")
+	collection := Client.Database("tracker").Collection("Incidents")
 	_, err := collection.InsertOne(ctx, Incident)
 	if err != nil {
 		slog.Error("failed to save attempt", slog.Any("error", err))

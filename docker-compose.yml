@@ -3,7 +3,7 @@ services:
     image: nikanostovan/price-tracker:latest
     container_name: price-tracker
     restart: unless-stopped
-    mem_limit: 128m 
+    mem_limit: 300m 
     env_file:
       - .env
     environment:

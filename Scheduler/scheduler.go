@@ -32,14 +32,14 @@ func SetChannelScheduler(ctx context.Context) {
 	itemMap := make(map[string]*database.Item)
 	// for running it once immediately on deployment
 	//
-	// go func() {
-	// 	for _, Channel := range database.ChannelMap {
-	// 		itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
-	// 		for _, item := range itemsArr {
-	// 			updateSingleItem(item, Channel)
-	// 		}
-	// 	}
-	// }()
+	go func() {
+		for _, Channel := range database.ChannelMap {
+			itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
+			for _, item := range itemsArr {
+				updateSingleItem(item, Channel)
+			}
+		}
+	}()
 	// Initial load for scheduler this runs after the timers hit tho not immediately
 	loadAndStartItems(ctx, activeRoutines, itemMap)
 
@@ -208,9 +208,9 @@ func updateSingleItem(item *database.Item, Channel *database.Channel) {
 }
 
 func updatePrice(Name string, Tracker *database.TrackingInfo, date time.Time, ChannelID string) (database.Price, error) {
-	newPrice, err := crawler.GetPrice(Tracker.URI, Tracker.HtmlQuery, true)
+	newPrice, err := crawler.GetPrice(Tracker.URI, Tracker.HtmlQuery, true, nil)
 	if err != nil && strings.Contains(Tracker.URI, "amazon") {
-		newPrice, err = crawler.GetPrice(Tracker.URI, backUpAmazonQuery, true)
+		newPrice, err = crawler.GetPrice(Tracker.URI, backUpAmazonQuery, true, nil)
 	}
 	if err != nil || newPrice == 0 {
 		slog.Error("error getting price in updatePrice", slog.Any("Error", err),

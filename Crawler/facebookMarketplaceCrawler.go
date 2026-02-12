@@ -51,14 +51,16 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 		var err3, err2 error
 		if itemType == "Clothes" {
 			Price = Price / 2
-			depop, err3 = CrawlDepop(Name, Price, normal, special, exclusionRegexes, exclusionSpecialWords)
+			depop, err3 = CrawlDepop(Name, Price, normal, special,
+				exclusionRegexes, exclusionSpecialWords, nil)
 		}
 		if facebookCrawl {
 			fb, err2 = MarketPlaceCrawl(Name, Price, homeLat, homeLong,
-				maxDistance, LocationCode, true, normal, special, exclusionRegexes, exclusionSpecialWords)
+				maxDistance, LocationCode, true, normal,
+				special, exclusionRegexes, exclusionSpecialWords, nil)
 		}
 		ebay, bids, err4 := GetEbayListings(Name, Price, true,
-			normal, special, exclusionRegexes, exclusionSpecialWords)
+			normal, special, exclusionRegexes, exclusionSpecialWords, nil)
 
 		if err != nil || err2 != nil || err3 != nil {
 			slog.Error("errors from getting second hand listing",
@@ -133,6 +135,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	allSpecialWords [][]string,
 	exclusionRegexes []*regexp.Regexp,
 	exclusionSpecialWords []string,
+	attempts []*types.Attempt,
 ) ([]*types.EbayListing, error) {
 	crawlDate := time.Now()
 	url := FacebookURLGenerator(Name, desiredPrice, LocationCode)
@@ -143,6 +146,9 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 		ctx, cancel = NewChromedpContext(90*time.Second, chromedp.ProxyServer("http://gluetun:8888"))
 	} else {
 		ctx, cancel = NewChromedpContext(90 * time.Second)
+	}
+	if attempts == nil {
+		attempts = []*types.Attempt{}
 	}
 
 	var first []byte
@@ -187,7 +193,22 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 				slog.Any("write err 2", fileErr2),
 				slog.Any("write err 3", fileErr3),
 			)
-			return MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode, false, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords)
+			attempts = append(attempts, &types.Attempt{
+				Crawler:   types.CrawlerFacebook,
+				Proxy:     types.ProxyEnabled,
+				Method:    types.MethodChromeDP,
+				Timestamp: time.Now(),
+				Error: func(err error) string {
+					if err != nil {
+						return err.Error()
+					} else {
+						return errors.New("error object empty but not visited").Error()
+					}
+				}(err),
+			})
+			return MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode,
+				false, allRegexPatterns, allSpecialWords, exclusionRegexes,
+				exclusionSpecialWords, attempts)
 		} else {
 			fileErr1 := os.WriteFile("logs/facebookFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("logs/facebookSecond.png", second, 0o644)
@@ -197,6 +218,25 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 				slog.Any("file error 2", fileErr2),
 				slog.Any("file error 3", fileErr3),
 			)
+			attempts = append(attempts, &types.Attempt{
+				Crawler:   types.CrawlerFacebook,
+				Proxy:     types.ProxyDisabled,
+				Method:    types.MethodChromeDP,
+				Timestamp: time.Now(),
+				Error: func(err error) string {
+					if err != nil {
+						return err.Error()
+					} else {
+						return errors.New("error object empty but not visited").Error()
+					}
+				}(err),
+			})
+			types.IncidentChannel <- types.Incident{
+				StartTime: time.Now(),
+				URL:       url,
+				Attempts:  attempts,
+				Resolved:  true,
+			}
 			err = errors.Join(errors.New("Error in facebook marketplace:"), err)
 			return retArr, err
 		}
@@ -220,6 +260,14 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 			items[i].Duration = 0
 			items[i].AcceptsOffers = true
 			retArr = append(retArr, &items[i])
+		}
+	}
+	if len(attempts) != 0 {
+		types.IncidentChannel <- types.Incident{
+			StartTime: time.Now(),
+			URL:       url,
+			Attempts:  attempts,
+			Resolved:  true,
 		}
 	}
 	return retArr, err

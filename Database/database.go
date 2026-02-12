@@ -1007,7 +1007,7 @@ func validateURI(uri string, querySelector string) (*Price, *TrackingInfo, error
 		slog.Error("Invalid url")
 		return &Price{}, &TrackingInfo{}, err
 	}
-	pr, err := crawler.GetPrice(uri, querySelector, true)
+	pr, err := crawler.GetPrice(uri, querySelector, true, nil)
 	if err != nil {
 		return &Price{}, &TrackingInfo{}, err
 	}
@@ -1024,16 +1024,9 @@ func validateURI(uri string, querySelector string) (*Price, *TrackingInfo, error
 }
 
 // SaveAttempt saves an attempt to the incidents collection as a new document.
-func SaveAttempt(attempt types.Attempt) {
+func SaveAttempt(Incident *types.Incident) {
 	collection := Client.Database("tracker").Collection("incidents")
-
-	incident := types.Incident{
-		StartTime: time.Now(),
-		URL:       string(attempt.Crawler),
-		Attempts:  []types.Attempt{attempt},
-	}
-
-	_, err := collection.InsertOne(ctx, incident)
+	_, err := collection.InsertOne(ctx, Incident)
 	if err != nil {
 		slog.Error("failed to save attempt", slog.Any("error", err))
 	}

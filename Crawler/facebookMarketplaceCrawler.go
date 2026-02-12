@@ -234,6 +234,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 			types.IncidentChannel <- types.Incident{
 				StartTime: time.Now(),
 				URL:       url,
+				Domain:    "facebook",
 				Attempts:  attempts,
 				Resolved:  false,
 			}
@@ -265,6 +266,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	if len(attempts) != 0 {
 		types.IncidentChannel <- types.Incident{
 			StartTime: time.Now(),
+			Domain:    "facebook",
 			URL:       url,
 			Attempts:  attempts,
 			Resolved:  true,

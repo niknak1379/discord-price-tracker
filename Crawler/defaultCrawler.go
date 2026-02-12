@@ -147,7 +147,8 @@ func GetPrice(uri string, querySelector string, proxy bool, attempts []*types.At
 	if len(attempts) != 0 {
 		types.IncidentChannel <- types.Incident{
 			StartTime: time.Now(),
-			URL:       ExtractDomainName(uri),
+			URL:       uri,
+			Domain:    ExtractDomainName(uri),
 			Attempts:  attempts,
 			Resolved:  true,
 		}
@@ -333,7 +334,8 @@ func ChromeDPFailover(url string, selector string, proxy bool, attempts []*types
 			})
 			types.IncidentChannel <- types.Incident{
 				StartTime: time.Now(),
-				URL:       ExtractDomainName(url),
+				Domain:    ExtractDomainName(url),
+				URL:       url,
 				Attempts:  attempts,
 				Resolved:  false,
 			}

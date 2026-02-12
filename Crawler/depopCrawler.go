@@ -128,6 +128,7 @@ func CrawlDepop(Name string,
 		types.IncidentChannel <- types.Incident{
 			StartTime: time.Now(),
 			URL:       url,
+			Domain:    "Depop",
 			Attempts:  attempts,
 			Resolved:  false,
 		}

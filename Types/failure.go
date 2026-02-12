@@ -34,22 +34,23 @@ const (
 
 // Attempt represents a single attempt to scrape data.
 type Attempt struct {
-	Crawler   CrawlerType `bson:"crawler"`   // Which crawler was used
-	Proxy     ProxyType   `bson:"proxy"`     // Proxy configuration
-	Method    MethodType  `bson:"method"`    // Scraping method
-	Timestamp time.Time   `bson:"timestamp"` // When the attempt was made
-	Error     string      `bson:"error"`     // Error message (empty if success)
+	Crawler   CrawlerType `bson:"Crawler"`   // Which crawler was used
+	Proxy     ProxyType   `bson:"Proxy"`     // Proxy configuration
+	Method    MethodType  `bson:"Method"`    // Scraping method
+	Timestamp time.Time   `bson:"Timestamp"` // When the attempt was made
+	Error     string      `bson:"Error"`     // Error message (empty if success)
 }
 
 // Incident represents a complete failure event with all attempts.
 type Incident struct {
-	StartTime time.Time  `bson:"start_time"` // When the incident started
-	URL       string     `bson:"url"`        // URL being crawled
-	Attempts  []*Attempt `bson:"attempts"`   // All attempts made
-	Resolved  bool       `bson:"resolved"`   // Whether it was eventually resolved
+	StartTime time.Time  `bson:"StartTime"` // When the incident started
+	URL       string     `bson:"URL"`       // URL being crawled
+	Domain    string     `bson:"Domain"`
+	Attempts  []*Attempt `bson:"Attempts"` // All attempts made
+	Resolved  bool       `bson:"Resolved"` // Whether it was eventually resolved
 }
 
-// AttemptChannel is the channel for sending attempts to be persisted.
+// IncidentChannel is the channel for sending attempts to be persisted.
 // Buffered to prevent blocking crawlers.
 var IncidentChannel chan Incident
 

@@ -531,6 +531,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
 			types.IncidentChannel <- types.Incident{
 				StartTime: time.Now(),
 				URL:       url,
+				Domain:    "ebay",
 				Attempts:  attempts,
 				Resolved:  false,
 			}
@@ -624,6 +625,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
 	types.IncidentChannel <- types.Incident{
 		StartTime: time.Now(),
 		URL:       url,
+		Domain:    "ebay",
 		Attempts:  attempts,
 		Resolved:  true,
 	}

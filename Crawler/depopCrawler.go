@@ -129,7 +129,7 @@ func CrawlDepop(Name string,
 			StartTime: time.Now(),
 			URL:       url,
 			Attempts:  attempts,
-			Resolved:  true,
+			Resolved:  false,
 		}
 		if err == nil {
 			err = errors.New("Depop link not visited, might have been rate limited")

@@ -235,7 +235,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 				StartTime: time.Now(),
 				URL:       url,
 				Attempts:  attempts,
-				Resolved:  true,
+				Resolved:  false,
 			}
 			err = errors.Join(errors.New("Error in facebook marketplace:"), err)
 			return retArr, err

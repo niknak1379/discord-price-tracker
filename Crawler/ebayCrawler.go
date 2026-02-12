@@ -532,7 +532,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
 				StartTime: time.Now(),
 				URL:       url,
 				Attempts:  attempts,
-				Resolved:  true,
+				Resolved:  false,
 			}
 			return retListingArr, retBidArr, errors.Join(err, errors.New("Problem in Ebay chromeDP Failover"))
 		}

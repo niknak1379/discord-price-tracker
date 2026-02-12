@@ -335,7 +335,7 @@ func ChromeDPFailover(url string, selector string, proxy bool, attempts []*types
 				StartTime: time.Now(),
 				URL:       url,
 				Attempts:  attempts,
-				Resolved:  true,
+				Resolved:  false,
 			}
 			return 0, fmt.Errorf("selector %s not found for url %s, %w in default crawler", selector, url, err)
 		}

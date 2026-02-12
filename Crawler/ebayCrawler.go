@@ -111,7 +111,7 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool,
 			slog.Info("skipping title criteria not met", slog.String("Title", title))
 			return
 		}
-		condition := e.ChildText("div.s-card__subtitle")
+		condition := e.ChildText("div.s-card__subtitle:last-child")
 		// checks wether element is a bid or not
 		isBid := false
 		e.ForEachWithBreak("div.s-card__attribute-row", func(i int, child *colly.HTMLElement) bool {
@@ -478,7 +478,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
 			
 			return {
 					Title: e.querySelector('.s-card__title span.primary')?.innerText || '',
-					Condition: e.querySelector('div.s-card__subtitle')?.innerText || '',
+					Condition: e.querySelector('div.s-card__subtitle:last-child')?.innerText || '',
 					URL: e.querySelector('a.s-card__link')?.href || '',
 					AcceptsOffer: AcceptsOffer,
 					Price: shippingCost + basePrice,

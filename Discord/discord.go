@@ -67,7 +67,7 @@ var (
 						},
 						{
 							Name:  "Ebay",
-							Value: "ebay",
+							Value: "Ebay",
 						},
 						{
 							Name:  "Default",

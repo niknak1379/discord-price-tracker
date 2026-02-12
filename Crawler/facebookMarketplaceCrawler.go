@@ -176,9 +176,9 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	var retArr []*types.EbayListing
 	if len(items) == 0 {
 		if proxy {
-			fileErr1 := os.WriteFile("proxyFacebookFirst.png", first, 0o644)
-			fileErr2 := os.WriteFile("proxyFacebookSecond.png", second, 0o644)
-			fileErr3 := os.WriteFile("proxyFacebookHTML.html", []byte(HTMLContent), 0o644)
+			fileErr1 := os.WriteFile("logs/proxyFacebookFirst.png", first, 0o644)
+			fileErr2 := os.WriteFile("logs/proxyFacebookSecond.png", second, 0o644)
+			fileErr3 := os.WriteFile("logs/proxyFacebookHTML.html", []byte(HTMLContent), 0o644)
 			time.Sleep(5 * time.Second)
 			slog.Warn("facebook proxy failed, triggering no proxy crawl",
 				slog.Any("Error", err),
@@ -189,9 +189,9 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 			)
 			return MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode, false, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords)
 		} else {
-			fileErr1 := os.WriteFile("facebookFirst.png", first, 0o644)
-			fileErr2 := os.WriteFile("facebookSecond.png", second, 0o644)
-			fileErr3 := os.WriteFile("facebookHTML.html", []byte(HTMLContent), 0o644)
+			fileErr1 := os.WriteFile("logs/facebookFirst.png", first, 0o644)
+			fileErr2 := os.WriteFile("logs/facebookSecond.png", second, 0o644)
+			fileErr3 := os.WriteFile("logs/facebookHTML.html", []byte(HTMLContent), 0o644)
 			slog.Error("Error in marketplace", slog.Any("error value", err),
 				slog.Any("File error 1", fileErr1),
 				slog.Any("file error 2", fileErr2),

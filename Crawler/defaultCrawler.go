@@ -100,7 +100,7 @@ func GetPrice(uri string, querySelector string, proxy bool) (int, error) {
 	if err != nil || priceErr != nil {
 		var res int
 		var err2 error
-		os.WriteFile("collyHTML.html", []byte(collyHTML), 0o644)
+		os.WriteFile("logs/collyHTML.html", []byte(collyHTML), 0o644)
 		if proxy {
 			slog.Warn("error in getting price in crawler, triggering proxy chrome",
 				slog.Any("Error", err), slog.Any("PriceErr", priceErr))
@@ -250,8 +250,8 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	cancel()
 	if priceText == "" {
 		if proxy {
-			err2 := os.WriteFile("proxyFailoverSS.png", screenShot, 0o644)
-			err3 := os.WriteFile("proxyFailoverHTML.html", []byte(HTMLContent), 0o644)
+			err2 := os.WriteFile("logs/proxyFailoverSS.png", screenShot, 0o644)
+			err3 := os.WriteFile("logs/proxyFailoverHTML.html", []byte(HTMLContent), 0o644)
 			time.Sleep(5 * time.Second)
 			slog.Warn("ChromDP proxy failed, triggering no proxy default crawler",
 				slog.Any("error", err),
@@ -261,8 +261,8 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 			return GetPrice(url, selector, false)
 		} else {
 			slog.Error("no proxy ChromeDB also failed")
-			err2 := os.WriteFile("failoverSS.png", screenShot, 0o644)
-			err3 := os.WriteFile("failoverHTML.html", []byte(HTMLContent), 0o644)
+			err2 := os.WriteFile("logs/failoverSS.png", screenShot, 0o644)
+			err3 := os.WriteFile("logs/failoverHTML.html", []byte(HTMLContent), 0o644)
 			slog.Error("error in default chromedp", slog.String("selector", selector),
 				slog.String("URL", url), slog.Any("ChromeDP Error", err),
 				slog.Any("ScreenShot Write Error", err2), slog.Any("HTML Write Error", err3))
@@ -274,8 +274,8 @@ func ChromeDPFailover(url string, selector string, proxy bool) (int, error) {
 	// Parse price
 	price, err := formatPrice(priceText)
 	if err != nil || price == 0 {
-		os.WriteFile("failoverHTML.html", []byte(HTMLContent), 0o644)
-		os.WriteFile("failoverSS.png", screenShot, 0o644)
+		os.WriteFile("logs/failoverHTML.html", []byte(HTMLContent), 0o644)
+		os.WriteFile("logs/failoverSS.png", screenShot, 0o644)
 		return 0, fmt.Errorf("failed to parse price '%s': %w in default crawler", priceText, err)
 	}
 

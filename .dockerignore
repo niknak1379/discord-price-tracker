@@ -1,8 +1,9 @@
 .env
-failoverSS.png
-debug-page.html
 
+# Log files and directories
+logs/
+*.png
+*.html
+debug-page.html
 debug-screenshot.png
-first.png
-second.png
-failoverSS.png
+

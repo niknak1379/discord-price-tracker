@@ -18,6 +18,8 @@ services:
       - "6060:6060"
     depends_on:
       - gluetun
+    volumes:
+      - log-data:/app/logs
 
   gluetun:
     image: qmcgaw/gluetun
@@ -58,3 +60,6 @@ services:
         "while true; do sleep 10800; docker restart price-tracker-gluetun-1; done",
       ]
     restart: unless-stopped
+
+volumes:
+  log-data:

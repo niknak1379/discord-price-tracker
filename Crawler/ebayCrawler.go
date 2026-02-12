@@ -456,8 +456,8 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
 				slog.Any("error", err))
 			return GetEbayListings(Name, desiredPrice, false, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords)
 		} else {
-			fileErr1 := os.WriteFile("ebayFirst.png", first, 0o644)
-			fileErr2 := os.WriteFile("ebaySecond.png", second, 0o644)
+			fileErr1 := os.WriteFile("logs/ebayFirst.png", first, 0o644)
+			fileErr2 := os.WriteFile("logs/ebaySecond.png", second, 0o644)
 			slog.Error("Error in ebay failover", slog.Any("error value", err),
 				slog.Any("file error 1", fileErr1), slog.Any("file error 2", fileErr2))
 			return retListingArr, retBidArr, errors.Join(err, errors.New("Problem in Ebay chromeDP Failover"))

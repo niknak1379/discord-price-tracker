@@ -108,12 +108,12 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	//
 	// <--------------- send screenshots of failed crawl --------->
 	if strings.Contains(err.Error(), "facebook") {
-		reader, err := os.Open("facebookSecond.png")
-		reader2, err2 := os.Open("facebookFirst.png")
-		reader3, err3 := os.Open("proxyFacebookSecond.png")
-		reader4, err4 := os.Open("proxyFacebookFirst.png")
-		reader5, err5 := os.Open("proxyFacebookHTML.html")
-		reader6, err6 := os.Open("facebookHTML.html")
+		reader, err := os.Open("logs/facebookSecond.png")
+		reader2, err2 := os.Open("logs/facebookFirst.png")
+		reader3, err3 := os.Open("logs/proxyFacebookSecond.png")
+		reader4, err4 := os.Open("logs/proxyFacebookFirst.png")
+		reader5, err5 := os.Open("logs/proxyFacebookHTML.html")
+		reader6, err6 := os.Open("logs/facebookHTML.html")
 
 		defer reader.Close()
 		defer reader2.Close()
@@ -140,8 +140,8 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		Discord.ChannelFileSend(ChannelID, "facebook.html", reader6)
 	}
 	if strings.Contains(err.Error(), "Ebay") {
-		reader, err := os.Open("ebaySecond.png")
-		reader2, err2 := os.Open("ebayFirst.png")
+		reader, err := os.Open("logs/ebaySecond.png")
+		reader2, err2 := os.Open("logs/ebayFirst.png")
 		defer reader.Close()
 		defer reader2.Close()
 		if err != nil || err2 != nil {
@@ -152,11 +152,11 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		Discord.ChannelFileSend(ChannelID, "first.png", reader2)
 	}
 	if strings.Contains(err.Error(), "default") {
-		reader, err := os.Open("failoverSS.png")
-		reader2, err2 := os.Open("failoverHTML.html")
-		reader3, err3 := os.Open("collyHTML.html")
-		reader4, err4 := os.Open("proxyFailoverSS.png")
-		reader5, err5 := os.Open("proxyFailoverHTML.html")
+		reader, err := os.Open("logs/failoverSS.png")
+		reader2, err2 := os.Open("logs/failoverHTML.html")
+		reader3, err3 := os.Open("logs/collyHTML.html")
+		reader4, err4 := os.Open("logs/proxyFailoverSS.png")
+		reader5, err5 := os.Open("logs/proxyFailoverHTML.html")
 		defer reader.Close()
 		defer reader2.Close()
 		defer reader3.Close()

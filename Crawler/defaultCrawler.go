@@ -147,7 +147,7 @@ func GetPrice(uri string, querySelector string, proxy bool, attempts []*types.At
 	if len(attempts) != 0 {
 		types.IncidentChannel <- types.Incident{
 			StartTime: time.Now(),
-			URL:       uri,
+			URL:       ExtractDomainName(uri),
 			Attempts:  attempts,
 			Resolved:  true,
 		}
@@ -333,7 +333,7 @@ func ChromeDPFailover(url string, selector string, proxy bool, attempts []*types
 			})
 			types.IncidentChannel <- types.Incident{
 				StartTime: time.Now(),
-				URL:       url,
+				URL:       ExtractDomainName(url),
 				Attempts:  attempts,
 				Resolved:  false,
 			}
@@ -344,7 +344,7 @@ func ChromeDPFailover(url string, selector string, proxy bool, attempts []*types
 	slog.Info("ChromeDP found Selector", slog.String("Found HTML Element", priceText))
 	types.IncidentChannel <- types.Incident{
 		StartTime: time.Now(),
-		URL:       url,
+		URL:       ExtractDomainName(url),
 		Attempts:  attempts,
 		Resolved:  true,
 	}
@@ -433,6 +433,17 @@ func getAmazonImageChromedp(url string, proxy bool) string {
 
 	slog.Info("Image URL found")
 	return imgURL
+}
+
+func ExtractDomainName(url string) string {
+	// Remove protocol
+	url = strings.TrimPrefix(url, "https://")
+	url = strings.TrimPrefix(url, "http://")
+	// Remove www.
+	url = strings.TrimPrefix(url, "www.")
+	// Split by . and get first part
+	parts := strings.Split(url, ".")
+	return parts[0]
 }
 
 func formatPrice(priceStr string) (int, error) {

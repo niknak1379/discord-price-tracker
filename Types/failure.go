@@ -51,3 +51,28 @@ type Incident struct {
 	Attempts  []Attempt     `bson:"attempts"`      // All attempts made
 	Resolved  bool          `bson:"resolved"`      // Whether it was eventually resolved
 }
+
+// AttemptChannel is the channel for sending attempts to be persisted.
+// Buffered to prevent blocking crawlers.
+var AttemptChannel chan Attempt
+
+// SaveAttemptFunc is the function signature for saving attempts to the database.
+type SaveAttemptFunc func(Attempt)
+
+// StartAttemptListener starts a goroutine that listens for attempts on the channel
+// and calls the provided database function to save them.
+// This should be called once after InitAttemptChannel.
+// The listener will exit when the done channel is closed.
+func StartAttemptListener(dbFunc SaveAttemptFunc, done <-chan struct{}) {
+	AttemptChannel = make(chan Attempt, 100)
+	go func() {
+		for {
+			select {
+			case attempt := <-AttemptChannel:
+				dbFunc(attempt)
+			case <-done:
+				return
+			}
+		}
+	}()
+}

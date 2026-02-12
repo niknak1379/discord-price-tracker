@@ -12,6 +12,7 @@ import (
 	database "priceTracker/Database"
 	discord "priceTracker/Discord"
 	scheduler "priceTracker/Scheduler"
+	types "priceTracker/Types"
 
 	logger "priceTracker/Logger"
 
@@ -36,6 +37,7 @@ func main() {
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
+	types.StartAttemptListener(database.SaveAttempt, ctx.Done())
 	go scheduler.SetChannelScheduler(ctx)
 	var wg sync.WaitGroup
 	wg.Go(func() {

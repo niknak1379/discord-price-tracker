@@ -1022,3 +1022,19 @@ func validateURI(uri string, querySelector string) (*Price, *TrackingInfo, error
 	}
 	return &price, &tracking, err
 }
+
+// SaveAttempt saves an attempt to the incidents collection as a new document.
+func SaveAttempt(attempt types.Attempt) {
+	collection := Client.Database("tracker").Collection("incidents")
+
+	incident := types.Incident{
+		StartTime: time.Now(),
+		URL:       string(attempt.Crawler),
+		Attempts:  []types.Attempt{attempt},
+	}
+
+	_, err := collection.InsertOne(ctx, incident)
+	if err != nil {
+		slog.Error("failed to save attempt", slog.Any("error", err))
+	}
+}

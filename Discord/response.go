@@ -413,7 +413,7 @@ func sendWelcomeMessage(discord *discordgo.Session, channelID string) {
 		"1. Run `/setup` in this channel to configure your location and marketplace settings\n" +
 		"2. Use `/add` to start tracking items\n" +
 		"3. Check `/help` for all available commands\n\n" +
-		"For more information, visit: https://github.com/nikanostovan/priceTracker"
+		"For more information, visit: https://github.com/niknak1379/discord-price-tracker"
 
 	_, err := discord.ChannelMessageSend(channelID, message)
 	if err != nil {

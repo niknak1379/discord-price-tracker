@@ -28,10 +28,6 @@ var (
 func SetChannelScheduler(ctx context.Context) {
 	slog.Info("first crawl start time", slog.Any("start time", time.Now()))
 
-	// Check for new/deleted items every hour
-	refreshTicker := time.NewTicker(30 * time.Minute)
-	defer refreshTicker.Stop()
-
 	activeRoutines := make(map[string]context.CancelFunc) // Track running goroutines
 	itemMap := make(map[string]*database.Item)
 	// for running it once immediately on deployment
@@ -47,6 +43,9 @@ func SetChannelScheduler(ctx context.Context) {
 	// Initial load for scheduler this runs after the timers hit tho not immediately
 	loadAndStartItems(ctx, activeRoutines, itemMap)
 
+	// Check for new/deleted items every half hour
+	refreshTicker := time.NewTicker(30 * time.Minute)
+	defer refreshTicker.Stop()
 	for {
 		select {
 		case <-ctx.Done():

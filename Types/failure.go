@@ -52,23 +52,32 @@ type Incident struct {
 
 // IncidentChannel is the channel for sending attempts to be persisted.
 // Buffered to prevent blocking crawlers.
-var IncidentChannel chan Incident
+var (
+	IncidentChannel chan Incident
+	IncidentCounter int
+)
 
 // SaveAttemptFunc is the function signature for saving attempts to the database.
 type SaveAttemptFunc func(*Incident)
 
-// StartAttemptListener starts a goroutine that listens for attempts on the channel
+// StartIncidentListener starts a goroutine that listens for attempts on the channel
 // and calls the provided database function to save them.
 // This should be called once after InitAttemptChannel.
 // The listener will exit when the done channel is closed.
-func StartAttemptListener(dbFunc SaveAttemptFunc, done <-chan struct{}) {
+func StartIncidentListener(dbFunc SaveAttemptFunc, done <-chan struct{}) {
 	IncidentChannel = make(chan Incident, 100)
+	IncidentCounter = 0
 	go func() {
 		for {
 			select {
 			case Incident := <-IncidentChannel:
 				slog.Warn("logging Incident", slog.Any("incident", Incident))
 				dbFunc(&Incident)
+				IncidentCounter += 1
+				if IncidentCounter >= 5 {
+					// restart glueten
+					IncidentCounter = 0
+				}
 			case <-done:
 				return
 			}

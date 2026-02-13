@@ -37,7 +37,7 @@ func main() {
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
-	types.StartAttemptListener(database.SaveAttempt, ctx.Done())
+	types.StartIncidentListener(database.SaveAttempt, ctx.Done())
 	go scheduler.SetChannelScheduler(ctx)
 	var wg sync.WaitGroup
 	wg.Go(func() {

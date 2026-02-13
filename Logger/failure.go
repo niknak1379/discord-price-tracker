@@ -2,11 +2,7 @@
 package logger
 
 import (
-	"encoding/json"
-	"errors"
 	"log/slog"
-	"net/http"
-	"strings"
 	"time"
 )
 
@@ -20,27 +16,24 @@ const (
 	CrawlerDefault  CrawlerType = "default"
 )
 
-// ProxyType identifies the proxy configuration.
-type ProxyType string
-
 const (
-	ProxyEnabled  ProxyType = "proxy"
-	ProxyDisabled ProxyType = "no_proxy"
+	ProxyEnabled  string = "proxy"
+	ProxyDisabled string = "no_proxy"
 )
 
 // MethodType identifies the scraping method used.
 type MethodType string
 
 const (
-	MethodColly    MethodType = "colly"
-	MethodChromeDP MethodType = "chromedp"
+	MethodColly    string = "colly"
+	MethodChromeDP string = "chromedp"
 )
 
 // Attempt represents a single attempt to scrape data.
 type Attempt struct {
 	Crawler   CrawlerType `bson:"Crawler"`   // Which crawler was used
-	Proxy     ProxyType   `bson:"Proxy"`     // Proxy configuration
-	Method    MethodType  `bson:"Method"`    // Scraping method
+	Proxy     string      `bson:"Proxy"`     // Proxy configuration
+	Method    string      `bson:"Method"`    // Scraping method
 	Timestamp time.Time   `bson:"Timestamp"` // When the attempt was made
 	Error     string      `bson:"Error"`     // Error message (empty if success)
 }
@@ -58,97 +51,24 @@ type Incident struct {
 // Buffered to prevent blocking crawlers.
 var (
 	IncidentChannel chan Incident
-	IncidentCounter int
 )
-
-// SaveAttemptFunc is the function signature for saving attempts to the database.
-type SaveAttemptFunc func(*Incident)
 
 // StartIncidentListener starts a goroutine that listens for attempts on the channel
 // and calls the provided database function to save them.
 // This should be called once after InitAttemptChannel.
 // The listener will exit when the done channel is closed.
-func StartIncidentListener(dbFunc SaveAttemptFunc, done <-chan struct{}) {
+func StartIncidentListener(dbFunc func(*Incident), done <-chan struct{}) {
 	IncidentChannel = make(chan Incident, 100)
-	IncidentCounter = 0
 	go func() {
 		for {
 			select {
 			case Incident := <-IncidentChannel:
 				slog.Warn("logging Incident", slog.Any("incident", Incident))
 				dbFunc(&Incident)
-				IncidentCounter += 1
-				if IncidentCounter >= 5 {
-					slog.Info("Incidents Exceeding Limit, restarting vpn container")
-					if err := RestartGluetun(); err != nil {
-						slog.Error("failed to restart gluetun", slog.Any("error", err))
-					}
-					IncidentCounter = 0
-				}
+				// proxy.ProxyCounterChannel <- Incident.Attempts
 			case <-done:
 				return
 			}
 		}
 	}()
-}
-
-func RestartGluetun() error {
-	client := &http.Client{Timeout: 10 * time.Second}
-
-	for i := 0; i < 3; i++ {
-		resp, err := client.Get("http://gluetun:8000/v1/vpn/status")
-		if err != nil {
-			slog.Error("failed to get VPN status", slog.Any("error", err))
-			time.Sleep(2 * time.Second)
-			continue
-		}
-
-		var status struct {
-			Status string `json:"status"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
-			slog.Error("failed to decode VPN status", slog.Any("error", err))
-			resp.Body.Close()
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		resp.Body.Close()
-
-		if status.Status != "stopped" {
-			slog.Info("VPN is running, cycling: stop then start")
-
-			req, _ := http.NewRequest("PUT", "http://gluetun:8000/v1/vpn/status",
-				strings.NewReader(`{"status":"stopped"}`))
-			req.Header.Set("Content-Type", "application/json")
-			client.Do(req)
-
-			time.Sleep(2 * time.Second)
-
-			req, _ = http.NewRequest("PUT", "http://gluetun:8000/v1/vpn/status",
-				strings.NewReader(`{"status":"running"}`))
-			req.Header.Set("Content-Type", "application/json")
-			_, err = client.Do(req)
-			if err != nil {
-				slog.Error("failed to restart VPN", slog.Any("error", err))
-				time.Sleep(2 * time.Second)
-				continue
-			}
-			slog.Warn("Gluetun VPN restarted due to incident threshold")
-			return nil
-		}
-
-		slog.Info("VPN already stopped, attempting to start")
-		req, _ := http.NewRequest("PUT", "http://gluetun:8000/v1/vpn/status",
-			strings.NewReader(`{"status":"running"}`))
-		req.Header.Set("Content-Type", "application/json")
-		_, err = client.Do(req)
-		if err != nil {
-			slog.Error("failed to start VPN", slog.Any("error", err))
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		return nil
-	}
-
-	return errors.New("failed to restart VPN after 3 attempts")
 }

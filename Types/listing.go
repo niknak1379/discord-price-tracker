@@ -1,3 +1,5 @@
+// Types packageg is pretty much only here so i dont have to deal
+// with cyclycal imports
 package types
 
 import "time"

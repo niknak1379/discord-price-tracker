@@ -13,7 +13,6 @@ import (
 	"time"
 
 	crawler "priceTracker/Crawler"
-	"priceTracker/Logger"
 	types "priceTracker/Types"
 
 	"github.com/joho/godotenv"
@@ -1040,7 +1039,7 @@ func validateURI(uri string, querySelector string) (*Price, *TrackingInfo, error
 }
 
 // SaveAttempt saves an attempt to the incidents collection as a new document.
-func SaveAttempt(Incident *logger.Incident) {
+func SaveAttempt(Incident *types.Incident) {
 	collection := Client.Database("tracker").Collection("Incidents")
 	_, err := collection.InsertOne(ctx, Incident)
 	if err != nil {

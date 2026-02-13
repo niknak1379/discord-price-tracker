@@ -11,7 +11,8 @@ import (
 	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
 	discord "priceTracker/Discord"
-	"priceTracker/Logger"
+	logger "priceTracker/Logger"
+	proxy "priceTracker/Proxy"
 	scheduler "priceTracker/Scheduler"
 
 	"github.com/joho/godotenv"
@@ -36,6 +37,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
 	logger.StartIncidentListener(database.SaveAttempt, ctx.Done())
+	proxy.StartProxyCounter(ctx.Done())
 	go scheduler.SetChannelScheduler(ctx)
 	var wg sync.WaitGroup
 	wg.Go(func() {

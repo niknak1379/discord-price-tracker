@@ -44,7 +44,7 @@ func CrawlDepop(Name string,
 	allSpecialWords [][]string,
 	exclusionRegexes []*regexp.Regexp,
 	exclusionSpecialWords []string,
-	attempts []*logger.Attempt,
+	attempts []*types.Attempt,
 ) ([]*types.EbayListing, error) {
 	url := depopURLGenerator(Name, Price)
 	c := initCrawler()
@@ -53,7 +53,7 @@ func CrawlDepop(Name string,
 	retArr := []*types.EbayListing{}
 	visited := false
 	if attempts == nil {
-		attempts = []*logger.Attempt{}
+		attempts = []*types.Attempt{}
 	}
 	slog.Info("logging depop url", slog.String("Url", url))
 	c.OnHTML("ol[class^='styles_productGrid__'] li", func(e *colly.HTMLElement) {
@@ -113,10 +113,10 @@ func CrawlDepop(Name string,
 	c.Wait()
 
 	if err != nil || !visited {
-		attempts = append(attempts, &logger.Attempt{
-			Crawler:   logger.CrawlerFacebook,
-			Proxy:     logger.ProxyEnabled,
-			Method:    logger.MethodChromeDP,
+		attempts = append(attempts, &types.Attempt{
+			Crawler:   types.CrawlerFacebook,
+			Proxy:     types.ProxyEnabled,
+			Method:    types.MethodChromeDP,
 			Timestamp: time.Now(),
 			Error: func(err error) string {
 				if err != nil {
@@ -126,7 +126,7 @@ func CrawlDepop(Name string,
 				}
 			}(err),
 		})
-		logger.IncidentChannel <- logger.Incident{
+		logger.IncidentChannel <- types.Incident{
 			StartTime: time.Now(),
 			URL:       url,
 			Domain:    "Depop",

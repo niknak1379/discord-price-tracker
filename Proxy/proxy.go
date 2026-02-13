@@ -9,13 +9,14 @@ import (
 	"strings"
 	"time"
 
-	logger "priceTracker/Logger"
+	types "priceTracker/Types"
 )
 
 var (
+	RestartThreshold        = 5
 	ProxyList               []string
 	ProxyIncidentCounterMap map[string]int
-	ProxyCounterChannel     chan []*logger.Attempt
+	ProxyCounterChannel     chan []*types.Attempt
 )
 
 func init() {
@@ -27,8 +28,24 @@ func init() {
 	}
 }
 
-func ProxyCounter() {
-	ProxyCounterChannel = make(chan []*logger.Attempt, 100)
+func StartProxyCounter(done <-chan struct{}) {
+	ProxyCounterChannel = make(chan []*types.Attempt, 100)
+	go func() {
+		for {
+			select {
+			case AttemptArr := <-ProxyCounterChannel:
+				for i := range AttemptArr {
+					ProxyIncidentCounterMap[AttemptArr[i].Proxy]++
+					if ProxyIncidentCounterMap[AttemptArr[i].Proxy] >= RestartThreshold {
+						RestartGluetun(AttemptArr[i].Proxy)
+						ProxyIncidentCounterMap[AttemptArr[i].Proxy] = 0
+					}
+				}
+			case <-done:
+				return
+			}
+		}
+	}()
 }
 
 func RestartGluetun(proxyURL string) error {
@@ -91,4 +108,3 @@ func RestartGluetun(proxyURL string) error {
 
 	return errors.New("failed to restart VPN after 3 attempts")
 }
-

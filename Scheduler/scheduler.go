@@ -254,16 +254,49 @@ func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Chann
 	for i := range oldEbayBids {
 		BidsMap[oldEbayBids[i].URL] = oldEbayBids[i]
 	}
-	ebayListings, ebayBids, err := crawler.GetSecondHandListings(
+	ebayListings, ebayBids, ebayErr, fbErr, depopErr := crawler.GetSecondHandListings(
 		append(item.AlternateTrackingQueries, item.Name),
 		item.CurrentLowestPrice.Price,
 		Channel.Lat, Channel.Long, Channel.Distance,
 		item.Type, Channel.LocationCode, item.FacebookCrawl,
 		item.TrackingExclusionQueries,
 	)
-	if err != nil {
-		discord.CrawlErrorAlert(item.Name, "Second Hand Listings", err, Channel.ChannelID)
+
+	// Handle eBay errors with rate limiting
+	if ebayErr != nil {
+		slog.Warn("Second-hand eBay crawl failed", slog.String("item", item.Name))
+		incidentRate.EbayTracker++
+		if HasIncidentRateLimitReached(incidentRate) {
+			discord.CrawlErrorAlert(item.Name, "Second Hand eBay", ebayErr, Channel.ChannelID)
+		}
 	} else {
+		incidentRate.EbayTracker = 0
+	}
+
+	// Handle Facebook errors with rate limiting
+	if fbErr != nil {
+		slog.Warn("Second-hand Facebook crawl failed", slog.String("item", item.Name))
+		incidentRate.FacebookTracker++
+		if HasIncidentRateLimitReached(incidentRate) {
+			discord.CrawlErrorAlert(item.Name, "Second Hand Facebook", fbErr, Channel.ChannelID)
+		}
+	} else {
+		incidentRate.FacebookTracker = 0
+	}
+
+	// Handle Depop errors with rate limiting
+	if depopErr != nil {
+		slog.Warn("Second-hand Depop crawl failed", slog.String("item", item.Name))
+		incidentRate.DepopTracker++
+		if HasIncidentRateLimitReached(incidentRate) {
+			discord.CrawlErrorAlert(item.Name, "Second Hand Depop", depopErr, Channel.ChannelID)
+		}
+	} else {
+		incidentRate.DepopTracker = 0
+	}
+
+	// Only process listings if we got some data (even if there were some errors)
+	if len(ebayListings) > 0 || len(ebayBids) > 0 {
 		if !item.SuppressNotifications {
 			for i := range ebayBids {
 				oldBid, ok := BidsMap[ebayBids[i].URL]
@@ -322,7 +355,6 @@ func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Chann
 		if err != nil || err2 != nil {
 			slog.Error("error updaing DB in ebay listing",
 				slog.Any("Error", err), slog.String("Name", item.Name))
-			discord.CrawlErrorAlert(item.Name, "www.ebay.com/DBError", err, Channel.ChannelID)
 		}
 	}
 }

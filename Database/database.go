@@ -115,7 +115,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 		return Item{}, err
 	}
 	imgURL := crawler.GetOpenGraphPic(uri)
-	ebayListings, bids, _ := crawler.GetSecondHandListings(
+	ebayListings, bids, _, _, _ := crawler.GetSecondHandListings(
 		append([]string{}, itemName),
 		p.Price, Channel.Lat, Channel.Long,
 		Channel.Distance, Type,

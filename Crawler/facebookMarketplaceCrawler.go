@@ -40,11 +40,11 @@ import (
 func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong float64,
 	maxDistance int, itemType string, LocationCode string, facebookCrawl bool,
 	exclusionQueries []string,
-) ([]*types.EbayListing, []*types.EbayBids, error) {
+) ([]*types.EbayListing, []*types.EbayBids, error, error, error) {
 	retListingArr := []*types.EbayListing{}
 	retBidArr := []*types.EbayBids{}
 	normal, special, exclusionRegexes, exclusionSpecialWords := initTitleRegex(Names, exclusionQueries)
-	var err error
+	var ebayErr, fbErr, depopErr error
 	for _, Name := range Names {
 
 		var depop, fb []*types.EbayListing
@@ -62,18 +62,23 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 		ebay, bids, err4 := GetEbayListings(Name, Price, true,
 			normal, special, exclusionRegexes, exclusionSpecialWords, nil)
 
-		if err != nil || err2 != nil || err3 != nil {
-			slog.Error("errors from getting second hand listing",
-				slog.Any("Ebay error", err),
-				slog.Any("Facebook Marketplace Error", err2),
-				slog.Any("Depop Error", err3),
-			)
+		ebayErr = errors.Join(ebayErr, err4)
+		fbErr = errors.Join(fbErr, err2)
+		depopErr = errors.Join(depopErr, err3)
+		if err4 != nil {
+			slog.Warn("ebay crawl failed", slog.Any("error", err4))
 		}
+		if err2 != nil {
+			slog.Warn("Facebook Marketplace crawl failed", slog.Any("error", err2))
+		}
+		if err3 != nil {
+			slog.Warn("Depop crawl failed", slog.Any("error", err3))
+		}
+
 		retListingArr = append(retListingArr, ebay...)
 		retListingArr = append(retListingArr, fb...)
 		retListingArr = append(retListingArr, depop...)
 		retBidArr = append(retBidArr, bids...)
-		err = errors.Join(err, err2, err3, err4)
 		t := rand.IntN(240) + 60
 		time.Sleep(time.Duration(t) * time.Second)
 	}
@@ -93,7 +98,7 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 	for _, Listing := range dedupBidMap {
 		dedupBidArr = append(dedupBidArr, Listing)
 	}
-	return dedupArr, dedupBidArr, err
+	return dedupArr, dedupBidArr, ebayErr, fbErr, depopErr
 }
 
 // FacebookURLGenerator builds a Facebook Marketplace search URL.

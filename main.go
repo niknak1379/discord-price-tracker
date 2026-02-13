@@ -89,7 +89,7 @@ func crawlerTest() {
 
 func InchMeasurement() {
 	slog.Info("=== Testing GetSecondHandListings with 32 inch monitor ===")
-	listings, bids, err := crawler.GetSecondHandListings(
+	listings, bids, err, _, _ := crawler.GetSecondHandListings(
 		[]string{"Samsung 32\" Odyssey OLED"},
 		1000, 0, 0, 100,
 		"Tech", "", false,

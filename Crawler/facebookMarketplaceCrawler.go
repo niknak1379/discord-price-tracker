@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"priceTracker/Logger"
 	types "priceTracker/Types"
 
 	"github.com/chromedp/chromedp"
@@ -140,7 +141,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	allSpecialWords [][]string,
 	exclusionRegexes []*regexp.Regexp,
 	exclusionSpecialWords []string,
-	attempts []*types.Attempt,
+	attempts []*logger.Attempt,
 ) ([]*types.EbayListing, error) {
 	crawlDate := time.Now()
 	url := FacebookURLGenerator(Name, desiredPrice, LocationCode)
@@ -153,7 +154,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 		ctx, cancel = NewChromedpContext(90 * time.Second)
 	}
 	if attempts == nil {
-		attempts = []*types.Attempt{}
+		attempts = []*logger.Attempt{}
 	}
 
 	var first []byte
@@ -198,10 +199,10 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 				slog.Any("write err 2", fileErr2),
 				slog.Any("write err 3", fileErr3),
 			)
-			attempts = append(attempts, &types.Attempt{
-				Crawler:   types.CrawlerFacebook,
-				Proxy:     types.ProxyEnabled,
-				Method:    types.MethodChromeDP,
+			attempts = append(attempts, &logger.Attempt{
+				Crawler:   logger.CrawlerFacebook,
+				Proxy:     logger.ProxyEnabled,
+				Method:    logger.MethodChromeDP,
 				Timestamp: time.Now(),
 				Error: func(err error) string {
 					if err != nil {
@@ -223,10 +224,10 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 				slog.Any("file error 2", fileErr2),
 				slog.Any("file error 3", fileErr3),
 			)
-			attempts = append(attempts, &types.Attempt{
-				Crawler:   types.CrawlerFacebook,
-				Proxy:     types.ProxyDisabled,
-				Method:    types.MethodChromeDP,
+			attempts = append(attempts, &logger.Attempt{
+				Crawler:   logger.CrawlerFacebook,
+				Proxy:     logger.ProxyDisabled,
+				Method:    logger.MethodChromeDP,
 				Timestamp: time.Now(),
 				Error: func(err error) string {
 					if err != nil {
@@ -236,7 +237,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 					}
 				}(err),
 			})
-			types.IncidentChannel <- types.Incident{
+			logger.IncidentChannel <- logger.Incident{
 				StartTime: time.Now(),
 				URL:       url,
 				Domain:    "facebook",
@@ -269,7 +270,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 		}
 	}
 	if len(attempts) != 0 {
-		types.IncidentChannel <- types.Incident{
+		logger.IncidentChannel <- logger.Incident{
 			StartTime: time.Now(),
 			Domain:    "facebook",
 			URL:       url,

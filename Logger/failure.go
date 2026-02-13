@@ -1,5 +1,5 @@
 // Package statistics provides failure tracking and incident logging for crawlers.
-package types
+package logger
 
 import (
 	"encoding/json"

@@ -11,10 +11,8 @@ import (
 	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
 	discord "priceTracker/Discord"
+	"priceTracker/Logger"
 	scheduler "priceTracker/Scheduler"
-	types "priceTracker/Types"
-
-	logger "priceTracker/Logger"
 
 	"github.com/joho/godotenv"
 )
@@ -37,7 +35,7 @@ func main() {
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
-	types.StartIncidentListener(database.SaveAttempt, ctx.Done())
+	logger.StartIncidentListener(database.SaveAttempt, ctx.Done())
 	go scheduler.SetChannelScheduler(ctx)
 	var wg sync.WaitGroup
 	wg.Go(func() {

@@ -44,10 +44,13 @@ func ready(discord *discordgo.Session, ready *discordgo.Ready) {
 //   - ChannelID: the Discord channel ID
 func PriceChangeAlert(itemName string, newPrice int, oldPrice database.Price, URL string, ChannelID string) {
 	var color int
+	var IncOrDec string
 	if newPrice > oldPrice.Price {
 		color = yellow // yellow
+		IncOrDec = "Increase"
 	} else {
 		color = green // green
+		IncOrDec = "Decrease"
 	}
 	oldPriceField := setPriceField(&oldPrice, "Previous ")
 	newPriceField := setPriceField(&database.Price{
@@ -59,7 +62,7 @@ func PriceChangeAlert(itemName string, newPrice int, oldPrice database.Price, UR
 	Fields = append(Fields, oldPriceField...)
 	Fields = append(Fields, newPriceField...)
 	em := discordgo.MessageEmbed{
-		Title:       "Price Update",
+		Title:       "Price " + IncOrDec,
 		Description: itemName,
 		Color:       color,
 		URL:         URL,
@@ -301,18 +304,21 @@ func EbayListingPriceChangeAlert(newListing *types.EbayListing,
 	oldPrice int, ChannelID string, aggregate *database.AggregateReport,
 ) {
 	var colorCode int
+	var IncOrDec string
 	if oldPrice < newListing.Price {
 		if newListing.Price > aggregate.AveragePrice {
 			colorCode = extremeRed // price higher and higher than average
 		} else {
 			colorCode = aqua // price higher but lower than average
 		}
+		IncOrDec = "Increase"
 	} else {
 		if newListing.Price > aggregate.AveragePrice {
 			colorCode = orange // price lowered but bigger than average
 		} else {
 			colorCode = razerGreen // price lowered and lower than average
 		}
+		IncOrDec = "Decrease"
 	}
 	newFields := formatSecondHandField(newListing, "New Price", true, true)
 	oldP := &types.EbayListing{
@@ -321,7 +327,8 @@ func EbayListingPriceChangeAlert(newListing *types.EbayListing,
 	}
 	oldFields := formatSecondHandField(oldP, "Old Price", false, false)
 	em := discordgo.MessageEmbed{
-		Title:  "Second Hand Listing Price Change For " + newListing.ItemName,
+		Title: "Second Hand Listing Price " +
+			IncOrDec + " For " + newListing.ItemName,
 		Color:  colorCode,
 		Fields: append(newFields, oldFields...),
 	}

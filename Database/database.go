@@ -1004,6 +1004,7 @@ func InitDB(context context.Context) {
 		panic(err)
 	}
 	loadDBTables()
+	resetIncidentsCollection()
 	slog.Info("DB Successfully Pinged")
 }
 
@@ -1035,5 +1036,15 @@ func SaveAttempt(Incident *types.Incident) {
 	_, err := collection.InsertOne(ctx, Incident)
 	if err != nil {
 		slog.Error("failed to save attempt", slog.Any("error", err))
+	}
+}
+
+func resetIncidentsCollection() {
+	collection := Client.Database("tracker").Collection("Incidents")
+	_, err := collection.DeleteMany(ctx, bson.M{})
+	if err != nil {
+		slog.Error("failed to reset incidents collection", slog.Any("error", err))
+	} else {
+		slog.Info("Incidents collection reset")
 	}
 }

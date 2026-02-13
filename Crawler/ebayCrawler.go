@@ -370,6 +370,7 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool,
 		types.IncidentChannel <- types.Incident{
 			StartTime: time.Now(),
 			URL:       url,
+			Domain:    "ebay",
 			Attempts:  attempts,
 			Resolved:  true,
 		}

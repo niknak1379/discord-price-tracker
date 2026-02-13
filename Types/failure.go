@@ -2,7 +2,11 @@
 package types
 
 import (
+	"encoding/json"
+	"errors"
 	"log/slog"
+	"net/http"
+	"strings"
 	"time"
 )
 
@@ -75,7 +79,9 @@ func StartIncidentListener(dbFunc SaveAttemptFunc, done <-chan struct{}) {
 				dbFunc(&Incident)
 				IncidentCounter += 1
 				if IncidentCounter >= 5 {
-					// restart glueten
+					if err := RestartGluetun(); err != nil {
+						slog.Error("failed to restart gluetun", slog.Any("error", err))
+					}
 					IncidentCounter = 0
 				}
 			case <-done:
@@ -83,4 +89,67 @@ func StartIncidentListener(dbFunc SaveAttemptFunc, done <-chan struct{}) {
 			}
 		}
 	}()
+}
+
+func RestartGluetun() error {
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	for i := 0; i < 3; i++ {
+		resp, err := client.Get("http://gluetun:8000/v1/vpn/status")
+		if err != nil {
+			slog.Error("failed to get VPN status", slog.Any("error", err))
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		var status struct {
+			Status string `json:"status"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+			slog.Error("failed to decode VPN status", slog.Any("error", err))
+			resp.Body.Close()
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		resp.Body.Close()
+
+		if status.Status != "stopped" {
+			slog.Info("VPN is running, cycling: stop then start")
+
+			req, _ := http.NewRequest("PUT", "http://gluetun:8000/v1/vpn/status",
+				strings.NewReader(`{"status":"stopped"}`))
+			req.Header.Set("Content-Type", "application/json")
+			client.Do(req)
+
+			time.Sleep(2 * time.Second)
+
+			req, _ = http.NewRequest("PUT", "http://gluetun:8000/v1/vpn/status",
+				strings.NewReader(`{"status":"running"}`))
+			req.Header.Set("Content-Type", "application/json")
+			_, err = client.Do(req)
+
+			if err != nil {
+				slog.Error("failed to restart VPN", slog.Any("error", err))
+				time.Sleep(2 * time.Second)
+				continue
+			}
+			slog.Warn("Gluetun VPN restarted due to incident threshold")
+			return nil
+		}
+
+		slog.Info("VPN already stopped, attempting to start")
+		req, _ := http.NewRequest("PUT", "http://gluetun:8000/v1/vpn/status",
+			strings.NewReader(`{"status":"running"}`))
+		req.Header.Set("Content-Type", "application/json")
+		_, err = client.Do(req)
+
+		if err != nil {
+			slog.Error("failed to start VPN", slog.Any("error", err))
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		return nil
+	}
+
+	return errors.New("failed to restart VPN after 3 attempts")
 }

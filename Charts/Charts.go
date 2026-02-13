@@ -263,3 +263,94 @@ func IncidentsByDomainChart(data []database.DomainTimeSeries) error {
 	err := render.MakeChartSnapshot(line.RenderContent(), "incidents_by_domain.png")
 	return err
 }
+
+func IncidentsByDomainMethodProxyChart(data []database.IncidentTimeSeries) error {
+	if len(data) == 0 {
+		return errors.New("no incident data available")
+	}
+
+	line := charts.NewLine()
+
+	line.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title:    "Incidents by Domain Over Time",
+			Subtitle: "Daily incident counts per domain, method, and proxy",
+			TitleStyle: &opts.TextStyle{
+				Color:      "Black",
+				FontWeight: "bold",
+				FontSize:   28,
+				Padding:    10,
+			},
+			TextAlign: "center",
+			Left:      "center",
+			Top:       "20px",
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			BackgroundColor: "white",
+			Width:           "1100px",
+			Height:          "600px",
+		}),
+		charts.WithGridOpts(opts.Grid{
+			Show:         opts.Bool(true),
+			ContainLabel: opts.Bool(true),
+			Top:          "100px",
+			Bottom:       "100px",
+		}),
+		charts.WithLegendOpts(
+			opts.Legend{
+				Bottom:  "0%",
+				Show:    opts.Bool(true),
+				Padding: 10,
+			},
+		),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Show:    opts.Bool(true),
+			Trigger: "axis",
+		}),
+		charts.WithAnimation(false),
+	)
+
+	seriesData := make(map[string]map[string]int)
+	allDates := make(map[string]bool)
+
+	for _, d := range data {
+		dateStr := d.Date.Format("2006-01-02")
+		allDates[dateStr] = true
+		seriesKey := d.Domain + "_" + d.Method + "_" + d.Proxy
+		if seriesData[seriesKey] == nil {
+			seriesData[seriesKey] = make(map[string]int)
+		}
+		seriesData[seriesKey][dateStr] = d.Count
+	}
+
+	var dates []string
+	for date := range allDates {
+		dates = append(dates, date)
+	}
+	slices.Sort(dates)
+
+	for seriesKey, countByDate := range seriesData {
+		values := make([]opts.LineData, len(dates))
+		for i, date := range dates {
+			if count, ok := countByDate[date]; ok {
+				values[i] = opts.LineData{Value: count}
+			} else {
+				values[i] = opts.LineData{Value: 0}
+			}
+		}
+		line.AddSeries(seriesKey, values)
+	}
+
+	line.SetXAxis(dates)
+	line.SetSeriesOptions(
+		charts.WithLineChartOpts(opts.LineChart{
+			ShowSymbol:   opts.Bool(true),
+			SymbolSize:   6,
+			Smooth:       opts.Bool(false),
+			ConnectNulls: opts.Bool(false),
+		}),
+	)
+
+	err := render.MakeChartSnapshot(line.RenderContent(), "incidents_by_domain_method_proxy.png")
+	return err
+}

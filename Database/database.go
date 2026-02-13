@@ -51,6 +51,14 @@ type DomainTimeSeries struct {
 	Count  int       `bson:"Count"`
 }
 
+type IncidentTimeSeries struct {
+	Domain string    `bson:"Domain"`
+	Method string    `bson:"Method"`
+	Proxy  string    `bson:"Proxy"`
+	Date   time.Time `bson:"Date"`
+	Count  int       `bson:"Count"`
+}
+
 // Item represents a tracked product with all its data.
 type Item struct {
 	Name                     string               `bson:"Name"`

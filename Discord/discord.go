@@ -1163,37 +1163,67 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			return
 		}
 
-		if len(domainData) == 0 {
+		methodProxyData, err := database.GetIncidentsByDomainMethodProxy(startDate, endDate)
+		if err != nil {
+			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: fmt.Sprint(err),
+			})
+			return
+		}
+
+		if len(domainData) == 0 && len(methodProxyData) == 0 {
 			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 				Content: "No incident data found for the specified time period.",
 			})
 			return
 		}
 
-		err = charts.IncidentsByDomainChart(domainData)
-		if err != nil {
-			slog.Error("failed to generate domain chart", slog.Any("error", err))
-			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Content: "Error generating chart: " + fmt.Sprint(err),
-			})
-			return
+		if len(domainData) > 0 {
+			err = charts.IncidentsByDomainChart(domainData)
+			if err != nil {
+				slog.Error("failed to generate domain chart", slog.Any("error", err))
+			}
 		}
 
-		reader, err := os.Open("incidents_by_domain.png")
-		if err != nil {
-			slog.Error("failed to open chart file", slog.Any("error", err))
+		if len(methodProxyData) > 0 {
+			err = charts.IncidentsByDomainMethodProxyChart(methodProxyData)
+			if err != nil {
+				slog.Error("failed to generate method proxy chart", slog.Any("error", err))
+			}
 		}
-		File := discordgo.File{
-			Name:        "incidents_by_domain.png",
-			ContentType: "image/png",
-			Reader:      reader,
+
+		var files []*discordgo.File
+
+		if len(domainData) > 0 {
+			reader, err := os.Open("incidents_by_domain.png")
+			if err == nil {
+				files = append(files, &discordgo.File{
+					Name:        "incidents_by_domain.png",
+					ContentType: "image/png",
+					Reader:      reader,
+				})
+			}
 		}
-		_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: "**Incidents by Domain Over Time (Last " + fmt.Sprint(days) + " days)**",
-			Files:   []*discordgo.File{&File},
-		})
-		if err != nil {
-			slog.Error("failed to send failure report", slog.Any("error", err))
+
+		if len(methodProxyData) > 0 {
+			reader, err := os.Open("incidents_by_domain_method_proxy.png")
+			if err == nil {
+				files = append(files, &discordgo.File{
+					Name:        "incidents_by_domain_method_proxy.png",
+					ContentType: "image/png",
+					Reader:      reader,
+				})
+			}
+		}
+
+		if len(files) > 0 {
+			_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: "**Incidents by Domain Over Time (Last " + fmt.Sprint(days) + " days)**",
+				Files:   files,
+			})
+			if err != nil {
+				slog.Error("failed to send failure report", slog.Any("error", err))
+			}
 		}
 	},
 	"aggregate": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {

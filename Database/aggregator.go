@@ -423,3 +423,56 @@ func GetIncidentsByDomainOverTime(startDate, endDate time.Time) ([]DomainTimeSer
 	}
 	return results, nil
 }
+
+func GetIncidentsByDomainMethodProxy(startDate, endDate time.Time) ([]IncidentTimeSeries, error) {
+	collection := Client.Database("tracker").Collection("Incidents")
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "StartTime", Value: bson.D{
+				{Key: "$gte", Value: startDate},
+				{Key: "$lte", Value: endDate},
+			}},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$Attempts"}},
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: bson.D{
+				{Key: "Domain", Value: "$Domain"},
+				{Key: "Method", Value: "$Attempts.Method"},
+				{Key: "Proxy", Value: "$Attempts.Proxy"},
+				{Key: "Date", Value: bson.D{
+					{Key: "$dateTrunc", Value: bson.D{
+						{Key: "date", Value: "$StartTime"},
+						{Key: "unit", Value: "day"},
+					}},
+				}},
+			}},
+			{Key: "Count", Value: bson.D{{Key: "$sum", Value: 1}}},
+		}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Domain", Value: "$_id.Domain"},
+			{Key: "Method", Value: "$_id.Method"},
+			{Key: "Proxy", Value: "$_id.Proxy"},
+			{Key: "Date", Value: "$_id.Date"},
+			{Key: "Count", Value: 1},
+			{Key: "_id", Value: 0},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "Date", Value: 1},
+			{Key: "Domain", Value: 1},
+			{Key: "Method", Value: 1},
+			{Key: "Proxy", Value: 1},
+		}}},
+	}
+
+	var results []IncidentTimeSeries
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		slog.Error("failed to aggregate incidents by domain method proxy", slog.Any("error", err))
+		return nil, err
+	}
+	if err := cursor.All(ctx, &results); err != nil {
+		slog.Error("failed to decode incidents by domain method proxy", slog.Any("error", err))
+		return nil, err
+	}
+	return results, nil
+}

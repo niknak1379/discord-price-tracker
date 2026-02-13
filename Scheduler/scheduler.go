@@ -36,7 +36,10 @@ func SetChannelScheduler(ctx context.Context) {
 		for _, Channel := range database.ChannelMap {
 			itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
 			for _, item := range itemsArr {
-				updateSingleItem(item, Channel)
+				// this incident rate isnt really used for anything tho since its not passed down
+				// after the update finishes
+				I := initIncidentRate(item)
+				updateSingleItem(item, Channel, I)
 			}
 		}
 	}()
@@ -150,10 +153,14 @@ func itemCrawlRoutine(ctx context.Context, item *database.Item, Channel *databas
 
 	slog.Info("starting item crawl routine",
 		slog.String("item", item.Name),
-		slog.String("interval", crawlInterval.String()))
+		slog.String("interval", crawlInterval.String()),
+	)
 
 	ticker := time.NewTicker(crawlInterval)
 	defer ticker.Stop()
+
+	// initialize error notification rate limit
+	I := initIncidentRate(item)
 
 	for {
 		select {
@@ -161,12 +168,12 @@ func itemCrawlRoutine(ctx context.Context, item *database.Item, Channel *databas
 			slog.Info("stopping item crawl routine", slog.String("item", item.Name))
 			return
 		case <-ticker.C:
-			go updateSingleItem(item, Channel)
+			go updateSingleItem(item, Channel, I)
 		}
 	}
 }
 
-func updateSingleItem(item *database.Item, Channel *database.Channel) {
+func updateSingleItem(item *database.Item, Channel *database.Channel, IR *IncidentRate) {
 	slog.Info("updating item",
 		slog.String("item", item.Name),
 		slog.String("channelID", Channel.ChannelID))
@@ -184,10 +191,11 @@ func updateSingleItem(item *database.Item, Channel *database.Channel) {
 		r := rand.IntN(180)
 		time.Sleep(time.Duration(r) * time.Second)
 
-		np, err := updatePrice(item.Name, t, date, Channel.ChannelID)
+		np, err := updatePrice(item.Name, t, date, Channel.ChannelID, IR)
 		if currLow.Price > np.Price && err == nil {
 			currLow = np
 		}
+
 	}
 
 	if currLow.Price == math.MaxInt {
@@ -203,11 +211,13 @@ func updateSingleItem(item *database.Item, Channel *database.Channel) {
 	}
 	item.CurrentLowestPrice = currLow
 	database.UpdateLowestPrice(item.Name, &currLow, Channel.ChannelID)
-	handleSecondHandListingsUpdate(item, Channel)
+	handleSecondHandListingsUpdate(item, Channel, IR)
 	database.UpdateAggregateReport(item.Name, Channel.ChannelID)
 }
 
-func updatePrice(Name string, Tracker *database.TrackingInfo, date time.Time, ChannelID string) (database.Price, error) {
+func updatePrice(Name string, Tracker *database.TrackingInfo, date time.Time,
+	ChannelID string, IR *IncidentRate,
+) (database.Price, error) {
 	newPrice, err := crawler.GetPrice(Tracker.URI, Tracker.HtmlQuery, true, nil)
 	if err != nil && strings.Contains(Tracker.URI, "amazon") {
 		newPrice, err = crawler.GetPrice(Tracker.URI, backUpAmazonQuery, true, nil)
@@ -215,15 +225,19 @@ func updatePrice(Name string, Tracker *database.TrackingInfo, date time.Time, Ch
 	if err != nil || newPrice == 0 {
 		slog.Error("error getting price in updatePrice", slog.Any("Error", err),
 			slog.Int("Returned Price", newPrice))
-		discord.CrawlErrorAlert(Name, Tracker.URI, err, ChannelID)
+		IR.DefaultTrackers[Tracker.URI] += 1
+		if HasIncidentRateLimitReached(IR) {
+			discord.CrawlErrorAlert(Name, Tracker.URI, err, ChannelID)
+		}
 		return database.Price{}, err
 	}
+	IR.DefaultTrackers[Tracker.URI] = 0
 	p, _ := database.AddNewPrice(Name, Tracker.URI, newPrice, date, ChannelID)
 
 	return p, err
 }
 
-func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Channel) {
+func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Channel, incidentRate *IncidentRate) {
 	oldEbayListings, err := database.GetEbayListings(item.Name, Channel.ChannelID)
 	oldEbayBids, err1 := database.GetEbayBids(item.Name, Channel.ChannelID)
 	if err != nil || err1 != nil {

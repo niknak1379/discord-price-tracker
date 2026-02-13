@@ -79,6 +79,7 @@ func StartIncidentListener(dbFunc SaveAttemptFunc, done <-chan struct{}) {
 				dbFunc(&Incident)
 				IncidentCounter += 1
 				if IncidentCounter >= 5 {
+					slog.Info("Incidents Exceeding Limit, restarting vpn container")
 					if err := RestartGluetun(); err != nil {
 						slog.Error("failed to restart gluetun", slog.Any("error", err))
 					}
@@ -127,7 +128,6 @@ func RestartGluetun() error {
 				strings.NewReader(`{"status":"running"}`))
 			req.Header.Set("Content-Type", "application/json")
 			_, err = client.Do(req)
-
 			if err != nil {
 				slog.Error("failed to restart VPN", slog.Any("error", err))
 				time.Sleep(2 * time.Second)
@@ -142,7 +142,6 @@ func RestartGluetun() error {
 			strings.NewReader(`{"status":"running"}`))
 		req.Header.Set("Content-Type", "application/json")
 		_, err = client.Do(req)
-
 		if err != nil {
 			slog.Error("failed to start VPN", slog.Any("error", err))
 			time.Sleep(2 * time.Second)

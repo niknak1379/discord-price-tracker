@@ -51,23 +51,6 @@ type DomainTimeSeries struct {
 	Count  int       `bson:"Count"`
 }
 
-type CrawlerProxyStats struct {
-	Crawler    string       `bson:"Crawler"`
-	ProxyStats []ProxyCount `bson:"ProxyStats"`
-}
-
-type ProxyCount struct {
-	ProxyType string `bson:"ProxyType"`
-	Count     int    `bson:"Count"`
-}
-
-type ProxyStats struct {
-	ProxyType   string  `bson:"ProxyType"`
-	Total       int     `bson:"Total"`
-	Failed      int     `bson:"Failed"`
-	SuccessRate float64 `bson:"SuccessRate"`
-}
-
 // Item represents a tracked product with all its data.
 type Item struct {
 	Name                     string               `bson:"Name"`

@@ -31,9 +31,9 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
-    ports:
-      - 8888:8888/tcp # HTTP proxy
-      - 8000:8000/tcp # Control server
+    # ports:
+    #   - 8888:8888/tcp # HTTP proxy
+    #   - 8000:8000/tcp # Control server
     volumes:
       - /yourpath:/gluetun
     environment:

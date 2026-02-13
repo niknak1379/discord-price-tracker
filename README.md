@@ -152,9 +152,13 @@ For the rest just read the Available Functions section below
       - marketplace-location-code: location code the marketplace uses
       - distance: maximum marketplace search distance
 
-23. **restart**: saves progress and stops the bot
+23. **get_failure_report**: get crawler failure analytics with visual charts
+    - Required Inputs:
+      - days: number of days of history to include
 
-24. **help**: show help and available commands
+24. **restart**: saves progress and stops the bot
+
+25. **help**: show help and available commands
 
 ## License
 

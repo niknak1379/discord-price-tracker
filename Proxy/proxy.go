@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -23,14 +22,17 @@ var (
 func init() {
 	slog.Info("initializeing proxy rotator module")
 	ProxyString := os.Getenv("PROXY_URL_LIST")
-	ProxyList = strings.Split(ProxyString, ",")
-	if len(ProxyList) == 0 {
+	hostnames := strings.Split(ProxyString, ",")
+	if len(hostnames) == 0 {
 		panic("you need at least one proxy server, just do the proton one its free")
 	}
-	for _, uri := range ProxyList {
-		if _, err := url.ParseRequestURI(uri); err != nil {
-			panic(uri + " is not a valid url")
+	ProxyList = make([]string, len(hostnames))
+	for i, hostname := range hostnames {
+		hostname = strings.TrimSpace(hostname)
+		if hostname == "" {
+			panic("proxy hostname cannot be empty")
 		}
+		ProxyList[i] = "http://" + hostname + ":8888"
 	}
 	slog.Info("Porxy string and array",
 		slog.String("string", ProxyString),
@@ -71,12 +73,14 @@ func StartProxyCounter(done <-chan struct{}) {
 }
 
 func RestartGluetun(proxyURL string) error {
-	slog.Info("restarting gluetun for url",
-		slog.String("URL", proxyURL),
+	controlURL := strings.Replace(proxyURL, ":8888", ":8000", 1)
+	slog.Info("restarting gluetun for proxy",
+		slog.String("proxyURL", proxyURL),
+		slog.String("controlURL", controlURL),
 	)
 	client := &http.Client{Timeout: 10 * time.Second}
 	for i := 0; i < 3; i++ {
-		resp, err := client.Get(proxyURL + "/v1/vpn/status")
+		resp, err := client.Get(controlURL + "/v1/vpn/status")
 		if err != nil {
 			slog.Error("failed to get VPN status", slog.Any("error", err))
 			time.Sleep(2 * time.Second)
@@ -97,14 +101,14 @@ func RestartGluetun(proxyURL string) error {
 		if status.Status != "stopped" {
 			slog.Info("VPN is running, cycling: stop then start")
 
-			req, _ := http.NewRequest("PUT", "http://gluetun:8000/v1/vpn/status",
+			req, _ := http.NewRequest("PUT", controlURL+"/v1/vpn/status",
 				strings.NewReader(`{"status":"stopped"}`))
 			req.Header.Set("Content-Type", "application/json")
 			client.Do(req)
 
 			time.Sleep(2 * time.Second)
 
-			req, _ = http.NewRequest("PUT", "http://gluetun:8000/v1/vpn/status",
+			req, _ = http.NewRequest("PUT", controlURL+"/v1/vpn/status",
 				strings.NewReader(`{"status":"running"}`))
 			req.Header.Set("Content-Type", "application/json")
 			_, err = client.Do(req)
@@ -118,7 +122,7 @@ func RestartGluetun(proxyURL string) error {
 		}
 
 		slog.Info("VPN already stopped, attempting to start")
-		req, _ := http.NewRequest("PUT", "http://gluetun:8000/v1/vpn/status",
+		req, _ := http.NewRequest("PUT", controlURL+"/v1/vpn/status",
 			strings.NewReader(`{"status":"running"}`))
 		req.Header.Set("Content-Type", "application/json")
 		_, err = client.Do(req)

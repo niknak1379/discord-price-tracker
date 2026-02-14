@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     environment:
-      - PROXY_URL_LIST=http://gluetun:8888,http://gluetun2:8888
+      - PROXY_URL_LIST=gluetun,gluetun2
       - APPLICATION_ID=${APPLICATION_ID}
       - PUBLIC_KEY=${PUBLIC_KEY}
       - MONGODB_URI=${MONGODB_URI}

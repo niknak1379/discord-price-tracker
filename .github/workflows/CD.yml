@@ -65,7 +65,7 @@ jobs:
           HOME_LONG=${{ secrets.HOME_LONG }}
           OPENVPN_USER=${{secrets.OPENVPN_USER}}
           OPENVPN_PASSWORD=${{secrets.OPENVPN_PASSWORD}}
-          WIREGUARD_ADDRESSES=${{secrets.WIREGUARD_ADDRESS}}
+          WIREGUARD_ADDRESSES=${{secrets.WIREGUARD_ADDRESSES}}
           WIREGUARD_PRIVATE_KEY=${{secrets.WIREGUARD_PRIVATE_KEY}}
           EOL
           cd ..

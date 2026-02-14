@@ -53,7 +53,8 @@ func StartProxyCounter(done <-chan struct{}) {
 					slog.Any("attemptArr", AttemptArr),
 				)
 				for i := range AttemptArr {
-					if AttemptArr[i].Method == types.MethodChromeDP {
+					if AttemptArr[i].Method == types.MethodChromeDP &&
+						AttemptArr[i].Proxy != types.ProxyDisabled {
 						slog.Info("chromeDP attempt Found, incrementing counter")
 						ProxyIncidentCounterMap[AttemptArr[i].Proxy]++
 					}

@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"strings"
 	"time"
 
 	crawler "priceTracker/Crawler"
@@ -1028,6 +1029,22 @@ func validateURI(uri string, querySelector string) (*Price, *TrackingInfo, error
 	copy(proxyCopy, proxy.ProxyList)
 	pr, err := crawler.GetPrice(uri, querySelector, proxyCopy, nil)
 	if err != nil {
+		if strings.Contains(uri, "amazon") {
+			proxyCopy := make([]string, len(proxy.ProxyList))
+			copy(proxyCopy, proxy.ProxyList)
+			pr, err := crawler.GetPrice(uri, "div#apex_desktop span.priceToPay",
+				proxyCopy, nil)
+			tracking := TrackingInfo{
+				URI:       uri,
+				HtmlQuery: querySelector,
+			}
+			price := Price{
+				Date:  time.Now(),
+				Price: pr,
+				Url:   uri,
+			}
+			return &price, &tracking, err
+		}
 		return &Price{}, &TrackingInfo{}, err
 	}
 	tracking := TrackingInfo{

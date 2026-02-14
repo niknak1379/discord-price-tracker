@@ -13,6 +13,7 @@ import (
 	"time"
 
 	crawler "priceTracker/Crawler"
+	proxy "priceTracker/Proxy"
 	types "priceTracker/Types"
 
 	"github.com/joho/godotenv"
@@ -121,6 +122,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 		Channel.Distance, Type,
 		Channel.LocationCode, false,
 		[]string{}, // empty exclusion queries for new items
+		proxy.ProxyList,
 	)
 	slices.SortFunc(ebayListings, func(a, b *types.EbayListing) int {
 		return b.Price - a.Price
@@ -1022,7 +1024,9 @@ func validateURI(uri string, querySelector string) (*Price, *TrackingInfo, error
 		slog.Error("Invalid url")
 		return &Price{}, &TrackingInfo{}, err
 	}
-	pr, err := crawler.GetPrice(uri, querySelector, true, nil)
+	proxyCopy := make([]string, len(proxy.ProxyList))
+	copy(proxyCopy, proxy.ProxyList)
+	pr, err := crawler.GetPrice(uri, querySelector, proxyCopy, nil)
 	if err != nil {
 		return &Price{}, &TrackingInfo{}, err
 	}

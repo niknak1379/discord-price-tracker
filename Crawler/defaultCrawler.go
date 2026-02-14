@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"priceTracker/Logger"
+	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 
 	"github.com/chromedp/chromedp"
@@ -28,16 +28,24 @@ import (
 //   - proxy: whether to use a proxy for the request
 //
 // Returns the price and any error encountered.
-func GetPrice(uri string, querySelector string, proxy bool, attempts []*types.Attempt) (int, error) {
+func GetPrice(uri string, querySelector string, proxy []string, attempts []*types.Attempt) (int, error) {
 	var err, priceErr error
+	var proxyIndex int
 	res := 0
 	crawled := false
-	slog.Info("logging url", slog.String("URI", uri), slog.Bool("proxy", proxy))
+	slog.Info("logging url", slog.String("URI", uri))
 	c := initCrawler()
 	if attempts == nil {
 		attempts = []*types.Attempt{}
 	}
-	if !proxy {
+	if len(proxy) != 0 {
+		proxyIndex = rand.IntN(len(proxy))
+		c.SetProxy(proxy[proxyIndex])
+		slog.Info("proxy set for default crawler",
+			slog.String("proxy url", proxy[proxyIndex]),
+		)
+	} else {
+		slog.Info("proxy function set to nil")
 		c.SetProxyFunc(nil)
 	}
 	c.OnHTML(querySelector, func(h *colly.HTMLElement) {
@@ -59,12 +67,12 @@ func GetPrice(uri string, querySelector string, proxy bool, attempts []*types.At
 		var res int
 		var err2 error
 		os.WriteFile("logs/collyHTML.html", []byte(collyHTML), 0o644)
-		if proxy {
+		if len(proxy) != 0 {
 			slog.Warn("error in getting price in crawler, triggering proxy chrome",
 				slog.Any("Error", err), slog.Any("PriceErr", priceErr))
 			attempts = append(attempts, &types.Attempt{
 				Crawler:   types.CrawlerDefault,
-				Proxy:     types.ProxyEnabled,
+				Proxy:     proxy[proxyIndex],
 				Method:    types.MethodColly,
 				Timestamp: time.Now(),
 				Error: func(err error) string {
@@ -75,11 +83,13 @@ func GetPrice(uri string, querySelector string, proxy bool, attempts []*types.At
 					}
 				}(err),
 			})
-			res, err2 = ChromeDPFailover(uri, querySelector, true, attempts)
+			res, err2 = ChromeDPFailover(uri, querySelector, proxy, proxyIndex, attempts)
 			return res, err2
 		} else {
 			slog.Warn("no proxy default crawler failed, triggering chromeDPFailover no proxy",
-				slog.Any("Error", err2), slog.Int("Price", res))
+				slog.Any("Error", err2),
+				slog.Int("Price", res),
+			)
 			attempts = append(attempts, &types.Attempt{
 				Crawler:   types.CrawlerDefault,
 				Proxy:     types.ProxyDisabled,
@@ -93,7 +103,7 @@ func GetPrice(uri string, querySelector string, proxy bool, attempts []*types.At
 					}
 				}(err),
 			})
-			res, err2 = ChromeDPFailover(uri, querySelector, false, attempts)
+			res, err2 = ChromeDPFailover(uri, querySelector, proxy, proxyIndex, attempts)
 			return res, err2
 		}
 	}
@@ -119,16 +129,22 @@ func GetPrice(uri string, querySelector string, proxy bool, attempts []*types.At
 //   - proxy: whether to use a proxy for the request
 //
 // Returns the price and any error encountered.
-func ChromeDPFailover(url string, selector string, proxy bool, attempts []*types.Attempt) (int, error) {
-	slog.Warn("ChromDP Triggered for default crawler",
+func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUsed int, attempts []*types.Attempt) (int, error) {
+	slog.Warn("ChromeDP Triggered for default crawler",
 		slog.String("URL", url), slog.String("Selector", selector),
-		slog.Bool("Proxy", proxy),
 	)
 	var ctx context.Context
 	var cancel context.CancelFunc
-	if proxy {
-		ctx, cancel = NewChromedpContext(90*time.Second, chromedp.ProxyServer("http://gluetun:8888"))
+	if len(proxy) != 0 {
+		proxyURL := proxy[proxyIndexUsed]
+		ctx, cancel = NewChromedpContext(90*time.Second,
+			chromedp.ProxyServer(proxyURL),
+		)
+		slog.Info("proxy set for default chromeDP",
+			slog.String("proxy url", proxy[proxyIndexUsed]),
+		)
 	} else {
+		slog.Info("proxy set to nil for chromeDP")
 		ctx, cancel = NewChromedpContext(90 * time.Second)
 	}
 
@@ -161,18 +177,13 @@ func ChromeDPFailover(url string, selector string, proxy bool, attempts []*types
 	}
 	cancel()
 	if priceText == "" {
-		if proxy {
+		if len(proxy) != 0 {
 			err2 := os.WriteFile("logs/proxyFailoverSS.png", screenShot, 0o644)
 			err3 := os.WriteFile("logs/proxyFailoverHTML.html", []byte(HTMLContent), 0o644)
 			time.Sleep(5 * time.Second)
-			slog.Warn("ChromDP proxy failed, triggering no proxy default crawler",
-				slog.Any("error", err),
-				slog.Any("priceText", priceText),
-				slog.Any("write err1", err2),
-				slog.Any("write err 2", err3))
 			attempts = append(attempts, &types.Attempt{
 				Crawler:   types.CrawlerDefault,
-				Proxy:     types.ProxyEnabled,
+				Proxy:     proxy[proxyIndexUsed],
 				Method:    types.MethodChromeDP,
 				Timestamp: time.Now(),
 				Error: func(err error) string {
@@ -183,7 +194,16 @@ func ChromeDPFailover(url string, selector string, proxy bool, attempts []*types
 					}
 				}(err),
 			})
-			return GetPrice(url, selector, false, attempts)
+			proxy = append(proxy[:proxyIndexUsed], proxy[proxyIndexUsed+1:]...)
+			slog.Warn("ChromDP proxy failed, triggering default crawler without this proxy",
+				slog.Any("error", err),
+				slog.Any("priceText", priceText),
+				slog.Any("write err1", err2),
+				slog.Any("write err 2", err3),
+				slog.Any("new Proxy Arr", proxy),
+			)
+			// delete failed proxy from proxy list
+			return GetPrice(url, selector, proxy, attempts)
 		} else {
 			slog.Error("no proxy ChromeDB also failed")
 			err2 := os.WriteFile("logs/failoverSS.png", screenShot, 0o644)

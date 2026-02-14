@@ -20,8 +20,13 @@ var (
 )
 
 func init() {
+	slog.Info("initializeing proxy rotator module")
 	ProxyString := os.Getenv("PROXY_URL_LIST")
 	ProxyList = strings.Split(ProxyString, ",")
+	slog.Info("Porxy string and array",
+		slog.String("string", ProxyString),
+		slog.Any("proxyArr", ProxyList),
+	)
 	ProxyIncidentCounterMap = make(map[string]int)
 	for _, proxyURL := range ProxyList {
 		ProxyIncidentCounterMap[proxyURL] = 0
@@ -29,13 +34,20 @@ func init() {
 }
 
 func StartProxyCounter(done <-chan struct{}) {
+	slog.Info("starting proxy counter")
 	ProxyCounterChannel = make(chan []*types.Attempt, 100)
 	go func() {
 		for {
 			select {
 			case AttemptArr := <-ProxyCounterChannel:
+				slog.Warn("recieved new Attempt Array",
+					slog.Any("attemptArr", AttemptArr),
+				)
 				for i := range AttemptArr {
-					ProxyIncidentCounterMap[AttemptArr[i].Proxy]++
+					if AttemptArr[i].Method == types.MethodChromeDP {
+						slog.Info("chromeDP attempt Found, incrementing counter")
+						ProxyIncidentCounterMap[AttemptArr[i].Proxy]++
+					}
 					if ProxyIncidentCounterMap[AttemptArr[i].Proxy] >= RestartThreshold {
 						RestartGluetun(AttemptArr[i].Proxy)
 						ProxyIncidentCounterMap[AttemptArr[i].Proxy] = 0
@@ -49,8 +61,10 @@ func StartProxyCounter(done <-chan struct{}) {
 }
 
 func RestartGluetun(proxyURL string) error {
+	slog.Info("restarting gluetun for url",
+		slog.String("URL", proxyURL),
+	)
 	client := &http.Client{Timeout: 10 * time.Second}
-
 	for i := 0; i < 3; i++ {
 		resp, err := client.Get(proxyURL + "/v1/vpn/status")
 		if err != nil {

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"net/url"
 	"os"
 	"regexp"
@@ -15,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"priceTracker/Logger"
+	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 
 	"github.com/chromedp/chromedp"
@@ -82,7 +83,7 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 //   - exclusionSpecialWords: special character words for exclusion matching
 //
 // Returns the listings, bids, and any error encountered.
-func GetEbayListings(Name string, desiredPrice int, Proxy bool,
+func GetEbayListings(Name string, desiredPrice int, proxy []string,
 	allRegexPatterns [][]*regexp.Regexp,
 	allSpecialWords [][]string,
 	exclusionRegexes []*regexp.Regexp,
@@ -91,17 +92,25 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool,
 ) ([]*types.EbayListing, []*types.EbayBids, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
 
-	slog.Info(url, slog.Bool("proxy", Proxy))
 	var listingArr []*types.EbayListing
 	var bidArr []*types.EbayBids
 	crawlDate := time.Now()
 	visited := false
 	c := initCrawler()
-	if !Proxy {
-		c.SetProxyFunc(nil)
-	}
+
 	if attempts == nil {
 		attempts = []*types.Attempt{}
+	}
+	var proxyIndex int
+	if len(proxy) != 0 {
+		proxyIndex = rand.IntN(len(proxy))
+		c.SetProxy(proxy[proxyIndex])
+		slog.Info("proxy set for colly ebay crawler",
+			slog.String("proxy url", proxy[proxyIndex]),
+		)
+	} else {
+		slog.Info("proxy function set to nil for ebay colly")
+		c.SetProxyFunc(nil)
 	}
 	c.OnHTML("ul.srp-results > li", func(e *colly.HTMLElement) {
 		visited = true
@@ -329,7 +338,7 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool,
 	err := c.Visit(url)
 	c.Wait()
 	if err != nil || !visited {
-		if !Proxy {
+		if len(proxy) == 0 {
 			slog.Warn("Colly failed even without proxy triggering chromeDP without proxy")
 			attempts = append(attempts, &types.Attempt{
 				Crawler:   types.CrawlerEbay,
@@ -344,14 +353,14 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool,
 					}
 				}(err),
 			})
-			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, false, allRegexPatterns,
+			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, proxy, 0, allRegexPatterns,
 				allSpecialWords, exclusionRegexes, exclusionSpecialWords, attempts)
 			return listingArr, bidArr, err
 		} else {
 			slog.Warn("ebay failed, redoing request with chromedp with proxy")
 			attempts = append(attempts, &types.Attempt{
 				Crawler:   types.CrawlerEbay,
-				Proxy:     types.ProxyEnabled,
+				Proxy:     proxy[proxyIndex],
 				Method:    types.MethodColly,
 				Timestamp: time.Now(),
 				Error: func(err error) string {
@@ -362,7 +371,7 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool,
 					}
 				}(err),
 			})
-			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, true, allRegexPatterns,
+			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, proxy, proxyIndex, allRegexPatterns,
 				allSpecialWords, exclusionRegexes, exclusionSpecialWords, attempts)
 			return listingArr, bidArr, err
 		}
@@ -394,7 +403,8 @@ func GetEbayListings(Name string, desiredPrice int, Proxy bool,
 //   - exclusionSpecialWords: special character words for exclusion matching
 //
 // Returns the listings, bids, and any error encountered.
-func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
+func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
+	proxyIndexUsed int,
 	allRegexPatterns [][]*regexp.Regexp,
 	allSpecialWords [][]string,
 	exclusionRegexes []*regexp.Regexp,
@@ -407,9 +417,16 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
 	slog.Info("chromedp failover for ebay", slog.String("URL", url))
 	var ctx context.Context
 	var cancel context.CancelFunc
-	if proxy {
-		ctx, cancel = NewChromedpContext(90*time.Second, chromedp.ProxyServer("http://gluetun:8888"))
+	if len(proxy) != 0 {
+		proxyURL := proxy[proxyIndexUsed]
+		ctx, cancel = NewChromedpContext(90*time.Second,
+			chromedp.ProxyServer(proxyURL),
+		)
+		slog.Info("proxy set for ebay chromeDP",
+			slog.String("proxy url", proxy[proxyIndexUsed]),
+		)
 	} else {
+		slog.Info("proxy set to nil for ebay chromeDP")
 		ctx, cancel = NewChromedpContext(90 * time.Second)
 	}
 
@@ -495,12 +512,12 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
 	var retBidArr []*types.EbayBids
 
 	if err != nil || len(items) == 0 {
-		if proxy {
+		if len(proxy) != 0 {
 			slog.Warn("Proxy ebay chrome failover failed, calling nonproxy default",
 				slog.Any("error", err))
 			attempts = append(attempts, &types.Attempt{
 				Crawler:   types.CrawlerEbay,
-				Proxy:     types.ProxyEnabled,
+				Proxy:     proxy[proxyIndexUsed],
 				Method:    types.MethodChromeDP,
 				Timestamp: time.Now(),
 				Error: func(err error) string {
@@ -511,7 +528,12 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy bool,
 					}
 				}(err),
 			})
-			return GetEbayListings(Name, desiredPrice, false, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords, attempts)
+			proxy = append(proxy[:proxyIndexUsed], proxy[proxyIndexUsed+1:]...)
+			slog.Warn("ChromDP proxy failed, triggering default crawler without this proxy",
+				slog.Any("error", err),
+				slog.Any("new Proxy Arr", proxy),
+			)
+			return GetEbayListings(Name, desiredPrice, proxy, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords, attempts)
 		} else {
 			fileErr1 := os.WriteFile("logs/ebayFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("logs/ebaySecond.png", second, 0o644)

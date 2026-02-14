@@ -54,7 +54,6 @@ func initCrawler() *colly.Collector {
 	c.WithTransport(&http.Transport{
 		DisableCompression: false,
 	})
-	c.SetProxy("http://gluetun:8888")
 	return c
 }
 
@@ -90,7 +89,6 @@ func NewChromedpContext(timeout time.Duration, extraOpts ...chromedp.ExecAllocat
 
 	return ctx, cancel
 }
-
 
 // StealthActions returns chromedp actions that help evade bot detection.
 // It masks the headless browser by setting typical browser properties.
@@ -139,7 +137,6 @@ func StealthActions() chromedp.Action {
 		});
 	`, nil)
 }
-
 
 // GetOpenGraphPic retrieves the product image URL from a webpage.
 // Supports Amazon, Best Buy, and generic Open Graph image tags.

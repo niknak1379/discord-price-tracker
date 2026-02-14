@@ -56,14 +56,18 @@ func main() {
 }
 
 func amazonTest() {
+	proxyCopy := make([]string, len(proxy.ProxyList))
+	copy(proxyCopy, proxy.ProxyList)
 	i, err := crawler.GetPrice("https://www.amazon.com/dp/B0B3F8V4JG?ref=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&ref_=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&social_share=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&language=en-US",
-		"form#addToCart span.a-price-whole", true, nil)
+		"form#addToCart span.a-price-whole", proxyCopy, nil)
 	slog.Info("price", slog.Int("int", i), slog.Any("error", err))
 }
 
 func BestBuyTest() {
+	proxyCopy := make([]string, len(proxy.ProxyList))
+	copy(proxyCopy, proxy.ProxyList)
 	i, err := crawler.GetPrice("https://www.bestbuy.com/product/msi-mpg-322urx-qd-oled-32-quantum-dot-oled-uhd-240hz-0-03ms-gaming-monitor-with-hdr400-displayport-2-1a-hdmi-usb-black/J3P7TX99VT/sku/6614908?sb_share_source=PDP&ref=app_pdp&loc=pdp_page",
-		"div[data-testid='price-block-customer-price']", true, nil)
+		"div[data-testid='price-block-customer-price']", proxyCopy, nil)
 	slog.Info("price", slog.Int("int", i), slog.Any("error", err))
 }
 
@@ -89,11 +93,14 @@ func crawlerTest() {
 
 func InchMeasurement() {
 	slog.Info("=== Testing GetSecondHandListings with 32 inch monitor ===")
+	proxyCopy := make([]string, len(proxy.ProxyList))
+	copy(proxyCopy, proxy.ProxyList)
 	listings, bids, err, _, _ := crawler.GetSecondHandListings(
 		[]string{"Samsung 32\" Odyssey OLED"},
 		1000, 0, 0, 100,
 		"Tech", "", false,
 		[]string{},
+		proxyCopy,
 	)
 
 	slog.Info("Test results",

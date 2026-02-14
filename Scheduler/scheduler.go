@@ -10,6 +10,7 @@ import (
 
 	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
+	proxy "priceTracker/Proxy"
 	types "priceTracker/Types"
 
 	discord "priceTracker/Discord"
@@ -218,9 +219,14 @@ func updateSingleItem(item *database.Item, Channel *database.Channel, IR *Incide
 func updatePrice(Name string, Tracker *database.TrackingInfo, date time.Time,
 	ChannelID string, IR *IncidentRate,
 ) (database.Price, error) {
-	newPrice, err := crawler.GetPrice(Tracker.URI, Tracker.HtmlQuery, true, nil)
+	// make copy of the proxy array
+	proxyCopy := make([]string, len(proxy.ProxyList))
+	copy(proxyCopy, proxy.ProxyList)
+	newPrice, err := crawler.GetPrice(Tracker.URI, Tracker.HtmlQuery, proxyCopy, nil)
 	if err != nil && strings.Contains(Tracker.URI, "amazon") {
-		newPrice, err = crawler.GetPrice(Tracker.URI, backUpAmazonQuery, true, nil)
+		proxyCopy := make([]string, len(proxy.ProxyList))
+		copy(proxyCopy, proxy.ProxyList)
+		newPrice, err = crawler.GetPrice(Tracker.URI, backUpAmazonQuery, proxyCopy, nil)
 	}
 	if err != nil || newPrice == 0 {
 		slog.Error("error getting price in updatePrice", slog.Any("Error", err),
@@ -254,12 +260,14 @@ func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Chann
 	for i := range oldEbayBids {
 		BidsMap[oldEbayBids[i].URL] = oldEbayBids[i]
 	}
+
 	ebayListings, ebayBids, ebayErr, fbErr, depopErr := crawler.GetSecondHandListings(
 		append(item.AlternateTrackingQueries, item.Name),
 		item.CurrentLowestPrice.Price,
 		Channel.Lat, Channel.Long, Channel.Distance,
 		item.Type, Channel.LocationCode, item.FacebookCrawl,
 		item.TrackingExclusionQueries,
+		proxy.ProxyList,
 	)
 
 	// Handle eBay errors with rate limiting

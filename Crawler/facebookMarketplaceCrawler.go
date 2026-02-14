@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"priceTracker/Logger"
+	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 
 	"github.com/chromedp/chromedp"
@@ -41,6 +41,7 @@ import (
 func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong float64,
 	maxDistance int, itemType string, LocationCode string, facebookCrawl bool,
 	exclusionQueries []string,
+	proxyArr []string,
 ) ([]*types.EbayListing, []*types.EbayBids, error, error, error) {
 	retListingArr := []*types.EbayListing{}
 	retBidArr := []*types.EbayBids{}
@@ -56,11 +57,15 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 				exclusionRegexes, exclusionSpecialWords, nil)
 		}
 		if facebookCrawl {
+			proxyCopy := make([]string, len(proxyArr))
+			copy(proxyCopy, proxyArr)
 			fb, err2 = MarketPlaceCrawl(Name, Price, homeLat, homeLong,
-				maxDistance, LocationCode, true, normal,
+				maxDistance, LocationCode, proxyCopy, normal,
 				special, exclusionRegexes, exclusionSpecialWords, nil)
 		}
-		ebay, bids, err4 := GetEbayListings(Name, Price, true,
+		proxyCopy := make([]string, len(proxyArr))
+		copy(proxyCopy, proxyArr)
+		ebay, bids, err4 := GetEbayListings(Name, Price, proxyCopy,
 			normal, special, exclusionRegexes, exclusionSpecialWords, nil)
 
 		ebayErr = errors.Join(ebayErr, err4)
@@ -136,7 +141,8 @@ func FacebookURLGenerator(Name string, Price int, LocationCode string) string {
 //
 // Returns the listings and any error encountered.
 func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
-	maxDistance int, LocationCode string, proxy bool,
+	maxDistance int, LocationCode string,
+	proxy []string,
 	allRegexPatterns [][]*regexp.Regexp,
 	allSpecialWords [][]string,
 	exclusionRegexes []*regexp.Regexp,
@@ -148,9 +154,17 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	slog.Info("crawling facebook marketplace URL", slog.String("URL", url))
 	var ctx context.Context
 	var cancel context.CancelFunc
-	if proxy {
-		ctx, cancel = NewChromedpContext(90*time.Second, chromedp.ProxyServer("http://gluetun:8888"))
+	proxyIndexUsed := rand.IntN(len(proxy))
+	if len(proxy) != 0 {
+		proxyURL := proxy[proxyIndexUsed]
+		ctx, cancel = NewChromedpContext(90*time.Second,
+			chromedp.ProxyServer(proxyURL),
+		)
+		slog.Info("proxy set for ebay chromeDP",
+			slog.String("proxy url", proxy[proxyIndexUsed]),
+		)
 	} else {
+		slog.Info("proxy set to nil for ebay chromeDP")
 		ctx, cancel = NewChromedpContext(90 * time.Second)
 	}
 	if attempts == nil {
@@ -187,18 +201,11 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	cancel()
 	var retArr []*types.EbayListing
 	if len(items) == 0 {
-		if proxy {
+		if len(proxy) != 0 {
 			fileErr1 := os.WriteFile("logs/proxyFacebookFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("logs/proxyFacebookSecond.png", second, 0o644)
 			fileErr3 := os.WriteFile("logs/proxyFacebookHTML.html", []byte(HTMLContent), 0o644)
 			time.Sleep(5 * time.Second)
-			slog.Warn("facebook proxy failed, triggering no proxy crawl",
-				slog.Any("Error", err),
-				slog.Int("ItemArr length", len(items)),
-				slog.Any("wirte Err", fileErr1),
-				slog.Any("write err 2", fileErr2),
-				slog.Any("write err 3", fileErr3),
-			)
 			attempts = append(attempts, &types.Attempt{
 				Crawler:   types.CrawlerFacebook,
 				Proxy:     types.ProxyEnabled,
@@ -212,8 +219,17 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 					}
 				}(err),
 			})
+			proxy = append(proxy[:proxyIndexUsed], proxy[proxyIndexUsed+1:]...)
+			slog.Warn("facebook proxy failed, triggering no proxy crawl",
+				slog.Any("Error", err),
+				slog.Int("ItemArr length", len(items)),
+				slog.Any("wirte Err", fileErr1),
+				slog.Any("write err 2", fileErr2),
+				slog.Any("write err 3", fileErr3),
+				slog.Any("proxy", proxy),
+			)
 			return MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode,
-				false, allRegexPatterns, allSpecialWords, exclusionRegexes,
+				proxy, allRegexPatterns, allSpecialWords, exclusionRegexes,
 				exclusionSpecialWords, attempts)
 		} else {
 			fileErr1 := os.WriteFile("logs/facebookFirst.png", first, 0o644)

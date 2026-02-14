@@ -226,6 +226,41 @@ func RemoveAlternateTrackingName(Name string, index int, ChannelID string) (Item
 	return result, err
 }
 
+// EditAlternateTrackingName edits an alternate tracking name by index.
+//
+// Parameters:
+//   - Name: the item name
+//   - index: the index of the alternate name to edit
+//   - newName: the new name to set
+//   - ChannelID: the Discord channel ID
+//
+// Returns the updated item and any error encountered.
+func EditAlternateTrackingName(Name string, index int, newName string, ChannelID string) (Item, error) {
+	var result Item
+	Table, err := loadChannelTable(ChannelID)
+	if err != nil {
+		slog.Error("couldnt load channel", slog.Any("Error", err))
+		return Item{}, err
+	}
+	filter := bson.M{
+		"Name": bson.M{"$regex": "^" + Name + "$", "$options": "i"},
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			fmt.Sprintf("AlternateTrackingQueries.%d", index): newName,
+		},
+	}
+	opts := options.FindOneAndUpdate().
+		SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).
+		SetReturnDocument(options.After)
+	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
 // AddTrackingExclusionQuery adds an exclusion pattern to filter out unwanted listings.
 //
 // Parameters:

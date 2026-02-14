@@ -289,6 +289,32 @@ var (
 			},
 		},
 		{
+			Name:        "edit_alternative_name",
+			Description: "Edit Additional Names for Tracking regex",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "name",
+					Description:  "name of item to be changed",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:         "index",
+					Description:  "index of alternative name to edit",
+					Type:         discordgo.ApplicationCommandOptionInteger,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:        "new_name",
+					Description: "new name to replace the existing one",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
+				},
+			},
+		},
+		{
 			Name:        "add_exclusion_query",
 			Description: "Add Exclusion Query for Tracking regex",
 			Options: []*discordgo.ApplicationCommandOption{
@@ -827,6 +853,46 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 		}
 	},
+	"edit_alternative_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		// get command inputs from discord
+		options := i.ApplicationCommandData().Options
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			switch {
+			case options[0].Focused:
+				autoComplete(options[0].StringValue(), 0, i, discord)
+			case options[1].Focused:
+				autoComplete(options[0].StringValue(), 3, i, discord)
+			}
+		default:
+			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
+			// edit alternative tracking name in database
+			name := options[0].StringValue()
+			index := int(options[1].IntValue())
+			newName := options[2].StringValue()
+			res, err := database.EditAlternateTrackingName(name, index, newName, i.ChannelID)
+			em := setEmbed(&res)
+			if err != nil {
+				content := err.Error()
+				discord.ChannelMessageSendEmbed(i.ChannelID, &discordgo.MessageEmbed{
+					Title: "Error",
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:  "Error",
+							Value: content,
+						},
+					},
+					Color: 10038562, // red
+				})
+			} else {
+				for _, embed := range em {
+					discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+				}
+			}
+		}
+	},
 	"get": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
@@ -1293,6 +1359,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 					"**Advanced Tracking:**\n" +
 					"• `/add_additional_name` - Add alternate names for tracking\n" +
 					"• `/remove_alternative_name` - Remove alternate names\n" +
+					"• `/edit_alternative_name` - Edit alternate names\n" +
 					"• `/add_exclusion_query` - Add exclusion patterns\n" +
 					"• `/remove_exclusion_query` - Remove exclusion patterns\n\n" +
 					"**Editing Trackers:**\n" +

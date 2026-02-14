@@ -42,6 +42,7 @@ func GetPrice(uri string, querySelector string, proxy []string, attempts []*type
 		proxyIndex = rand.IntN(len(proxy))
 		c.SetProxy(proxy[proxyIndex])
 		slog.Info("proxy set for default crawler",
+			slog.Any("proxyArr", proxy),
 			slog.String("proxy url", proxy[proxyIndex]),
 		)
 	} else {

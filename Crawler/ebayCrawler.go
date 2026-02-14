@@ -106,6 +106,7 @@ func GetEbayListings(Name string, desiredPrice int, proxy []string,
 		proxyIndex = rand.IntN(len(proxy))
 		c.SetProxy(proxy[proxyIndex])
 		slog.Info("proxy set for colly ebay crawler",
+			slog.Any("proxyArr", proxy),
 			slog.String("proxy url", proxy[proxyIndex]),
 		)
 	} else {

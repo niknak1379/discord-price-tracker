@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -23,6 +24,14 @@ func init() {
 	slog.Info("initializeing proxy rotator module")
 	ProxyString := os.Getenv("PROXY_URL_LIST")
 	ProxyList = strings.Split(ProxyString, ",")
+	if len(ProxyList) == 0 {
+		panic("you need at least one proxy server, just do the proton one its free")
+	}
+	for _, uri := range ProxyList {
+		if _, err := url.ParseRequestURI(uri); err != nil {
+			panic(uri + " is not a valid url")
+		}
+	}
 	slog.Info("Porxy string and array",
 		slog.String("string", ProxyString),
 		slog.Any("proxyArr", ProxyList),

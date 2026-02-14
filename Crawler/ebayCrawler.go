@@ -92,6 +92,7 @@ func GetEbayListings(Name string, desiredPrice int, proxy []string,
 ) ([]*types.EbayListing, []*types.EbayBids, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
 
+	slog.Info("crawling ebay url", slog.String("URL", url))
 	var listingArr []*types.EbayListing
 	var bidArr []*types.EbayBids
 	crawlDate := time.Now()

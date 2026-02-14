@@ -1,4 +1,5 @@
 .env
+us-sjc-wg-401.conf
 
 # Log files and directories
 logs/

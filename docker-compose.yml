@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     environment:
-      - PROXY_URL_LIST=http://gluetun:8888
+      - PROXY_URL_LIST=http://gluetun:8888,http://gluetun2:8888
       - APPLICATION_ID=${APPLICATION_ID}
       - PUBLIC_KEY=${PUBLIC_KEY}
       - MONGODB_URI=${MONGODB_URI}
@@ -19,6 +19,7 @@ services:
       - "6060:6060"
     depends_on:
       - gluetun
+      - gluetun2
     volumes:
       - log-data:/app/logs
 
@@ -51,6 +52,22 @@ services:
       - HTTPPROXY=on
       - UPDATER_PERIOD=12h
       - HTTPPROXY_STEALTH=on
+      - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"none"}
+
+  gluetun2:
+    image: qmcgaw/gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=mullvad
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=4KgtbLX1qhEjapZ1Z6GnhHHLHYcF5yoHt0TtdeE6imM=
+      - WIREGUARD_ADDRESSES=10.70.32.171/32
+      - SERVER_COUNTRIES=United States
+      - HTTPPROXY=on
       - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"none"}
 
 volumes:

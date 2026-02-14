@@ -1036,7 +1036,7 @@ func validateURI(uri string, querySelector string) (*Price, *TrackingInfo, error
 				proxyCopy, nil)
 			tracking := TrackingInfo{
 				URI:       uri,
-				HtmlQuery: querySelector,
+				HtmlQuery: "div#apex_desktop span.priceToPay",
 			}
 			price := Price{
 				Date:  time.Now(),

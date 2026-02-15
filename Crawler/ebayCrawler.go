@@ -193,7 +193,8 @@ func GetEbayListings(Name string, desiredPrice int, proxy []string,
 								time.Duration(hour)*time.Hour,
 						)
 
-					} else if strings.Contains(timeLeftStr[0], "s") {
+					} else if strings.Contains(timeLeftStr[0], "m") &&
+						!strings.Contains(timeLeftStr[0], "h") {
 						timeLeftStr = strings.Split(timeLeftStr[0], " ")
 						minute, err := strconv.Atoi(strings.Split(timeLeftStr[0], "m")[0])
 						if err != nil {
@@ -600,7 +601,8 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 							time.Duration(day)*time.Hour*24 +
 								time.Duration(hour)*time.Hour,
 						)
-					} else if strings.Contains(timeLeftStr[0], "s") {
+					} else if strings.Contains(timeLeftStr[0], "m") &&
+						!strings.Contains(timeLeftStr[0], "h") {
 						// 2d 16h left
 						timeLeftStr = strings.Split(timeLeftStr[0], " ")
 						minute, _ := strconv.Atoi(strings.Split(timeLeftStr[0], "m")[0])

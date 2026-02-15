@@ -179,14 +179,17 @@ func GetEbayListings(Name string, desiredPrice int, proxy []string,
 								slog.Any("error", err),
 							)
 						}
-						hour, err := strconv.Atoi(strings.Split(timeLeftStr[1], "h")[0])
-						if err != nil {
-							slog.Warn("Cant process bid hour",
-								slog.Any("bidInfo", bidInfo),
-								slog.String("bidStr", bidStr),
-								slog.Any("timeLeftStr", timeLeftStr),
-								slog.Any("error", err),
-							)
+						hour := 0
+						if len(timeLeftStr) > 1 {
+							hour, err = strconv.Atoi(strings.Split(timeLeftStr[1], "h")[0])
+							if err != nil {
+								slog.Warn("Cant process bid hour",
+									slog.Any("bidInfo", bidInfo),
+									slog.String("bidStr", bidStr),
+									slog.Any("timeLeftStr", timeLeftStr),
+									slog.Any("error", err),
+								)
+							}
 						}
 						endTime = time.Now().Add(
 							time.Duration(day)*time.Hour*24 +
@@ -206,14 +209,17 @@ func GetEbayListings(Name string, desiredPrice int, proxy []string,
 								slog.Any("error", err),
 							)
 						}
-						second, err := strconv.Atoi(strings.Split(timeLeftStr[1], "s")[0])
-						if err != nil {
-							slog.Warn("Cant process bid second",
-								slog.Any("bidInfo", bidInfo),
-								slog.String("bidStr", bidStr),
-								slog.Any("timeLeftStr", timeLeftStr),
-								slog.Any("error", err),
-							)
+						second := 0
+						if len(timeLeftStr) > 1 {
+							second, err = strconv.Atoi(strings.Split(timeLeftStr[1], "s")[0])
+							if err != nil {
+								slog.Warn("Cant process bid second",
+									slog.Any("bidInfo", bidInfo),
+									slog.String("bidStr", bidStr),
+									slog.Any("timeLeftStr", timeLeftStr),
+									slog.Any("error", err),
+								)
+							}
 						}
 						endTime = time.Now().Add(
 							time.Duration(minute)*time.Minute +
@@ -229,13 +235,17 @@ func GetEbayListings(Name string, desiredPrice int, proxy []string,
 								slog.Any("timeLeftStr", timeLeftStr),
 								slog.Any("error", err))
 						}
-						minute, err := strconv.Atoi(strings.Split(timeLeftStr[1], "m")[0])
-						if err != nil {
-							slog.Warn("Cant process bid min",
-								slog.Any("bidInfo", bidInfo),
-								slog.String("bidStr", bidStr),
-								slog.Any("timeLeftStr", timeLeftStr),
-								slog.Any("error", err))
+						minute := 0
+						if len(timeLeftStr) > 1 {
+							minute, err = strconv.Atoi(strings.Split(timeLeftStr[1], "m")[0])
+							if err != nil {
+								slog.Warn("Cant process bid min",
+									slog.Any("bidInfo", bidInfo),
+									slog.String("bidStr", bidStr),
+									slog.Any("timeLeftStr", timeLeftStr),
+									slog.Any("error", err),
+								)
+							}
 						}
 						endTime = time.Now().Add(
 							time.Duration(hour)*time.Hour +
@@ -595,26 +605,83 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 					if strings.Contains(timeLeftStr[0], "d") {
 						// 2d 16h left
 						timeLeftStr = strings.Split(timeLeftStr[0], " ")
-						day, _ := strconv.Atoi(strings.Split(timeLeftStr[0], "d")[0])
-						hour, _ := strconv.Atoi(strings.Split(timeLeftStr[1], "h")[0])
+						day, err := strconv.Atoi(strings.Split(timeLeftStr[0], "d")[0])
+						if err != nil {
+							slog.Warn("Cant process bid Day",
+								slog.Any("bidInfo", bidInfo),
+								slog.String("bidStr", bidStr),
+								slog.Any("timeLeftStr", timeLeftStr),
+								slog.Any("error", err),
+							)
+						}
+						hour := 0
+						if len(timeLeftStr) > 1 {
+							hour, err = strconv.Atoi(strings.Split(timeLeftStr[1], "h")[0])
+							if err != nil {
+								slog.Warn("Cant process bid hour",
+									slog.Any("bidInfo", bidInfo),
+									slog.String("bidStr", bidStr),
+									slog.Any("timeLeftStr", timeLeftStr),
+									slog.Any("error", err),
+								)
+							}
+						}
 						endTime = time.Now().Add(
 							time.Duration(day)*time.Hour*24 +
 								time.Duration(hour)*time.Hour,
 						)
 					} else if strings.Contains(timeLeftStr[0], "m") &&
 						!strings.Contains(timeLeftStr[0], "h") {
-						// 2d 16h left
+						// 30m 30s left
 						timeLeftStr = strings.Split(timeLeftStr[0], " ")
-						minute, _ := strconv.Atoi(strings.Split(timeLeftStr[0], "m")[0])
-						second, _ := strconv.Atoi(strings.Split(timeLeftStr[1], "s")[0])
+						minute, err := strconv.Atoi(strings.Split(timeLeftStr[0], "m")[0])
+						if err != nil {
+							slog.Warn("Cant process bid Minute",
+								slog.Any("bidInfo", bidInfo),
+								slog.String("bidStr", bidStr),
+								slog.Any("timeLeftStr", timeLeftStr),
+								slog.Any("error", err),
+							)
+						}
+						second := 0
+						if len(timeLeftStr) > 1 {
+							second, err = strconv.Atoi(strings.Split(timeLeftStr[1], "s")[0])
+							if err != nil {
+								slog.Warn("Cant process bid second",
+									slog.Any("bidInfo", bidInfo),
+									slog.String("bidStr", bidStr),
+									slog.Any("timeLeftStr", timeLeftStr),
+									slog.Any("error", err),
+								)
+							}
+						}
 						endTime = time.Now().Add(
 							time.Duration(minute)*time.Minute +
 								time.Duration(second)*time.Second,
 						)
 					} else {
 						timeLeftStr = strings.Split(timeLeftStr[0], " ")
-						hour, _ := strconv.Atoi(strings.Split(timeLeftStr[0], "h")[0])
-						minute, _ := strconv.Atoi(strings.Split(timeLeftStr[1], "m")[0])
+						hour, err := strconv.Atoi(strings.Split(timeLeftStr[0], "h")[0])
+						if err != nil {
+							slog.Warn("Cant process bid hour",
+								slog.Any("bidInfo", bidInfo),
+								slog.String("bidStr", bidStr),
+								slog.Any("timeLeftStr", timeLeftStr),
+								slog.Any("error", err),
+							)
+						}
+						minute := 0
+						if len(timeLeftStr) > 1 {
+							minute, err = strconv.Atoi(strings.Split(timeLeftStr[1], "m")[0])
+							if err != nil {
+								slog.Warn("Cant process bid min",
+									slog.Any("bidInfo", bidInfo),
+									slog.String("bidStr", bidStr),
+									slog.Any("timeLeftStr", timeLeftStr),
+									slog.Any("error", err),
+								)
+							}
+						}
 						endTime = time.Now().Add(
 							time.Duration(hour)*time.Hour +
 								time.Duration(minute)*time.Minute,

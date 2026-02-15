@@ -154,8 +154,9 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	slog.Info("crawling facebook marketplace URL", slog.String("URL", url))
 	var ctx context.Context
 	var cancel context.CancelFunc
-	proxyIndexUsed := rand.IntN(len(proxy))
+	var proxyIndexUsed int
 	if len(proxy) != 0 {
+		proxyIndexUsed = rand.IntN(len(proxy))
 		proxyURL := proxy[proxyIndexUsed]
 		ctx, cancel = NewChromedpContext(90*time.Second,
 			chromedp.ProxyServer(proxyURL),

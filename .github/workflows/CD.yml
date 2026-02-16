@@ -7,7 +7,7 @@ on:
 
 jobs:
   dockerize:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment: .env
     steps:
     - name: Checkout repository
@@ -36,7 +36,7 @@ jobs:
         cache-to: type=gha,mode=max
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment: .env
     needs: dockerize
     steps:

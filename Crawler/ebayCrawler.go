@@ -112,7 +112,6 @@ func GetEbayListings(Name string, desiredPrice int, proxy []string,
 		)
 	} else {
 		slog.Info("proxy function set to nil for ebay colly")
-		c.SetProxyFunc(nil)
 	}
 	c.OnHTML("ul.srp-results > li", func(e *colly.HTMLElement) {
 		visited = true

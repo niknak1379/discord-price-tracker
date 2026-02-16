@@ -47,7 +47,6 @@ func GetPrice(uri string, querySelector string, proxy []string, attempts []*type
 		)
 	} else {
 		slog.Info("proxy function set to nil")
-		c.SetProxyFunc(nil)
 	}
 	c.OnHTML(querySelector, func(h *colly.HTMLElement) {
 		crawled = true

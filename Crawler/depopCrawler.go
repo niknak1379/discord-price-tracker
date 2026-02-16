@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"time"
 
-	"priceTracker/Logger"
+	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 
 	"github.com/gocolly/colly/v2"
@@ -45,15 +45,26 @@ func CrawlDepop(Name string,
 	exclusionRegexes []*regexp.Regexp,
 	exclusionSpecialWords []string,
 	attempts []*types.Attempt,
+	proxy []string,
 ) ([]*types.EbayListing, error) {
 	url := depopURLGenerator(Name, Price)
 	c := initCrawler()
 
-	crawlDate := time.Now()
 	retArr := []*types.EbayListing{}
 	visited := false
 	if attempts == nil {
 		attempts = []*types.Attempt{}
+	}
+	var proxyIndex int
+	if len(proxy) != 0 {
+		proxyIndex = rand.IntN(len(proxy))
+		c.SetProxy(proxy[proxyIndex])
+		slog.Info("proxy set for default crawler",
+			slog.Any("proxyArr", proxy),
+			slog.String("proxy url", proxy[proxyIndex]),
+		)
+	} else {
+		slog.Info("proxy function set to nil")
 	}
 	slog.Info("logging depop url", slog.String("Url", url))
 	c.OnHTML("ol[class^='styles_productGrid__'] li", func(e *colly.HTMLElement) {
@@ -67,46 +78,17 @@ func CrawlDepop(Name string,
 				slog.Int("item price", price))
 			return
 		}
-
-		// Create NEW collector for product page
-		productCollector := initCrawler()
-		approved := false
-		condition := ""
-
-		// Handler for product page
-		r := rand.IntN(30)
-		r += r + 30
-		time.Sleep(time.Duration(r) * time.Second)
-
-		productCollector.OnHTML("p.styles_textWrapper__v3kxJ", func(pe *colly.HTMLElement) {
-			condition = pe.Text
-			if titleCorrectnessCheck(condition, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords) {
-				approved = true
-			}
-		})
-
-		// Visit product page synchronously
-		productCollector.Visit(productURL)
-		productCollector.Wait()
-
-		// Now approved and condition are set
-		if approved && price < Price {
-			Listing := types.EbayListing{
-				ItemName:      Name,
-				Title:         condition,
-				Price:         price,
-				Condition:     Name,
-				URL:           productURL,
-				Date:          crawlDate,
-				Duration:      0,
-				AcceptsOffers: true,
-			}
-			slog.Info("listing", slog.Any("depop listing information", Listing))
-			retArr = append(retArr, &Listing)
-		} else {
-			slog.Info("skipping depop item, title not matched or price too high",
-				slog.String("URL", url))
+		listing, productAttempts, err := CrawlProductPage(productURL,
+			allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords, attempts, proxy)
+		attempts = append(attempts, productAttempts...)
+		if err != nil {
+			slog.Warn("could not visit product page")
+			return
 		}
+		listing.ItemName = Name
+		listing.Condition = Name
+		listing.Price = price
+		retArr = append(retArr, listing)
 	})
 
 	err := c.Visit(url)
@@ -140,4 +122,76 @@ func CrawlDepop(Name string,
 	}
 
 	return retArr, nil
+}
+
+func CrawlProductPage(productURL string,
+	allRegexPatterns [][]*regexp.Regexp,
+	allSpecialWords [][]string,
+	exclusionRegexes []*regexp.Regexp,
+	exclusionSpecialWords []string,
+	attempts []*types.Attempt,
+	proxy []string,
+) (*types.EbayListing, []*types.Attempt, error) {
+	// Create NEW collector for product page
+	productCollector := initCrawler()
+	approved := false
+	visited := false
+	condition := ""
+	var proxyIndex int
+	if len(proxy) != 0 {
+		proxyIndex = rand.IntN(len(proxy))
+		productCollector.SetProxy(proxy[proxyIndex])
+		slog.Info("proxy set for default crawler",
+			slog.Any("proxyArr", proxy),
+			slog.String("proxy url", proxy[proxyIndex]),
+		)
+	} else {
+		slog.Info("proxy function set to nil")
+	}
+
+	// Handler for product page
+	r := rand.IntN(30)
+	r += r + 30
+	time.Sleep(time.Duration(r) * time.Second)
+
+	productCollector.OnHTML("p.styles_textWrapper__v3kxJ", func(pe *colly.HTMLElement) {
+		visited = true
+		condition = pe.Text
+		if titleCorrectnessCheck(condition, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords) {
+			approved = true
+		}
+	})
+
+	// Visit product page synchronously
+	err := productCollector.Visit(productURL)
+	productCollector.Wait()
+
+	Listing := &types.EbayListing{}
+	if !visited || err != nil {
+		slog.Warn("Depop product link not visited for",
+			slog.String("url", productURL),
+			slog.Any("error", err),
+			slog.Bool("visited", visited),
+		)
+		if !visited {
+			err = errors.New("page not visited")
+		}
+		return Listing, []*types.Attempt{}, err
+	}
+	// Now approved and condition are set
+	if approved {
+		Listing = &types.EbayListing{
+			Title:         condition,
+			URL:           productURL,
+			Date:          time.Now(),
+			Duration:      0,
+			AcceptsOffers: true,
+		}
+		slog.Info("listing", slog.Any("depop listing information", Listing))
+	} else {
+		slog.Info("skipping depop item, title not matched",
+			slog.String("URL", productURL),
+		)
+	}
+	return Listing, []*types.Attempt{}, err
 }

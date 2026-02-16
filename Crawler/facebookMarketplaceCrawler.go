@@ -53,8 +53,10 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 		var err3, err2 error
 		if itemType == "Clothes" {
 			Price = Price / 2
+			proxyCopy := make([]string, len(proxyArr))
+			copy(proxyCopy, proxyArr)
 			depop, err3 = CrawlDepop(Name, Price, normal, special,
-				exclusionRegexes, exclusionSpecialWords, nil)
+				exclusionRegexes, exclusionSpecialWords, nil, proxyCopy)
 		}
 		if facebookCrawl {
 			proxyCopy := make([]string, len(proxyArr))

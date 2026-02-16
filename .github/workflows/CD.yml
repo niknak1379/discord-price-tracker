@@ -36,7 +36,7 @@ jobs:
         cache-to: type=gha,mode=max
 
   deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     environment: .env
     needs: dockerize
     steps:

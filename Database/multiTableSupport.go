@@ -10,7 +10,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // Channel object with its data
@@ -183,26 +182,27 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 
 	Client.Database("tracker").Collection("ChannelIDs").InsertOne(ctx, Channel)
 
-	Table := Client.Database("tracker").Collection(ChannelID)
-	opts := options.SearchIndexes().SetName(ChannelID).SetType("search")
-	searchIndexModel := mongo.SearchIndexModel{
-		Definition: bson.D{
-			{Key: "mappings", Value: bson.D{
-				{Key: "dynamic", Value: false},
-				{Key: "fields", Value: bson.D{
-					{Key: "Name", Value: bson.D{
-						{Key: "type", Value: "autocomplete"},
-					}},
-				}},
-			}},
-		},
-		Options: opts,
-	}
-	// Creates the index
-	_, err = Table.SearchIndexes().CreateOne(ctx, searchIndexModel)
-	if err != nil {
-		return err
-	}
+	// this portion is deprecated since im moving off atlas
+	// Table := Client.Database("tracker").Collection(ChannelID)
+	// opts := options.SearchIndexes().SetName(ChannelID).SetType("search")
+	// searchIndexModel := mongo.SearchIndexModel{
+	// 	Definition: bson.D{
+	// 		{Key: "mappings", Value: bson.D{
+	// 			{Key: "dynamic", Value: false},
+	// 			{Key: "fields", Value: bson.D{
+	// 				{Key: "Name", Value: bson.D{
+	// 					{Key: "type", Value: "autocomplete"},
+	// 				}},
+	// 			}},
+	// 		}},
+	// 	},
+	// 	Options: opts,
+	// }
+	// // Creates the index
+	// _, err = Table.SearchIndexes().CreateOne(ctx, searchIndexModel)
+	// if err != nil {
+	// 	return err
+	// }
 	table := Client.Database("tracker").Collection(ChannelID)
 	Tables[ChannelID] = table
 	ChannelMap[ChannelID] = &Channel

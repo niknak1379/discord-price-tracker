@@ -1,11 +1,77 @@
 package database
 
-import (
-	"log/slog"
+import "github.com/lithammer/fuzzysearch/fuzzy"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-)
+// this was deprecated from moving the database off atlas
+// local mongodb doesnt support search vectors so have to use
+// local fuzzy algorithms in the binary itself
+//
+// FuzzyMatchName performs fuzzy search on item names for autocomplete suggestions.
+//
+// Parameters:
+//   - Name: the partial name to search for (empty string returns all names)
+//   - ChannelID: the Discord channel ID
+//
+// Returns a list of matching item names.
+//
+//	func FuzzyMatchName(Name string, ChannelID string) []string {
+//		Table, err := loadChannelTable(ChannelID)
+//		if err != nil {
+//			slog.Error("couldnt load channel", slog.Any("Error", err))
+//			return make([]string, 0)
+//		}
+//
+//		projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "Name", Value: 1}}}}
+//		var pipeline mongo.Pipeline
+//
+//		if Name == "" {
+//			pipeline = mongo.Pipeline{
+//				bson.D{{Key: "$match", Value: bson.D{}}},
+//				bson.D{{Key: "$sort", Value: bson.D{{Key: "Name", Value: 1}}}},
+//				projectStage,
+//			}
+//		} else {
+//			pipeline = mongo.Pipeline{
+//				bson.D{{Key: "$search", Value: bson.D{
+//					{Key: "index", Value: ChannelID},
+//					{Key: "autocomplete", Value: bson.D{
+//						{Key: "path", Value: "Name"},
+//						{Key: "query", Value: Name},
+//						{Key: "fuzzy", Value: bson.D{
+//							{Key: "maxEdits", Value: 2},
+//							{Key: "prefixLength", Value: 1},
+//						}},
+//					}},
+//				}}},
+//				projectStage,
+//			}
+//		}
+//
+//		cursor, err := Table.Aggregate(ctx, pipeline)
+//		if err != nil {
+//			slog.Error("Error", slog.Any("Error", err))
+//		}
+//		defer cursor.Close(ctx)
+//		names := make([]string, 0)
+//
+//		for cursor.Next(ctx) {
+//			var result bson.M
+//			if err := cursor.Decode(&result); err != nil {
+//				slog.Error("Error", slog.Any("Error", err))
+//				continue
+//			}
+//
+//			if name, ok := result["Name"].(string); ok {
+//				names = append(names, name)
+//			}
+//		}
+//
+//		if err := cursor.Err(); err != nil {
+//			slog.Error("Error", slog.Any("Error", err))
+//		}
+//
+//		return names
+//	}
 
 // FuzzyMatchName performs fuzzy search on item names for autocomplete suggestions.
 //
@@ -15,62 +81,13 @@ import (
 //
 // Returns a list of matching item names.
 func FuzzyMatchName(Name string, ChannelID string) []string {
-	Table, err := loadChannelTable(ChannelID)
-	if err != nil {
-		slog.Error("couldnt load channel", slog.Any("Error", err))
-		return make([]string, 0)
+	itemsArr := GetAllItems(ChannelID,
+		[]string{"PriceHistory", "ListingsHistory", "EbayListings", "EbayBids"})
+	NameArr := []string{}
+	for _, Item := range itemsArr {
+		NameArr = append(NameArr, Item.Name)
 	}
-
-	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "Name", Value: 1}}}}
-	var pipeline mongo.Pipeline
-
-	if Name == "" {
-		pipeline = mongo.Pipeline{
-			bson.D{{Key: "$match", Value: bson.D{}}},
-			bson.D{{Key: "$sort", Value: bson.D{{Key: "Name", Value: 1}}}},
-			projectStage,
-		}
-	} else {
-		pipeline = mongo.Pipeline{
-			bson.D{{Key: "$search", Value: bson.D{
-				{Key: "index", Value: ChannelID},
-				{Key: "autocomplete", Value: bson.D{
-					{Key: "path", Value: "Name"},
-					{Key: "query", Value: Name},
-					{Key: "fuzzy", Value: bson.D{
-						{Key: "maxEdits", Value: 2},
-						{Key: "prefixLength", Value: 1},
-					}},
-				}},
-			}}},
-			projectStage,
-		}
-	}
-
-	cursor, err := Table.Aggregate(ctx, pipeline)
-	if err != nil {
-		slog.Error("Error", slog.Any("Error", err))
-	}
-	defer cursor.Close(ctx)
-	names := make([]string, 0)
-
-	for cursor.Next(ctx) {
-		var result bson.M
-		if err := cursor.Decode(&result); err != nil {
-			slog.Error("Error", slog.Any("Error", err))
-			continue
-		}
-
-		if name, ok := result["Name"].(string); ok {
-			names = append(names, name)
-		}
-	}
-
-	if err := cursor.Err(); err != nil {
-		slog.Error("Error", slog.Any("Error", err))
-	}
-
-	return names
+	return fuzzy.FindFold(Name, NameArr)
 }
 
 // not really critical functionality i feel like i dont really

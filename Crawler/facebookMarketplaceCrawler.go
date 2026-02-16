@@ -52,10 +52,10 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 		var depop, fb []*types.EbayListing
 		var err3, err2 error
 		if itemType == "Clothes" {
-			Price = Price / 2
 			proxyCopy := make([]string, len(proxyArr))
 			copy(proxyCopy, proxyArr)
-			depop, err3 = CrawlDepop(Name, Price, normal, special,
+			// im bargen hunting here close only for those less than half price
+			depop, err3 = CrawlDepop(Name, Price/2, normal, special,
 				exclusionRegexes, exclusionSpecialWords, nil, proxyCopy)
 		}
 		if facebookCrawl {
@@ -118,7 +118,7 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 //
 // Returns the constructed Facebook Marketplace search URL.
 func FacebookURLGenerator(Name string, Price int, LocationCode string) string {
-	baseURL := "https://www.facebook.com/marketplace/107711145919004/search"
+	baseURL := "https://www.facebook.com/marketplace/" + LocationCode + "/search"
 	priceQuery := fmt.Sprintf("?maxPrice=%d", Price)
 	query := "&query=" + url.PathEscape(Name) + "&exact=false"
 	return baseURL + priceQuery + query

@@ -168,7 +168,7 @@ func CrawlProductPage(productURL string,
 
 	// Handler for product page
 	r := rand.IntN(30)
-	r += r + 30
+	r += 30
 	time.Sleep(time.Duration(r) * time.Second)
 
 	productCollector.OnHTML("p.styles_textWrapper__v3kxJ", func(pe *colly.HTMLElement) {

@@ -18,7 +18,7 @@ import (
 
 var (
 	backUpAmazonQuery = "div#apex_desktop span.priceToPay"
-	exludedFields     = []string{"PriceHistory, ListingsHistory, EbayListings"}
+	exludedFields     = []string{"PriceHistory", "ListingsHistory", "EbayListings"}
 )
 
 // SetChannelScheduler initializes and runs the scheduler for all channels.

@@ -267,11 +267,8 @@ func updateChannelLength(ChannelID string, Diff int) error {
 			"TotalItems": Diff + Len,
 		},
 	}
-	Table, err := loadChannelTable(ChannelID)
-	if err != nil {
-		slog.Error("Error updating Channel Length", slog.Any("error", err))
-		return err
-	}
+
+	Table := Client.Database("tracker").Collection("ChannelIDs")
 	res := Table.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
 	ChannelMap[ChannelID].TotalItems = Diff + Len
 	return res.Err()

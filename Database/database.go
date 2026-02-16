@@ -620,7 +620,7 @@ func UpdateLowestHistoricalPrice(Name string, newLow Price, ChannelID string) (I
 		return Item{}, err
 	}
 	filter := bson.M{"Name": Name}
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHisotry", Value: 0}}).SetReturnDocument(options.After)
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
 	update := bson.M{
 		"$set": bson.M{
 			"LowestPrice": newLow,
@@ -653,10 +653,10 @@ func GetLowestPrice(Name string, ChannelID string) (Price, error) {
 	var res Item
 	err = Table.FindOne(ctx, filter, opts).Decode(&res)
 	if err != nil {
-		return res.LowestPrice, err
+		return Price{}, err
 	}
 
-	return res.LowestPrice, err
+	return res.CurrentLowestPrice, err
 }
 
 // UpdateLowestPrice updates the current lowest price for an item.

@@ -37,7 +37,7 @@ services:
     #   - 8888:8888/tcp # HTTP proxy
     #   - 8000:8000/tcp # Control server
     volumes:
-      - /yourpath:/gluetun
+      - gluetun-data:/gluetun
     environment:
       # See https://github.com/qdm12/gluetun-wiki/tree/main/setup#setup
       - VPN_SERVICE_PROVIDER=protonvpn
@@ -72,3 +72,4 @@ services:
 
 volumes:
   log-data:
+  gluetun-data:

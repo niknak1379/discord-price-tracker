@@ -664,15 +664,13 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			itemName := options[0].StringValue()
 			newTimer := int(options[1].IntValue())
 			err := database.EditTimer(itemName, newTimer, i.ChannelID)
-			content := ""
+			customAcknowledge(discord, i)
 			if err != nil {
-				content = err.Error()
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
-				content = fmt.Sprintf("Price Update Notification Timer: %d Hours", newTimer)
+				content := fmt.Sprintf("Price Update Notification Timer: %d Hours", newTimer)
+				SendSuccessEmbed(discord, i.ChannelID, content)
 			}
-			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-				Content: content,
-			})
 		}
 	},
 	"edit_facebook_crawl": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -689,15 +687,17 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			itemName := options[0].StringValue()
 			enableCrawl := options[1].BoolValue()
 			err := database.SetFacebookCrawl(itemName, enableCrawl, i.ChannelID)
-			content := ""
+			customAcknowledge(discord, i)
 			if err != nil {
-				content = err.Error()
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
-				content = fmt.Sprintf("Facebook crawl value: %t", enableCrawl)
+				status := "enabled"
+				if !enableCrawl {
+					status = "disabled"
+				}
+				content := fmt.Sprintf("Facebook marketplace crawling is now %s for '%s'", status, itemName)
+				SendInfoEmbed(discord, i.ChannelID, "Facebook Crawl Status Updated", content)
 			}
-			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-				Content: content,
-			})
 		}
 	},
 	"suppress": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -714,15 +714,13 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			itemName := options[0].StringValue()
 			suppressNotifications := options[1].BoolValue()
 			err := database.EditSuppress(itemName, suppressNotifications, i.ChannelID)
-			content := ""
+			customAcknowledge(discord, i)
 			if err != nil {
-				content = err.Error()
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
-				content = fmt.Sprintf("Price Update Notification Status: %t", suppressNotifications)
+				content := fmt.Sprintf("Price Update Notification Status: %t", suppressNotifications)
+				SendInfoEmbed(discord, i.ChannelID, "Notification Status Updated", content)
 			}
-			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-				Content: content,
-			})
 		}
 	},
 	"add_additional_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -739,15 +737,12 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			itemName := i.ApplicationCommandData().Options[0].StringValue()
 			additionalName := i.ApplicationCommandData().Options[1].StringValue()
 			err := database.AddAlternateTrackingName(itemName, additionalName, i.ChannelID)
-			content := ""
+			customAcknowledge(discord, i)
 			if err != nil {
-				content = err.Error()
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
-				content = "Additional Tracking Names Added"
+				SendSuccessEmbed(discord, i.ChannelID, "Additional Tracking Names Added")
 			}
-			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-				Content: content,
-			})
 		}
 	},
 	"add_exclusion_query": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -764,15 +759,12 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			itemName := i.ApplicationCommandData().Options[0].StringValue()
 			exclusionQuery := i.ApplicationCommandData().Options[1].StringValue()
 			err := database.AddTrackingExclusionQuery(itemName, exclusionQuery, i.ChannelID)
-			content := ""
+			customAcknowledge(discord, i)
 			if err != nil {
-				content = err.Error()
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
-				content = "Exclusion Query Added"
+				SendSuccessEmbed(discord, i.ChannelID, "Exclusion Query Added")
 			}
-			discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-				Content: content,
-			})
 		}
 	},
 	"remove_exclusion_query": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -956,16 +948,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			newName := options[1].StringValue()
 			getRes, err := database.EditName(oldName, newName, i.ChannelID)
 			var embedArr []*discordgo.MessageEmbed
-			var content string
 			customAcknowledge(discord, i)
 			if err != nil {
-				content = "Error: " + err.Error()
-				discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: content,
-					},
-				})
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
 				em := setEmbed(&getRes)
 				embedArr = append(embedArr, em...)
@@ -998,14 +983,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 		}
 		if len(getRes) == 0 {
-			_, err := discord.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-				Content: "No Items Are Being Tracked in This Channel",
-			})
-			if err != nil {
-				slog.Error("Could not send response",
-					slog.Any("value", err),
-				)
-			}
+			SendInfoEmbed(discord, i.ChannelID, "No Items Found", "No items are being tracked in this channel. Use `/add` to start tracking an item.")
 		}
 	},
 	"remove": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -1019,12 +997,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			deleteRes := database.RemoveItem(itemName, i.ChannelID)
 
 			// set up response to discord client
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: fmt.Sprintf("Deleted Rows in the DB: %d", (deleteRes)),
-				},
-			})
+			content := fmt.Sprintf("Item '%s' removed. Deleted %d row(s) from the database.", itemName, deleteRes)
+			SendInfoEmbed(discord, i.ChannelID, "Item Removed", content)
 
 		}
 	},
@@ -1129,9 +1103,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			months := int(options[1].IntValue())
 			err := charts.PriceHistoryChart([]string{itemName}, months, i.ChannelID)
 			if err != nil {
-				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-					Content: fmt.Sprint(err),
-				})
+				customAcknowledge(discord, i)
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
 				reader, err := os.Open("my-chart.png")
 				if err != nil {
@@ -1182,9 +1155,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				secondItemName,
 			}, months, i.ChannelID)
 			if err != nil {
-				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-					Content: fmt.Sprint(err),
-				})
+				customAcknowledge(discord, i)
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
 				reader, err := os.Open("my-chart.png")
 				if err != nil {
@@ -1334,7 +1306,13 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "restarting server...",
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						Title:       "System Restart",
+						Description: "The bot is restarting. All tracking progress has been saved.",
+						Color:       10038562, // red
+					},
+				},
 			},
 		})
 

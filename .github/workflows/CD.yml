@@ -76,7 +76,7 @@ jobs:
               cd price-tracker
               sudo docker compose pull
               sudo docker compose down
-              sudo docker compose up -d
+              sudo docker compose up --remove-orphans -d
               echo "Running containers:"
               sudo docker compose ps
               echo "Container logs:"

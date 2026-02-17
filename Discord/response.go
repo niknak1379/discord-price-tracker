@@ -29,6 +29,33 @@ var (
 	razerGreen = 3328050
 )
 
+func SendErrorEmbed(s *discordgo.Session, channelID, message string) {
+	embed := &discordgo.MessageEmbed{
+		Title:       "Error",
+		Description: message,
+		Color:       red,
+	}
+	s.ChannelMessageSendEmbed(channelID, embed)
+}
+
+func SendSuccessEmbed(s *discordgo.Session, channelID, message string) {
+	embed := &discordgo.MessageEmbed{
+		Title:       "Success",
+		Description: message,
+		Color:       green,
+	}
+	s.ChannelMessageSendEmbed(channelID, embed)
+}
+
+func SendInfoEmbed(s *discordgo.Session, channelID, title, message string) {
+	embed := &discordgo.MessageEmbed{
+		Title:       title,
+		Description: message,
+		Color:       blue,
+	}
+	s.ChannelMessageSendEmbed(channelID, embed)
+}
+
 func ready(discord *discordgo.Session, ready *discordgo.Ready) {
 	slog.Info("Discord Logged in")
 	discord.UpdateGameStatus(1, "stonks")

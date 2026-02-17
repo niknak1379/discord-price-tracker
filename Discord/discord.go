@@ -907,8 +907,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 			getRes, err := database.GetItem(itemName, i.ChannelID, "PriceHistory", "ListingsHistory")
 			if err != nil {
-				content := err.Error()
-				discord.ChannelMessageSend(i.ChannelID, content)
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
 				em := setEmbed(&getRes)
 
@@ -940,11 +939,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 			err = database.SetDesiredPrice(itemName, i.ChannelID, desiredPrice)
 			if err != nil {
-				content := err.Error()
-				discord.ChannelMessageSend(i.ChannelID, content)
-
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
-				discord.ChannelMessageSend(i.ChannelID, "Price Successfully Set")
+				SendSuccessEmbed(discord, i.ChannelID, fmt.Sprintf("Price for '%s' set to $%d", itemName, desiredPrice))
 			}
 		}
 	}, "edit_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {

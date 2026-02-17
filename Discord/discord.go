@@ -672,7 +672,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			itemName := options[0].StringValue()
 			enableCrawl := options[1].BoolValue()
 			err := database.SetFacebookCrawl(itemName, enableCrawl, i.ChannelID)
-			customAcknowledge(discord, i)
 			if err != nil {
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {

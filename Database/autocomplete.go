@@ -87,6 +87,10 @@ func FuzzyMatchName(Name string, ChannelID string) []string {
 	for _, Item := range itemsArr {
 		NameArr = append(NameArr, Item.Name)
 	}
+	if len(NameArr) == 0 {
+		NameArr = append(NameArr, "No Results Found :0")
+	}
+
 	return fuzzy.FindFold(Name, NameArr)
 }
 
@@ -108,6 +112,9 @@ func AutoCompleteURL(Name string, ChannelID string) []string {
 	for _, tracker := range item.TrackingList {
 		res = append(res, tracker.URI)
 	}
+	if len(res) == 0 {
+		res = append(res, "No Results Found :0")
+	}
 	return res
 }
 
@@ -127,6 +134,9 @@ func AutoCompleteAlternateTrackingQueries(Name string, ChannelID string) []strin
 	for _, query := range item.AlternateTrackingQueries {
 		res = append(res, query)
 	}
+	if len(res) == 0 {
+		res = append(res, "No Results Found :0")
+	}
 	return res
 }
 
@@ -145,6 +155,9 @@ func AutoCompleteTrackingExclusionQueries(Name string, ChannelID string) []strin
 	}
 	for _, query := range item.TrackingExclusionQueries {
 		res = append(res, query)
+	}
+	if len(res) == 0 {
+		res = append(res, "No Results Found :0")
 	}
 	return res
 }

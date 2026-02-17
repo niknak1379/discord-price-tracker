@@ -280,8 +280,8 @@ var (
 					Autocomplete: true,
 				},
 				{
-					Name:         "index",
-					Description:  "index of alternative name to remove",
+					Name:         "alternative_name",
+					Description:  "alternative name to remove",
 					Type:         discordgo.ApplicationCommandOptionInteger,
 					Required:     true,
 					Autocomplete: true,
@@ -300,8 +300,8 @@ var (
 					Autocomplete: true,
 				},
 				{
-					Name:         "index",
-					Description:  "index of alternative name to edit",
+					Name:         "alternative_name",
+					Description:  "alternative name to edit",
 					Type:         discordgo.ApplicationCommandOptionInteger,
 					Required:     true,
 					Autocomplete: true,
@@ -354,56 +354,47 @@ var (
 			},
 		},
 		{
-			Name:        "edit_tracking",
-			Description: "Edit a currently Existing Tracker",
+			Name:        "add_tracker",
+			Description: "Add a new tracking URL and HTML selector to an existing item",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
-					Name:        "add",
-					Description: "add new pair of tracking URI and HTML",
-					Type:        discordgo.ApplicationCommandOptionSubCommand,
-					Options: []*discordgo.ApplicationCommandOption{
-						{
-							Name:         "name",
-							Description:  "Add item name",
-							Type:         discordgo.ApplicationCommandOptionString,
-							Required:     true,
-							Autocomplete: true,
-						},
-						{
-							Name:        "uri",
-							Description: "Add Scrapping URI",
-							Type:        discordgo.ApplicationCommandOptionString,
-							Required:    true,
-						},
-						{
-							Name:         "html_tag",
-							Description:  "Add Scrapping HTML Tag",
-							Type:         discordgo.ApplicationCommandOptionString,
-							Required:     true,
-							Autocomplete: true,
-						},
-					},
+					Name:         "name",
+					Description:  "Item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
 				},
 				{
-					Name:        "remove",
-					Description: "remove pair of tracking URI and HTML",
-					Type:        discordgo.ApplicationCommandOptionSubCommand,
-					Options: []*discordgo.ApplicationCommandOption{
-						{
-							Name:         "name",
-							Description:  "Add item name",
-							Type:         discordgo.ApplicationCommandOptionString,
-							Required:     true,
-							Autocomplete: true,
-						},
-						{
-							Name:         "uri",
-							Description:  "Add Scrapping URI",
-							Type:         discordgo.ApplicationCommandOptionInteger,
-							Required:     true,
-							Autocomplete: true,
-						},
-					},
+					Name:        "uri",
+					Description: "Tracking URL",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
+				},
+				{
+					Name:         "html_tag",
+					Description:  "CSS selector for price",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+			},
+		},
+		{
+			Name:        "remove_tracker",
+			Description: "Remove a tracking URL from an item",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "name",
+					Description:  "Item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:        "index",
+					Description: "Index of tracker to remove (get index from /get command)",
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Required:    true,
 				},
 			},
 		},
@@ -1002,87 +993,59 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 
 		}
 	},
-	// this is hella unreadable refractor to make it look better
-	"edit_tracking": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"add_tracker": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
-		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-		// handle auto correct requests for the different fields
 		switch i.Type {
 		case discordgo.InteractionApplicationCommandAutocomplete:
-			logger.Info("auto complete interaction coming in", slog.Any("option", options))
 			switch {
-			case options[0].Options[0].Focused:
-				autoComplete(options[0].Options[0].StringValue(), 0, i, discord)
-			case options[0].Options[1].Focused:
-				autoComplete(options[0].Options[0].StringValue(), 1, i, discord)
-			case options[0].Options[2].Focused:
+			case options[0].Focused:
+				autoComplete(options[0].StringValue(), 0, i, discord)
+			case options[2].Focused:
 				autoCompleteQuerySelector(i, discord)
 			}
 		default:
-			err := customAcknowledge(discord, i)
-			content := ""
-			// get option values
-			name := options[0].Options[0].StringValue()
+			customAcknowledge(discord, i)
 
-			// handle add and remove subcommands
-			switch options[0].Name {
-			case "add":
-				uri := options[0].Options[1].StringValue()
-				htmlQuery := options[0].Options[2].StringValue()
+			name := options[0].StringValue()
+			uri := options[1].StringValue()
+			htmlQuery := options[2].StringValue()
 
-				// database reutrns a price struct, setpricefield formats the returned price
-				// and adds it to the message embeds
-				res, p, err := database.AddTrackingInfo(name, uri, htmlQuery, i.ChannelID)
+			res, p, err := database.AddTrackingInfo(name, uri, htmlQuery, i.ChannelID)
+			if err != nil {
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
+			} else {
 				priceField := setPriceField(&p, "Newly Added Tracker")
-
-				// add price tracking info
 				em := setEmbed(&res)
 				em[len(em)-1].Fields = append(em[len(em)-1].Fields, priceField...)
-				if err != nil {
-					content = err.Error()
-					Discord.ChannelMessageSendEmbed(i.ChannelID, &discordgo.MessageEmbed{
-						Title: "Error",
-						Fields: []*discordgo.MessageEmbedField{
-							{
-								Name:  "Error",
-								Value: content,
-							},
-						},
-						Color: 10038562, // red
-					})
-				} else {
-					for _, embed := range em {
-						discord.ChannelMessageSendEmbed(i.ChannelID, embed)
-					}
+				for _, embed := range em {
+					discord.ChannelMessageSendEmbed(i.ChannelID, embed)
 				}
-
-			case "remove":
-				trackerIndex := options[0].Options[1].IntValue()
-				res, err := database.RemoveTrackingInfo(name, int(trackerIndex), i.ChannelID)
-				em := setEmbed(&res)
-				if err != nil {
-					content = err.Error()
-					Discord.ChannelMessageSendEmbed(i.ChannelID, &discordgo.MessageEmbed{
-						Title: "Error",
-						Fields: []*discordgo.MessageEmbedField{
-							{
-								Name:  "Error",
-								Value: content,
-							},
-						},
-						Color: 10038562, // red
-					})
-				} else {
-					for _, embed := range em {
-						discord.ChannelMessageSendEmbed(i.ChannelID, embed)
-					}
-				}
-
 			}
+		}
+	},
+	"remove_tracker": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		options := i.ApplicationCommandData().Options
 
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			if options[0].Focused {
+				autoComplete(options[0].StringValue(), 0, i, discord)
+			}
+		default:
+			customAcknowledge(discord, i)
+
+			name := options[0].StringValue()
+			trackerIndex := int(options[1].IntValue())
+
+			res, err := database.RemoveTrackingInfo(name, trackerIndex, i.ChannelID)
 			if err != nil {
-				slog.Error("Error in sending edit tracking response", slog.Any("Error", err))
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
+			} else {
+				em := setEmbed(&res)
+				for _, embed := range em {
+					discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+				}
 			}
 		}
 	},
@@ -1343,7 +1306,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 					"• `/edit_facebook_crawl` - Toggle Facebook crawling\n" +
 					"• `/suppress` - Enable/disable notifications\n" +
 					"• `/set_price` - Manually set desired price\n" +
-					"• `/edit_tracking` - Add/remove tracking URLs\n\n" +
+					"• `/add_tracker` - Add a tracking URL to an item\n" +
+					"• `/remove_tracker` - Remove a tracking URL from an item\n\n" +
 					"**Analytics & Visualization:**\n" +
 					"• `/graph` - Price history chart\n" +
 					"• `/graph-compare` - Compare two items\n" +

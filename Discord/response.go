@@ -488,5 +488,8 @@ func customAcknowledge(discord *discordgo.Session, i *discordgo.InteractionCreat
 			Embeds: []*discordgo.MessageEmbed{&em},
 		},
 	})
+	if err != nil {
+		slog.Error("ack error", slog.Any("error value", err))
+	}
 	return err
 }

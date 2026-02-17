@@ -622,9 +622,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			)
 			if err != nil {
 				content = fmt.Sprint(err)
-				discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-					Content: "Error adding item" + content,
-				})
 				CrawlErrorAlert(itemName, uri, err, i.ChannelID)
 				return
 			} else {
@@ -649,14 +646,12 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			})
+			customAcknowledge(discord, i)
+
 			// add tracker to database
 			itemName := options[0].StringValue()
 			newTimer := int(options[1].IntValue())
 			err := database.EditTimer(itemName, newTimer, i.ChannelID)
-			customAcknowledge(discord, i)
 			if err != nil {
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
@@ -744,7 +739,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			itemName := i.ApplicationCommandData().Options[0].StringValue()
 			exclusionQuery := i.ApplicationCommandData().Options[1].StringValue()
 			err := database.AddTrackingExclusionQuery(itemName, exclusionQuery, i.ChannelID)
-			customAcknowledge(discord, i)
 			if err != nil {
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
@@ -877,10 +871,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(itemName, 0, i, discord)
 		default:
-			err := customAcknowledge(discord, i)
-			if err != nil {
-				slog.Error("ack error", slog.Any("error value", err))
-			}
+			customAcknowledge(discord, i)
 			getRes, err := database.GetItem(itemName, i.ChannelID, "PriceHistory", "ListingsHistory")
 			if err != nil {
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
@@ -908,19 +899,18 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(itemName, 0, i, discord)
 		default:
+			customAcknowledge(discord, i)
 			desiredPrice := int(options[1].IntValue())
-			err := customAcknowledge(discord, i)
-			if err != nil {
-				slog.Error("ack error", slog.Any("error value", err))
-			}
-			err = database.SetDesiredPrice(itemName, i.ChannelID, desiredPrice)
+			err := database.SetDesiredPrice(itemName, i.ChannelID, desiredPrice)
 			if err != nil {
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
-				SendSuccessEmbed(discord, i.ChannelID, fmt.Sprintf("Price for '%s' set to $%d", itemName, desiredPrice))
+				SendSuccessEmbed(discord, i.ChannelID,
+					fmt.Sprintf("Price for '%s' set to $%d", itemName, desiredPrice))
 			}
 		}
-	}, "edit_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	},
+	"edit_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
 		oldName := options[0].StringValue()
 
@@ -952,10 +942,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		}
 	},
 	"list": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
-		err := customAcknowledge(discord, i)
-		if err != nil {
-			slog.Error("ack error", slog.Any("error value", err))
-		}
+		customAcknowledge(discord, i)
+
 		getRes := database.GetAllItems(i.ChannelID,
 			[]string{"ListingsHistory", "PriceHistory"})
 		// returnstr, _ := json.Marshal(getRes)
@@ -977,6 +965,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(itemName, 0, i, discord)
 		default:
+			customAcknowledge(discord, i)
 			// remove tracker to database
 			deleteRes := database.RemoveItem(itemName, i.ChannelID)
 
@@ -1052,9 +1041,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			autoComplete(itemName, 0, i, discord)
 		default:
 			// set up response to discord client
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			})
+
+			customAcknowledge(discord, i)
+
 			// get command inputs from discord
 			months := int(options[1].IntValue())
 			err := charts.PriceHistoryChart([]string{itemName}, months, i.ChannelID)
@@ -1066,14 +1055,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				if err != nil {
 					slog.Error("Could not open file", slog.Any("Error", err))
 				}
-				File := discordgo.File{
-					Name:        "chart.png",
-					ContentType: "Image",
-					Reader:      reader,
-				}
-				_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-					Files: []*discordgo.File{&File},
-				})
+
+				_, err = discord.ChannelFileSend(i.ChannelID, "graph.png", reader)
 				if err != nil {
 					if err != nil {
 						slog.Error("failed to send graph",
@@ -1100,10 +1083,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 
 		default:
-			// set up response to discord client
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			})
+			customAcknowledge(discord, i)
 			// get command inputs from discord
 			months := int(options[2].IntValue())
 			err := charts.PriceHistoryChart([]string{
@@ -1111,21 +1091,13 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				secondItemName,
 			}, months, i.ChannelID)
 			if err != nil {
-				customAcknowledge(discord, i)
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
 				reader, err := os.Open("my-chart.png")
 				if err != nil {
 					slog.Error("Could not open file", slog.Any("Error", err))
 				}
-				File := discordgo.File{
-					Name:        "chart.png",
-					ContentType: "Image",
-					Reader:      reader,
-				}
-				_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-					Files: []*discordgo.File{&File},
-				})
+				_, err = discord.ChannelFileSend(i.ChannelID, "graph.png", reader)
 				if err != nil {
 					slog.Error("failed to send comparison graph")
 				}

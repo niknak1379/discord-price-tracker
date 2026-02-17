@@ -25,7 +25,7 @@ var (
 	commandList = []*discordgo.ApplicationCommand{
 		{
 			Name:        "setup",
-			Description: "create new tracking table",
+			Description: "Configure channel location and marketplace settings",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:        "location",
@@ -53,7 +53,7 @@ var (
 		},
 		{
 			Name:        "get_logs",
-			Description: "returnes the latest html and pictures recorded",
+			Description: "Returns the latest HTML and pictures recorded",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:        "crawl",
@@ -88,14 +88,21 @@ var (
 					Required:    true,
 				},
 				{
+					Name:         "name",
+					Description:  "Item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
 					Name:        "uri",
-					Description: "Add Scrapping URI",
+					Description: "Tracking URL",
 					Type:        discordgo.ApplicationCommandOptionString,
 					Required:    true,
 				},
 				{
 					Name:         "html_tag",
-					Description:  "Add Scrapping HTML Tag",
+					Description:  "CSS selector for price",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
@@ -130,14 +137,14 @@ var (
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name",
-					Description:  "Add item name",
+					Description:  "Item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
 					Name:        "suppress",
-					Description: "bool, wether to suppress or not",
+					Description: "Whether to suppress notifications",
 					Type:        discordgo.ApplicationCommandOptionBoolean,
 					Required:    true,
 				},
@@ -145,18 +152,18 @@ var (
 		},
 		{
 			Name:        "edit_timer",
-			Description: "Suppress notifications for this item",
+			Description: "Change scrape interval for an item",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name",
-					Description:  "Add item name",
+					Description:  "Item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
 					Name:        "timer",
-					Description: "New timer",
+					Description: "Scrape interval in hours",
 					Type:        discordgo.ApplicationCommandOptionInteger,
 					Required:    true,
 				},
@@ -164,11 +171,11 @@ var (
 		},
 		{
 			Name:        "get",
-			Description: "Add all links for the item",
+			Description: "Get item details and pricing",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name",
-					Description:  "Add item name",
+					Description:  "Item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
@@ -177,18 +184,18 @@ var (
 		},
 		{
 			Name:        "set_price",
-			Description: "removes all trackers and manually sets price",
+			Description: "Manually set desired price for an item",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name",
-					Description:  "Add item name",
+					Description:  "Item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
 					Name:        "price",
-					Description: "desired price",
+					Description: "Desired price",
 					Type:        discordgo.ApplicationCommandOptionInteger,
 					Required:    true,
 				},
@@ -200,11 +207,11 @@ var (
 		},
 		{
 			Name:        "remove",
-			Description: "remove item completely",
+			Description: "Remove an item from tracking",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name",
-					Description:  "Add item name",
+					Description:  "Item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
@@ -213,18 +220,18 @@ var (
 		},
 		{
 			Name:        "edit_name",
-			Description: "Edit Item Name(Used for Ebay queries",
+			Description: "Edit Item Name (Used for eBay queries)",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "old_name",
-					Description:  "name of item to be changed",
+					Description:  "Current item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
 					Name:        "new_name",
-					Description: "name of item to be changed",
+					Description: "New item name",
 					Type:        discordgo.ApplicationCommandOptionString,
 					Required:    true,
 				},
@@ -232,37 +239,37 @@ var (
 		},
 		{
 			Name:        "edit_facebook_crawl",
-			Description: "weather to crawl marketplace for this item or not",
+			Description: "Whether to crawl marketplace for this item or not",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
-					Name:         "old_name",
-					Description:  "name of item to be changed",
+					Name:         "name",
+					Description:  "Item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
 					Name:        "crawl",
-					Description: "bool",
+					Description: "Enable or disable Facebook crawling",
 					Type:        discordgo.ApplicationCommandOptionBoolean,
 					Required:    true,
 				},
 			},
 		},
 		{
-			Name:        "add_additional_name",
-			Description: "Add Additional Names for Tracking regex",
+			Name:        "add_alternative_name",
+			Description: "Add Alternative Names for Tracking",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name",
-					Description:  "name of item to be changed",
+					Description:  "Item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
-					Name:        "additional_name",
-					Description: "name of item to be changed",
+					Name:        "alternative_name",
+					Description: "Alternative name to add",
 					Type:        discordgo.ApplicationCommandOptionString,
 					Required:    true,
 				},
@@ -270,18 +277,18 @@ var (
 		},
 		{
 			Name:        "remove_alternative_name",
-			Description: "Remove Additional Names for Tracking regex",
+			Description: "Remove Alternative Names for Tracking",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name",
-					Description:  "name of item to be changed",
+					Description:  "Item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
 					Name:         "alternative_name",
-					Description:  "alternative name to remove",
+					Description:  "Alternative name to remove",
 					Type:         discordgo.ApplicationCommandOptionInteger,
 					Required:     true,
 					Autocomplete: true,
@@ -290,18 +297,18 @@ var (
 		},
 		{
 			Name:        "edit_alternative_name",
-			Description: "Edit Additional Names for Tracking regex",
+			Description: "Edit Alternative Names for Tracking",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name",
-					Description:  "name of item to be changed",
+					Description:  "Item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
 					Name:         "alternative_name",
-					Description:  "alternative name to edit",
+					Description:  "Alternative name to edit",
 					Type:         discordgo.ApplicationCommandOptionInteger,
 					Required:     true,
 					Autocomplete: true,
@@ -316,18 +323,18 @@ var (
 		},
 		{
 			Name:        "add_exclusion_query",
-			Description: "Add Exclusion Query for Tracking regex",
+			Description: "Add Exclusion Query for Tracking",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name",
-					Description:  "name of item",
+					Description:  "Item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
 					Name:        "exclusion_query",
-					Description: "exclusion pattern to add (regex string)",
+					Description: "Exclusion pattern to add (regex string)",
 					Type:        discordgo.ApplicationCommandOptionString,
 					Required:    true,
 				},
@@ -335,18 +342,18 @@ var (
 		},
 		{
 			Name:        "remove_exclusion_query",
-			Description: "Remove Exclusion Query for Tracking regex",
+			Description: "Remove Exclusion Query for Tracking",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name",
-					Description:  "name of item",
+					Description:  "Item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
-					Name:         "index",
-					Description:  "index of exclusion query to remove",
+					Name:         "exclusion_query",
+					Description:  "Exclusion query to remove",
 					Type:         discordgo.ApplicationCommandOptionInteger,
 					Required:     true,
 					Autocomplete: true,
@@ -391,8 +398,8 @@ var (
 					Autocomplete: true,
 				},
 				{
-					Name:        "index",
-					Description: "Index of tracker to remove (get index from /get command)",
+					Name:        "tracker",
+					Description: "Tracker index to remove (get index from /get command)",
 					Type:        discordgo.ApplicationCommandOptionInteger,
 					Required:    true,
 				},
@@ -400,18 +407,18 @@ var (
 		},
 		{
 			Name:        "graph",
-			Description: "graph price of item",
+			Description: "Graph price history of an item",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name",
-					Description:  "Add item name",
+					Description:  "Item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
 					Name:        "months",
-					Description: "how long of the history to graph",
+					Description: "How many months of history to graph",
 					Type:        discordgo.ApplicationCommandOptionInteger,
 					Required:    true,
 				},
@@ -419,25 +426,25 @@ var (
 		},
 		{
 			Name:        "graph-compare",
-			Description: "graph price of items",
+			Description: "Graph price comparison of items",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name1",
-					Description:  "Add item name",
+					Description:  "First item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
 					Name:         "name2",
-					Description:  "Add item name",
+					Description:  "Second item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
 					Name:        "months",
-					Description: "how long of the history to graph",
+					Description: "How many months of history to graph",
 					Type:        discordgo.ApplicationCommandOptionInteger,
 					Required:    true,
 				},
@@ -449,7 +456,7 @@ var (
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:        "days",
-					Description: "how many days of history to include",
+					Description: "How many days of history to include",
 					Type:        discordgo.ApplicationCommandOptionInteger,
 					Required:    true,
 				},
@@ -457,24 +464,24 @@ var (
 		},
 		{
 			Name:        "aggregate",
-			Description: "Get Aggregate Data for the Used Listings of the Item",
+			Description: "Get aggregate data for used listings of an item",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name",
-					Description:  "Add item name",
+					Description:  "Item name",
 					Type:         discordgo.ApplicationCommandOptionString,
 					Required:     true,
 					Autocomplete: true,
 				},
 				{
 					Name:        "months",
-					Description: "how long of the history to aggregate",
+					Description: "How many months of history to aggregate",
 					Type:        discordgo.ApplicationCommandOptionInteger,
 					Required:    true,
 				},
 				{
 					Name:        "ending_month",
-					Description: "how many months ago the ending point of the aggregation should be",
+					Description: "How many months ago the ending point should be",
 					Type:        discordgo.ApplicationCommandOptionInteger,
 					Required:    true,
 				},
@@ -482,15 +489,15 @@ var (
 		},
 		{
 			Name:        "channel_item_summary_one_week",
-			Description: "Get Aggregate Data for the Used Listings of the Item",
+			Description: "Get weekly aggregate data for all items in channel",
 		},
 		{
 			Name:        "channel_item_summary_custom_ln",
-			Description: "Get Aggregate Data for the Used Listings of the Item",
+			Description: "Get custom period aggregate data for all items in channel",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:        "months",
-					Description: "How Many Months Back for the Aggregations",
+					Description: "How many months back for the aggregations",
 					Type:        discordgo.ApplicationCommandOptionInteger,
 					Required:    true,
 				},
@@ -498,7 +505,7 @@ var (
 		},
 		{
 			Name:        "restart",
-			Description: "Saves Progress and Stops the Bot",
+			Description: "Save progress and stop the bot",
 		},
 		{
 			Name:        "help",
@@ -714,7 +721,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 		}
 	},
-	"add_additional_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+	"add_alternative_name": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		// get command inputs from discord
 		options := i.ApplicationCommandData().Options
 		switch i.Type {
@@ -1295,7 +1302,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 					"• `/list` - List all tracked items\n" +
 					"• `/get` - Get item prices and details\n\n" +
 					"**Advanced Tracking:**\n" +
-					"• `/add_additional_name` - Add alternate names for tracking\n" +
+					"• `/add_alternative_name` - Add alternate names for tracking\n" +
 					"• `/remove_alternative_name` - Remove alternate names\n" +
 					"• `/edit_alternative_name` - Edit alternate names\n" +
 					"• `/add_exclusion_query` - Add exclusion patterns\n" +

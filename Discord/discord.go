@@ -672,9 +672,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			})
+			customAcknowledge(discord, i)
 			// add tracker to database
 			itemName := options[0].StringValue()
 			enableCrawl := options[1].BoolValue()
@@ -699,9 +697,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			})
+
+			customAcknowledge(discord, i)
 			// add tracker to database
 			itemName := options[0].StringValue()
 			suppressNotifications := options[1].BoolValue()
@@ -722,9 +719,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			})
+			customAcknowledge(discord, i)
 			// add tracker to database
 			itemName := i.ApplicationCommandData().Options[0].StringValue()
 			additionalName := i.ApplicationCommandData().Options[1].StringValue()
@@ -744,9 +739,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		case discordgo.InteractionApplicationCommandAutocomplete:
 			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			})
+			customAcknowledge(discord, i)
 			// add exclusion query to database
 			itemName := i.ApplicationCommandData().Options[0].StringValue()
 			exclusionQuery := i.ApplicationCommandData().Options[1].StringValue()
@@ -771,9 +764,8 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				autoComplete(options[0].StringValue(), 4, i, discord)
 			}
 		default:
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			})
+
+			customAcknowledge(discord, i)
 			// remove exclusion query from database
 			name := options[0].StringValue()
 			index := int(options[1].IntValue())
@@ -810,9 +802,9 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				autoComplete(options[0].StringValue(), 3, i, discord)
 			}
 		default:
-			discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			})
+
+			customAcknowledge(discord, i)
+
 			// remove alternative tracking name from database
 			name := options[0].StringValue()
 			index := int(options[1].IntValue())

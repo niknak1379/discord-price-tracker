@@ -697,7 +697,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			itemName := options[0].StringValue()
 			suppressNotifications := options[1].BoolValue()
 			err := database.EditSuppress(itemName, suppressNotifications, i.ChannelID)
-			customAcknowledge(discord, i)
 			if err != nil {
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
@@ -718,7 +717,6 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			itemName := i.ApplicationCommandData().Options[0].StringValue()
 			additionalName := i.ApplicationCommandData().Options[1].StringValue()
 			err := database.AddAlternateTrackingName(itemName, additionalName, i.ChannelID)
-			customAcknowledge(discord, i)
 			if err != nil {
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
@@ -804,17 +802,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			res, err := database.RemoveAlternateTrackingName(name, index, i.ChannelID)
 			em := setEmbed(&res)
 			if err != nil {
-				content := err.Error()
-				discord.ChannelMessageSendEmbed(i.ChannelID, &discordgo.MessageEmbed{
-					Title: "Error",
-					Fields: []*discordgo.MessageEmbedField{
-						{
-							Name:  "Error",
-							Value: content,
-						},
-					},
-					Color: 10038562, // red
-				})
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
 				for _, embed := range em {
 					discord.ChannelMessageSendEmbed(i.ChannelID, embed)
@@ -844,17 +832,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			res, err := database.EditAlternateTrackingName(name, index, newName, i.ChannelID)
 			em := setEmbed(&res)
 			if err != nil {
-				content := err.Error()
-				discord.ChannelMessageSendEmbed(i.ChannelID, &discordgo.MessageEmbed{
-					Title: "Error",
-					Fields: []*discordgo.MessageEmbedField{
-						{
-							Name:  "Error",
-							Value: content,
-						},
-					},
-					Color: 10038562, // red
-				})
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
 				for _, embed := range em {
 					discord.ChannelMessageSendEmbed(i.ChannelID, embed)
@@ -885,6 +863,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 							slog.Any("Embed", embed),
 							slog.Any("value", err),
 						)
+						SendErrorEmbed(discord, i.ChannelID, err.Error())
 					}
 				}
 			}
@@ -936,6 +915,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 						slog.Any("Embed", embed),
 						slog.Any("value", err),
 					)
+					SendErrorEmbed(discord, i.ChannelID, err.Error())
 				}
 			}
 		}
@@ -950,7 +930,10 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		for _, Item := range getRes {
 			em := setEmbed(Item)
 			for _, embed := range em {
-				discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+				_, err := discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+				if err != nil {
+					SendErrorEmbed(discord, i.ChannelID, err.Error())
+				}
 			}
 		}
 		if len(getRes) == 0 {
@@ -1047,21 +1030,20 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			months := int(options[1].IntValue())
 			err := charts.PriceHistoryChart([]string{itemName}, months, i.ChannelID)
 			if err != nil {
-				customAcknowledge(discord, i)
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
 				reader, err := os.Open("my-chart.png")
 				if err != nil {
 					slog.Error("Could not open file", slog.Any("Error", err))
+					SendErrorEmbed(discord, i.ChannelID, err.Error())
 				}
 
 				_, err = discord.ChannelFileSend(i.ChannelID, "graph.png", reader)
 				if err != nil {
-					if err != nil {
-						slog.Error("failed to send graph",
-							slog.Any("value", err),
-						)
-					}
+					slog.Error("failed to send graph",
+						slog.Any("value", err),
+					)
+					SendErrorEmbed(discord, i.ChannelID, err.Error())
 				}
 			}
 		}
@@ -1095,54 +1077,45 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				reader, err := os.Open("my-chart.png")
 				if err != nil {
 					slog.Error("Could not open file", slog.Any("Error", err))
+					SendErrorEmbed(discord, i.ChannelID, err.Error())
 				}
 				_, err = discord.ChannelFileSend(i.ChannelID, "graph.png", reader)
 				if err != nil {
 					slog.Error("failed to send comparison graph")
+					SendErrorEmbed(discord, i.ChannelID, err.Error())
 				}
 			}
 		}
 	},
 	"get_failure_report": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		customAcknowledge(discord, i)
+
 		options := i.ApplicationCommandData().Options
 		days := int(options[0].IntValue())
-
-		discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Generating failure report for the last " + fmt.Sprint(days) + " days...",
-			},
-		})
-
 		endDate := time.Now()
 		startDate := endDate.AddDate(0, 0, -days)
 
 		domainData, err := database.GetIncidentsByDomainOverTime(startDate, endDate)
 		if err != nil {
-			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Content: fmt.Sprint(err),
-			})
+			SendErrorEmbed(discord, i.ChannelID, err.Error())
 			return
 		}
 
 		methodProxyData, err := database.GetIncidentsByDomainMethodProxy(startDate, endDate)
 		if err != nil {
-			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Content: fmt.Sprint(err),
-			})
+			SendErrorEmbed(discord, i.ChannelID, err.Error())
 			return
 		}
 
 		if len(domainData) == 0 && len(methodProxyData) == 0 {
-			discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Content: "No incident data found for the specified time period.",
-			})
+			SendErrorEmbed(discord, i.ChannelID, err.Error())
 			return
 		}
 
 		if len(domainData) > 0 {
 			err = charts.IncidentsByDomainChart(domainData)
 			if err != nil {
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 				slog.Error("failed to generate domain chart", slog.Any("error", err))
 			}
 		}
@@ -1150,6 +1123,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		if len(methodProxyData) > 0 {
 			err = charts.IncidentsByDomainMethodProxyChart(methodProxyData)
 			if err != nil {
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 				slog.Error("failed to generate method proxy chart", slog.Any("error", err))
 			}
 		}
@@ -1179,11 +1153,12 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		}
 
 		if len(files) > 0 {
-			_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			_, err := discord.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{
 				Content: "**Incidents by Domain Over Time (Last " + fmt.Sprint(days) + " days)**",
 				Files:   files,
 			})
 			if err != nil {
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 				slog.Error("failed to send failure report", slog.Any("error", err))
 			}
 		}

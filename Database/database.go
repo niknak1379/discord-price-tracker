@@ -674,7 +674,7 @@ func UpdateLowestPrice(Name string, newLow *Price, ChannelID string) (Item, erro
 		return Item{}, err
 	}
 	filter := bson.M{"Name": bson.M{"$regex": "^" + Name + "$", "$options": "i"}}
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHisotry", Value: 0}}).SetReturnDocument(options.After)
+	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
 	update := bson.M{
 		"$set": bson.M{
 			"CurrentLowestPrice": newLow,

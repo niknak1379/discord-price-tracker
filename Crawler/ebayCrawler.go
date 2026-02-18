@@ -151,107 +151,7 @@ func GetEbayListings(Name string, desiredPrice int, proxy []string,
 					basePrice = int(float64(basePrice) * TaxRate)
 				case 1:
 					// index 1 is where auction end and how many bids data is held
-					// 34 bids · Time left2d 23h left
-					bidInfo := strings.Split(child.Text, "·")
-					// 34
-					bidStr := strings.Split(bidInfo[0], " ")[0]
-					bids, err = strconv.Atoi(bidStr)
-					if err != nil {
-						slog.Warn("Cant process bid number",
-							slog.Any("bidInfo", bidInfo),
-							slog.String("bidStr", bidStr),
-							slog.Any("error", err),
-						)
-					}
-					bidInfo[1] = strings.ReplaceAll(bidInfo[1], " Time left", "")
-					timeLeftStr := strings.Split(bidInfo[1], "left")
-					if strings.Contains(timeLeftStr[0], "d") {
-						// 2d 16h left
-						timeLeftStr = strings.Split(timeLeftStr[0], " ")
-						day, err := strconv.Atoi(strings.Split(timeLeftStr[0], "d")[0])
-						if err != nil {
-							slog.Warn("Cant process bid Day",
-
-								slog.Any("bidInfo", bidInfo),
-								slog.String("bidStr", bidStr),
-								slog.Any("timeLeftStr", timeLeftStr),
-								slog.Any("error", err),
-							)
-						}
-						hour := 0
-						if len(timeLeftStr) > 1 {
-							hour, err = strconv.Atoi(strings.Split(timeLeftStr[1], "h")[0])
-							if err != nil {
-								slog.Warn("Cant process bid hour",
-									slog.Any("bidInfo", bidInfo),
-									slog.String("bidStr", bidStr),
-									slog.Any("timeLeftStr", timeLeftStr),
-									slog.Any("error", err),
-								)
-							}
-						}
-						endTime = time.Now().Add(
-							time.Duration(day)*time.Hour*24 +
-								time.Duration(hour)*time.Hour,
-						)
-
-					} else if strings.Contains(timeLeftStr[0], "m") &&
-						!strings.Contains(timeLeftStr[0], "h") {
-						timeLeftStr = strings.Split(timeLeftStr[0], " ")
-						minute, err := strconv.Atoi(strings.Split(timeLeftStr[0], "m")[0])
-						if err != nil {
-							slog.Warn("Cant process bid Minute",
-
-								slog.Any("bidInfo", bidInfo),
-								slog.String("bidStr", bidStr),
-								slog.Any("timeLeftStr", timeLeftStr),
-								slog.Any("error", err),
-							)
-						}
-						second := 0
-						if len(timeLeftStr) > 1 {
-							second, err = strconv.Atoi(strings.Split(timeLeftStr[1], "s")[0])
-							if err != nil {
-								slog.Warn("Cant process bid second",
-									slog.Any("bidInfo", bidInfo),
-									slog.String("bidStr", bidStr),
-									slog.Any("timeLeftStr", timeLeftStr),
-									slog.Any("error", err),
-								)
-							}
-						}
-						endTime = time.Now().Add(
-							time.Duration(minute)*time.Minute +
-								time.Duration(second)*time.Second,
-						)
-					} else {
-						timeLeftStr = strings.Split(timeLeftStr[0], " ")
-						hour, err := strconv.Atoi(strings.Split(timeLeftStr[0], "h")[0])
-						if err != nil {
-							slog.Warn("Cant process bid hour",
-								slog.Any("bidInfo", bidInfo),
-								slog.String("bidStr", bidStr),
-								slog.Any("timeLeftStr", timeLeftStr),
-								slog.Any("error", err))
-						}
-						minute := 0
-						if len(timeLeftStr) > 1 {
-							minute, err = strconv.Atoi(strings.Split(timeLeftStr[1], "m")[0])
-							if err != nil {
-								slog.Warn("Cant process bid min",
-									slog.Any("bidInfo", bidInfo),
-									slog.String("bidStr", bidStr),
-									slog.Any("timeLeftStr", timeLeftStr),
-									slog.Any("error", err),
-								)
-							}
-						}
-						endTime = time.Now().Add(
-							time.Duration(hour)*time.Hour +
-								time.Duration(minute)*time.Minute,
-						)
-					}
-
+					bids, endTime = ProcessBidRawString(child.Text)
 				case 2:
 					// get shipping price
 					if strings.Contains(child.Text, "Free delivery") {
@@ -593,101 +493,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 		if items[i].IsBid {
 			var bids int
 			var endTime time.Time
-			items[i].EndTimeText = strings.ReplaceAll(items[i].EndTimeText, " \nTime left\n", "")
-			bidInfo := strings.Split(items[i].EndTimeText, "·")
-			if len(bidInfo) >= 2 {
-				bidStr := strings.Split(bidInfo[0], " ")[0]
-				bids, _ = strconv.Atoi(bidStr)
-
-				timeLeftStr := strings.Split(bidInfo[1], "left")
-				if len(timeLeftStr) > 0 {
-					if strings.Contains(timeLeftStr[0], "d") {
-						// 2d 16h left
-						timeLeftStr = strings.Split(timeLeftStr[0], " ")
-						day, err := strconv.Atoi(strings.Split(timeLeftStr[0], "d")[0])
-						if err != nil {
-							slog.Warn("Cant process bid Day",
-								slog.Any("bidInfo", bidInfo),
-								slog.String("bidStr", bidStr),
-								slog.Any("timeLeftStr", timeLeftStr),
-								slog.Any("error", err),
-							)
-						}
-						hour := 0
-						if len(timeLeftStr) > 1 {
-							hour, err = strconv.Atoi(strings.Split(timeLeftStr[1], "h")[0])
-							if err != nil {
-								slog.Warn("Cant process bid hour",
-									slog.Any("bidInfo", bidInfo),
-									slog.String("bidStr", bidStr),
-									slog.Any("timeLeftStr", timeLeftStr),
-									slog.Any("error", err),
-								)
-							}
-						}
-						endTime = time.Now().Add(
-							time.Duration(day)*time.Hour*24 +
-								time.Duration(hour)*time.Hour,
-						)
-					} else if strings.Contains(timeLeftStr[0], "m") &&
-						!strings.Contains(timeLeftStr[0], "h") {
-						// 30m 30s left
-						timeLeftStr = strings.Split(timeLeftStr[0], " ")
-						minute, err := strconv.Atoi(strings.Split(timeLeftStr[0], "m")[0])
-						if err != nil {
-							slog.Warn("Cant process bid Minute",
-								slog.Any("bidInfo", bidInfo),
-								slog.String("bidStr", bidStr),
-								slog.Any("timeLeftStr", timeLeftStr),
-								slog.Any("error", err),
-							)
-						}
-						second := 0
-						if len(timeLeftStr) > 1 {
-							second, err = strconv.Atoi(strings.Split(timeLeftStr[1], "s")[0])
-							if err != nil {
-								slog.Warn("Cant process bid second",
-									slog.Any("bidInfo", bidInfo),
-									slog.String("bidStr", bidStr),
-									slog.Any("timeLeftStr", timeLeftStr),
-									slog.Any("error", err),
-								)
-							}
-						}
-						endTime = time.Now().Add(
-							time.Duration(minute)*time.Minute +
-								time.Duration(second)*time.Second,
-						)
-					} else {
-						timeLeftStr = strings.Split(timeLeftStr[0], " ")
-						hour, err := strconv.Atoi(strings.Split(timeLeftStr[0], "h")[0])
-						if err != nil {
-							slog.Warn("Cant process bid hour",
-								slog.Any("bidInfo", bidInfo),
-								slog.String("bidStr", bidStr),
-								slog.Any("timeLeftStr", timeLeftStr),
-								slog.Any("error", err),
-							)
-						}
-						minute := 0
-						if len(timeLeftStr) > 1 {
-							minute, err = strconv.Atoi(strings.Split(timeLeftStr[1], "m")[0])
-							if err != nil {
-								slog.Warn("Cant process bid min",
-									slog.Any("bidInfo", bidInfo),
-									slog.String("bidStr", bidStr),
-									slog.Any("timeLeftStr", timeLeftStr),
-									slog.Any("error", err),
-								)
-							}
-						}
-						endTime = time.Now().Add(
-							time.Duration(hour)*time.Hour +
-								time.Duration(minute)*time.Minute,
-						)
-					}
-				}
-			} // Handle bid listing
+			bids, endTime = ProcessBidRawString(items[i].EndTimeText)
 			if time.Until(endTime) > 24*time.Hour {
 				continue
 			}
@@ -728,8 +534,117 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 
 var excludeRegexes []*regexp2.Regexp
 
+// im gonna silent error this for now, it just returns
+// everything 0 if it errs on sth
+func ProcessBidRawString(rawString string) (int, time.Time) {
+	// 34 bids · Time left2d 23h left
+	var bids int
+	var err error
+	var endTime time.Time
+	bidInfo := strings.Split(rawString, "·")
+	// 34
+	bidStr := strings.Split(bidInfo[0], " ")[0]
+	bids, err = strconv.Atoi(bidStr)
+	if err != nil {
+		slog.Warn("Cant process bid number",
+			slog.Any("bidInfo", bidInfo),
+			slog.String("bidStr", bidStr),
+			slog.Any("error", err),
+		)
+	}
+	bidInfo[1] = strings.ReplaceAll(bidInfo[1], " Time left", "")
+	timeLeftStr := strings.Split(bidInfo[1], "left")
+	if strings.Contains(timeLeftStr[0], "d") {
+		// 2d 16h left
+		timeLeftStr = strings.Split(timeLeftStr[0], " ")
+		day, err := strconv.Atoi(strings.Split(timeLeftStr[0], "d")[0])
+		if err != nil {
+			slog.Warn("Cant process bid Day",
+
+				slog.Any("bidInfo", bidInfo),
+				slog.String("bidStr", bidStr),
+				slog.Any("timeLeftStr", timeLeftStr),
+				slog.Any("error", err),
+			)
+		}
+		hour := 0
+		if len(timeLeftStr) > 1 {
+			hour, err = strconv.Atoi(strings.Split(timeLeftStr[1], "h")[0])
+			if err != nil {
+				slog.Warn("Cant process bid hour",
+					slog.Any("bidInfo", bidInfo),
+					slog.String("bidStr", bidStr),
+					slog.Any("timeLeftStr", timeLeftStr),
+					slog.Any("error", err),
+				)
+			}
+		}
+		endTime = time.Now().Add(
+			time.Duration(day)*time.Hour*24 +
+				time.Duration(hour)*time.Hour,
+		)
+
+	} else if strings.Contains(timeLeftStr[0], "m") &&
+		!strings.Contains(timeLeftStr[0], "h") {
+		timeLeftStr = strings.Split(timeLeftStr[0], " ")
+		minute, err := strconv.Atoi(strings.Split(timeLeftStr[0], "m")[0])
+		if err != nil {
+			slog.Warn("Cant process bid Minute",
+
+				slog.Any("bidInfo", bidInfo),
+				slog.String("bidStr", bidStr),
+				slog.Any("timeLeftStr", timeLeftStr),
+				slog.Any("error", err),
+			)
+		}
+		second := 0
+		if len(timeLeftStr) > 1 {
+			second, err = strconv.Atoi(strings.Split(timeLeftStr[1], "s")[0])
+			if err != nil {
+				slog.Warn("Cant process bid second",
+					slog.Any("bidInfo", bidInfo),
+					slog.String("bidStr", bidStr),
+					slog.Any("timeLeftStr", timeLeftStr),
+					slog.Any("error", err),
+				)
+			}
+		}
+		endTime = time.Now().Add(
+			time.Duration(minute)*time.Minute +
+				time.Duration(second)*time.Second,
+		)
+	} else {
+		timeLeftStr = strings.Split(timeLeftStr[0], " ")
+		hour, err := strconv.Atoi(strings.Split(timeLeftStr[0], "h")[0])
+		if err != nil {
+			slog.Warn("Cant process bid hour",
+				slog.Any("bidInfo", bidInfo),
+				slog.String("bidStr", bidStr),
+				slog.Any("timeLeftStr", timeLeftStr),
+				slog.Any("error", err))
+		}
+		minute := 0
+		if len(timeLeftStr) > 1 {
+			minute, err = strconv.Atoi(strings.Split(timeLeftStr[1], "m")[0])
+			if err != nil {
+				slog.Warn("Cant process bid min",
+					slog.Any("bidInfo", bidInfo),
+					slog.String("bidStr", bidStr),
+					slog.Any("timeLeftStr", timeLeftStr),
+					slog.Any("error", err),
+				)
+			}
+		}
+		endTime = time.Now().Add(
+			time.Duration(hour)*time.Hour +
+				time.Duration(minute)*time.Minute,
+		)
+	}
+	return bids, endTime
+}
+
 func init() {
-	excludePatterns := []string{
+	excludepatterns := []string{
 		`\bfor parts`,
 		`\bbroken`,
 		`\baccessories\b`,
@@ -754,7 +669,7 @@ func init() {
 		`\bdock\b`,
 	}
 
-	for _, pattern := range excludePatterns {
+	for _, pattern := range excludepatterns {
 		re, err := regexp2.Compile(pattern, 0)
 		if err != nil {
 			continue

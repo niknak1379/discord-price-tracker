@@ -30,9 +30,7 @@ func init() {
 	for i, hostname := range hostnames {
 		hostname = strings.TrimSpace(hostname)
 		if hostname == "" {
-			// panic("proxy hostname cannot be empty")
-			ProxyList = []string{}
-			return
+			panic("you need at least one proxy server, just do the proton one its free")
 		}
 		ProxyList[i] = "http://" + hostname + ":8888"
 	}

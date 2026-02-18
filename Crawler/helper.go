@@ -171,7 +171,7 @@ func GetOpenGraphPic(url string) string {
 
 		// Fallback to chromedp for Amazon
 		if strings.Contains(url, "amazon") {
-			imgURL = getAmazonImageChromedp(url, true)
+			imgURL = getAmazonImageChromedp(url)
 		}
 
 		if imgURL == "" {
@@ -182,14 +182,10 @@ func GetOpenGraphPic(url string) string {
 	return imgURL
 }
 
-func getAmazonImageChromedp(url string, proxy bool) string {
+func getAmazonImageChromedp(url string) string {
 	var ctx context.Context
 	var cancel context.CancelFunc
-	if proxy {
-		ctx, cancel = NewChromedpContext(90*time.Second, chromedp.ProxyServer("http://gluetun:8888"))
-	} else {
-		ctx, cancel = NewChromedpContext(90 * time.Second)
-	}
+	ctx, cancel = NewChromedpContext(90 * time.Second)
 	defer cancel()
 
 	var imgURL string
@@ -202,10 +198,6 @@ func getAmazonImageChromedp(url string, proxy bool) string {
 		chromedp.Evaluate(`document.querySelector('img#landingImage')?.src || ""`, &imgURL),
 	)
 	if err != nil || imgURL == "" {
-		if proxy {
-			slog.Warn("chromedp failed to get Amazon image, trying without proxy", slog.Any("error", err))
-			return getAmazonImageChromedp(url, false)
-		}
 		slog.Error("chromedp failed to get Amazon image", slog.Any("error", err))
 		return ""
 	}

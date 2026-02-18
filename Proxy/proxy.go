@@ -24,13 +24,14 @@ func init() {
 	ProxyString := os.Getenv("PROXY_URL_LIST")
 	hostnames := strings.Split(ProxyString, ",")
 	if len(hostnames) == 0 {
-		panic("you need at least one proxy server, just do the proton one its free")
+		slog.Error("proxy string empty")
 	}
 	ProxyList = make([]string, len(hostnames))
 	for i, hostname := range hostnames {
 		hostname = strings.TrimSpace(hostname)
 		if hostname == "" {
-			panic("you need at least one proxy server, just do the proton one its free")
+			slog.Error("empty proxy string")
+			continue
 		}
 		ProxyList[i] = "http://" + hostname + ":8888"
 	}

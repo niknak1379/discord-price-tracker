@@ -151,7 +151,7 @@ func GetEbayListings(Name string, desiredPrice int, proxy []string,
 					basePrice = int(float64(basePrice) * TaxRate)
 				case 1:
 					// index 1 is where auction end and how many bids data is held
-					bids, endTime = ProcessBidRawString(child.Text)
+					bids, endTime = ProcessBidRawString(child.Text, time.Now())
 				case 2:
 					// get shipping price
 					if strings.Contains(child.Text, "Free delivery") {
@@ -494,7 +494,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 		if items[i].IsBid {
 			var bids int
 			var endTime time.Time
-			bids, endTime = ProcessBidRawString(items[i].EndTimeText)
+			bids, endTime = ProcessBidRawString(items[i].EndTimeText, time.Now())
 			if time.Until(endTime) > 24*time.Hour {
 				continue
 			}
@@ -537,11 +537,14 @@ var excludeRegexes []*regexp2.Regexp
 
 // im gonna silent error this for now, it just returns
 // everything 0 if it errs on sth
-func ProcessBidRawString(rawString string) (int, time.Time) {
+func ProcessBidRawString(rawString string, currTime time.Time) (int, time.Time) {
 	// 34 bids · Time left2d 23h left
 	var bids int
 	var err error
 	var endTime time.Time
+	if rawString == "" {
+		return 0, time.Time{}
+	}
 	bidInfo := strings.Split(rawString, "·")
 	// 34
 	bidStr := strings.Split(bidInfo[0], " ")[0]
@@ -580,7 +583,7 @@ func ProcessBidRawString(rawString string) (int, time.Time) {
 				)
 			}
 		}
-		endTime = time.Now().Add(
+		endTime = currTime.Add(
 			time.Duration(day)*time.Hour*24 +
 				time.Duration(hour)*time.Hour,
 		)
@@ -610,7 +613,7 @@ func ProcessBidRawString(rawString string) (int, time.Time) {
 				)
 			}
 		}
-		endTime = time.Now().Add(
+		endTime = currTime.Add(
 			time.Duration(minute)*time.Minute +
 				time.Duration(second)*time.Second,
 		)
@@ -636,7 +639,7 @@ func ProcessBidRawString(rawString string) (int, time.Time) {
 				)
 			}
 		}
-		endTime = time.Now().Add(
+		endTime = currTime.Add(
 			time.Duration(hour)*time.Hour +
 				time.Duration(minute)*time.Minute,
 		)

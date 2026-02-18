@@ -368,6 +368,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 		Array.from(document.querySelectorAll('ul.srp-results > li')).map(e => {
 			const rows = e.querySelectorAll('div.s-card__attribute-row');
 			let basePrice = 0;
+			let taxRate = 1.1;
 			let shippingCost = 0;
 			let AcceptsOffer = false;
 			let isBid = false;
@@ -412,7 +413,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 					Condition: e.querySelector('div.s-card__subtitle:last-child')?.innerText || '',
 					URL: e.querySelector('a.s-card__link')?.href || '',
 					AcceptsOffer: AcceptsOffer,
-					Price: shippingCost + basePrice,
+					Price: shippingCost + basePrice * taxRate,
 					IsBid: isBid,
 					Bids: bids,
 					EndTimeText: endTimeText

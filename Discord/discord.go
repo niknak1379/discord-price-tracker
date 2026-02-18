@@ -82,11 +82,10 @@ var (
 			Description: "Add new Price Tracker",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
-					Name:         "name",
-					Description:  "Item name",
-					Type:         discordgo.ApplicationCommandOptionString,
-					Required:     true,
-					Autocomplete: true,
+					Name:        "name",
+					Description: "Item name",
+					Type:        discordgo.ApplicationCommandOptionString,
+					Required:    true,
 				},
 				{
 					Name:        "uri",

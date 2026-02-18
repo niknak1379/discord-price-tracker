@@ -29,10 +29,24 @@ func TestBidProcessingFunction(t *testing.T) {
 		},
 		{
 			Name:         "Bid String with hours and minutes",
-			TextInput:    "34 bids · Time left2h 23m left",
+			TextInput:    "1 bid · Time left2h 23m left",
 			TimeInput:    time.Time{},
-			ExpectedBid:  34,
+			ExpectedBid:  1,
 			ExpectedTime: time.Time{}.Add((2)*time.Hour + 23*time.Minute),
+		},
+		{
+			Name:         "Bid String with only minutes",
+			TextInput:    "12 bids · Time left37m left (Today 02:30 PM)",
+			TimeInput:    time.Time{},
+			ExpectedBid:  12,
+			ExpectedTime: time.Time{}.Add((37) * time.Minute),
+		},
+		{
+			Name:         "Bid String with minutes and seconds",
+			TextInput:    "12 bids · Time left5m 8s left (Today 02:30 PM)",
+			TimeInput:    time.Time{},
+			ExpectedBid:  12,
+			ExpectedTime: time.Time{}.Add(8*time.Second + 5*time.Minute),
 		},
 	}
 	for _, testCase := range tests {

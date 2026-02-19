@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"time"
@@ -30,6 +32,7 @@ import (
 func GetPrice(uri string, querySelector string, proxy []string, attempts []*types.Attempt) (int, error) {
 	var err, priceErr error
 	var proxyIndex int
+	var collyHTML string
 	res := 0
 	crawled := false
 	slog.Info("logging url", slog.String("URI", uri))
@@ -47,17 +50,11 @@ func GetPrice(uri string, querySelector string, proxy []string, attempts []*type
 	} else {
 		slog.Info("proxy function set to nil")
 	}
-	c.OnHTML(querySelector, func(h *colly.HTMLElement) {
-		crawled = true
-		res, priceErr = formatPrice(h.Text)
-		c.OnHTMLDetach(querySelector)
-	})
-	var collyHTML string
 	c.OnHTML("body", func(h *colly.HTMLElement) {
 		collyHTML, _ = h.DOM.Html()
 	})
+	DefaultParserCallback(c, querySelector, &crawled, &res, &priceErr)
 	err = c.Visit(uri)
-
 	c.Wait()
 	if !crawled {
 		err = errors.New("Error in default crawler: could not crawl, html element does not exist")
@@ -86,6 +83,45 @@ func GetPrice(uri string, querySelector string, proxy []string, attempts []*type
 		loggIncident(uri, attempts, true)
 	}
 	return int(float64(res) * TaxRate), err
+}
+
+func DefaultParserCallback(c *colly.Collector, querySelector string, crawled *bool, price *int, priceErr *error) {
+	c.OnHTML(querySelector, func(h *colly.HTMLElement) {
+		if *crawled {
+			return
+		}
+		slog.Info("default crawler call back function being called")
+		*crawled = true
+		*price, *priceErr = formatPrice(h.Text)
+		c.OnHTMLDetach(querySelector)
+	})
+}
+
+// ParseChromedpHTML - new function to parse chromedp output with colly
+func ParseDefaultChromedpHTML(html string,
+	querySelector string,
+) (int, error) {
+	// Create test server with the chromedp HTML
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(html))
+	}))
+	defer ts.Close()
+	c := initCrawler("")
+	crawled := false
+	price := 0
+	var priceErr error
+
+	DefaultParserCallback(c, querySelector, &crawled, &price, &priceErr)
+	err := c.Visit(ts.URL)
+	c.Wait()
+	if !crawled && err == nil {
+		slog.Error("Error was nil, but ebay not visited")
+		err = errors.New("ebay page not visited")
+	} else if priceErr != nil {
+		err = priceErr
+	}
+	return price, err
 }
 
 // ChromeDPFailover attempts to retrieve a price using chromedp when colly fails.
@@ -118,22 +154,18 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 		ctx, cancel = NewChromedpContext(90 * time.Second)
 	}
 
-	var priceText string
 	var screenShot []byte
 	var HTMLContent string
 	var err error
-	js := fmt.Sprintf(`document.querySelector("%s")?.innerText || ""`, selector)
 	if strings.Contains(url, "amazon") {
 		err = chromedp.Run(ctx,
 			StealthActions(url),
 			chromedp.Navigate(url),
 			chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
 			chromedp.FullScreenshot(&screenShot, 70),
-			chromedp.OuterHTML("body", &HTMLContent),
 			chromedp.Evaluate(`document.querySelector('button.a-button-text[alt="Continue shopping"]')?.click()`, nil),
 			chromedp.Sleep(5*time.Second),
-			// chromedp.Text(selector, &priceText, chromedp.ByQuery),
-			chromedp.Evaluate(js, &priceText),
+			chromedp.OuterHTML("body", &HTMLContent),
 		)
 	} else {
 		err = chromedp.Run(ctx,
@@ -142,11 +174,10 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 			chromedp.Sleep(time.Duration(rand.IntN(10)+30)*time.Second),
 			chromedp.FullScreenshot(&screenShot, 70),
 			chromedp.OuterHTML("body", &HTMLContent),
-			chromedp.Evaluate(js, &priceText),
 		)
 	}
 	cancel()
-	if priceText == "" {
+	if err != nil {
 		if len(proxy) != 0 {
 			err2 := os.WriteFile("logs/proxyFailoverSS.png", screenShot, 0o644)
 			err3 := os.WriteFile("logs/proxyFailoverHTML.html", []byte(HTMLContent), 0o644)
@@ -157,7 +188,6 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 			proxy = append(proxy[:proxyIndexUsed], proxy[proxyIndexUsed+1:]...)
 			slog.Warn("ChromDP proxy failed, triggering default crawler without this proxy",
 				slog.Any("error", err),
-				slog.Any("priceText", priceText),
 				slog.Any("write err1", err2),
 				slog.Any("write err 2", err3),
 				slog.Any("new Proxy Arr", proxy),
@@ -178,15 +208,15 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 		}
 	}
 
-	slog.Info("ChromeDP found Selector", slog.String("Found HTML Element", priceText))
-	loggIncident(url, attempts, true)
-	// Parse price
-	price, err := formatPrice(priceText)
-	if err != nil || price == 0 {
-		os.WriteFile("logs/failoverHTML.html", []byte(HTMLContent), 0o644)
-		os.WriteFile("logs/failoverSS.png", screenShot, 0o644)
-		return 0, fmt.Errorf("failed to parse price '%s': %w in default crawler", priceText, err)
+	res, err := ParseDefaultChromedpHTML(HTMLContent, selector)
+	if err != nil {
+		slog.Info("ChromeDP found Selector", slog.Int("Found Price", res))
+		loggIncident(url, attempts, true)
+	} else {
+		slog.Error("ChromeDP failed")
+		loggIncident(url, attempts, false)
+
 	}
 
-	return int(float64(price) * TaxRate), nil
+	return int(float64(res) * TaxRate), nil
 }

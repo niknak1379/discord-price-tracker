@@ -27,7 +27,8 @@ func main() {
 	// }()
 	godotenv.Load()
 	// amazonTest()
-	// BestBuyTest()
+	// ChromeDPFailoverTest()
+	BestBuyTest()
 	// crawlerTest()
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
@@ -35,7 +36,7 @@ func main() {
 	logger.StartIncidentListener(database.SaveAttempt, ctx.Done())
 	proxy.Init()
 	proxy.StartProxyCounter(ctx.Done())
-	AlienwareMonitorTest()
+	// AlienwareMonitorTest()
 	// InchMeasurement()
 	// EbayFailoverTest()
 	// go scheduler.SetChannelScheduler(ctx)
@@ -78,6 +79,22 @@ func amazonTest() {
 	i, err := crawler.GetPrice("https://www.amazon.com/dp/B0B3F8V4JG?ref=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&ref_=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&social_share=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&language=en-US",
 		"form#addToCart span.a-price-whole", proxyCopy, nil)
 	slog.Info("price", slog.Int("int", i), slog.Any("error", err))
+}
+
+func ChromeDPFailoverTest() {
+	slog.Info("=== Testing ChromeDPFailover Direct ===")
+	proxyCopy := make([]string, len(proxy.ProxyList))
+	copy(proxyCopy, proxy.ProxyList)
+	price, err := crawler.ChromeDPFailover(
+		"https://www.amazon.com/dp/B0B3F8V4JG?ref=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&ref_=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&social_share=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&language=en-US",
+		"form#addToCart span.a-price-whole",
+		proxyCopy,
+		0,
+		nil,
+	)
+	slog.Info("ChromeDPFailover result",
+		slog.Int("price", price),
+		slog.Any("error", err))
 }
 
 func BestBuyTest() {

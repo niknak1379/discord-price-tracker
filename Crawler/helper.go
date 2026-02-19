@@ -268,6 +268,7 @@ func FormatHostAndRefererUrls(url string) (string, string) {
 }
 
 func formatPrice(priceStr string) (int, error) {
+	slog.Info("format price called", slog.String("input string", priceStr))
 	ret := strings.ReplaceAll(priceStr, "$", "")
 	ret = strings.ReplaceAll(ret, "\n", "")
 	ret = strings.ReplaceAll(ret, ",", "")

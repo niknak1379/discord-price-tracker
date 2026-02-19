@@ -4,11 +4,16 @@ import (
 	"context"
 	"log/slog"
 	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"sync"
 
 	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
+	discord "priceTracker/Discord"
 	logger "priceTracker/Logger"
 	proxy "priceTracker/Proxy"
+	scheduler "priceTracker/Scheduler"
 
 	"github.com/joho/godotenv"
 )
@@ -42,7 +47,7 @@ func main() {
 		discord.Run(ctx)
 	})
 
-	make the program run unless sigINT is recieved
+	// make the program run unless sigINT is recieved
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	slog.Info("Graceful Shutdown setup")

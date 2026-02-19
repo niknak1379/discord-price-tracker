@@ -19,26 +19,27 @@ var (
 	ProxyCounterChannel     chan []*types.Attempt
 )
 
-func init() {
+func Init() {
 	slog.Info("initializeing proxy rotator module")
 	ProxyString := os.Getenv("PROXY_URL_LIST")
-	hostnames := strings.Split(ProxyString, ",")
-	if len(hostnames) == 0 {
+	if ProxyString == "" {
 		slog.Error("proxy string empty")
-	}
-	ProxyList = make([]string, len(hostnames))
-	for i, hostname := range hostnames {
-		hostname = strings.TrimSpace(hostname)
-		if hostname == "" {
-			slog.Error("empty proxy string")
-			continue
+	} else {
+		hostnames := strings.Split(ProxyString, ",")
+		ProxyList = make([]string, len(hostnames))
+		for i, hostname := range hostnames {
+			hostname = strings.TrimSpace(hostname)
+			if hostname == "" {
+				slog.Error("empty proxy string")
+				continue
+			}
+			ProxyList[i] = "http://" + hostname + ":8888"
 		}
-		ProxyList[i] = "http://" + hostname + ":8888"
+		slog.Info("Proxy string and array",
+			slog.String("string", ProxyString),
+			slog.Any("proxyArr", ProxyList),
+		)
 	}
-	slog.Info("Porxy string and array",
-		slog.String("string", ProxyString),
-		slog.Any("proxyArr", ProxyList),
-	)
 	ProxyIncidentCounterMap = make(map[string]int)
 	for _, proxyURL := range ProxyList {
 		ProxyIncidentCounterMap[proxyURL] = 0

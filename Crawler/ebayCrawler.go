@@ -303,7 +303,6 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 ) (
 	[]*types.EbayListing, []*types.EbayBids, error,
 ) {
-	crawlDate := time.Now()
 	slog.Info("chromedp failover for ebay", slog.String("URL", url))
 	var ctx context.Context
 	var cancel context.CancelFunc
@@ -322,87 +321,22 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 
 	var first []byte
 	var second []byte
+	var rawHTML string
 
-	type EbayItem struct {
-		Title        string
-		Condition    string
-		URL          string
-		Price        int
-		AcceptsOffer bool
-		IsBid        bool
-		Bids         int
-		EndTimeText  string
-	}
-
-	var items []*EbayItem
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
 		StealthActions(),
 		chromedp.Sleep(10*time.Second),
 		chromedp.FullScreenshot(&first, 70),
-		chromedp.Sleep(3*time.Second),
+		chromedp.Sleep(7*time.Second),
 		chromedp.FullScreenshot(&second, 70),
-		chromedp.Evaluate(`
-		Array.from(document.querySelectorAll('ul.srp-results > li')).map(e => {
-			const rows = e.querySelectorAll('div.s-card__attribute-row');
-			let basePrice = 0;
-			let taxRate = 1.1;
-			let shippingCost = 0;
-			let AcceptsOffer = false;
-			let isBid = false;
-			let bids = 0;
-			let endTimeText = '';
-			
-			const formatPrice = (priceStr) => {
-					if (!priceStr) return 0;
-					let ret = priceStr.replace(/\$/g, '');
-					ret = ret.replace(/,/g, '');
-					ret = ret.trim();
-					ret = ret.split('.')[0];
-					return parseInt(ret) || 0;
-			};
-			
-			if (rows.length > 1 && rows[1].innerText.includes('bids')) {
-					isBid = true;
-			}
-			
-			for (let i = 0; i < Math.min(3, rows.length); i++) {
-					if (i === 0) {
-							basePrice = formatPrice(rows[i].innerText);
-					}
-					if (i === 1) {
-							if (isBid) {
-								endTimeText = rows[i].innerText;  // Store raw text
-							} else if (rows[i].innerText.includes('or Best Offer')) {
-								AcceptsOffer = true;
-							}
-					}
-					if (i === 2) {
-							if (rows[i].innerText.includes('Free delivery')) {
-									shippingCost = 0;
-							} else {
-									shippingCost = formatPrice(rows[i].innerText);
-							}
-					}
-			}
-			
-			return {
-					Title: e.querySelector('.s-card__title span.primary')?.innerText || '',
-					Condition: e.querySelector('div.s-card__subtitle:last-child')?.innerText || '',
-					URL: e.querySelector('a.s-card__link')?.href || '',
-					AcceptsOffer: AcceptsOffer,
-					Price: shippingCost + basePrice * taxRate,
-					IsBid: isBid,
-					Bids: bids,
-					EndTimeText: endTimeText
-			};
-	}).filter(item => item !== null)		`, &items),
+		chromedp.OuterHTML("html", &rawHTML),
 	)
 	cancel()
 	var retListingArr []*types.EbayListing
 	var retBidArr []*types.EbayBids
-
-	if err != nil || len(items) == 0 {
+	retListingArr, retBidArr, err = ParseChromedpHTML(rawHTML, desiredPrice, Name, *queries)
+	if err != nil {
 		if len(proxy) != 0 {
 			slog.Warn("Proxy ebay chrome failover failed, calling nonproxy default",
 				slog.Any("error", err))
@@ -455,52 +389,6 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 	}
 	slog.Info("Ebay Failover returned Items, its fine for now")
 
-	// Sanitize the list
-	for i := range items {
-		if !titleCorrectnessCheck(items[i].Title, queries) {
-			continue
-		}
-
-		if items[i].Price == 0 {
-			continue
-		}
-
-		if items[i].Price >= desiredPrice || items[i].Price <= int(float64(desiredPrice)*float64(0.25)) {
-			continue
-		}
-
-		if items[i].IsBid {
-			var bids int
-			var endTime time.Time
-			bids, endTime = ProcessBidRawString(items[i].EndTimeText, time.Now())
-			if time.Until(endTime) > 24*time.Hour {
-				continue
-			}
-			bidListing := types.EbayBids{
-				ItemName:  Name,
-				Price:     int(float64(items[i].Price) * TaxRate),
-				URL:       strings.Split(items[i].URL, "?_skw")[0],
-				Title:     items[i].Title,
-				Condition: items[i].Condition,
-				EndDate:   endTime,
-				Bids:      bids,
-			}
-			retBidArr = append(retBidArr, &bidListing)
-		} else {
-			// Handle normal listing
-			listing := types.EbayListing{
-				ItemName:      Name,
-				Price:         int(float64(items[i].Price) * TaxRate),
-				URL:           strings.Split(items[i].URL, "?_skw")[0],
-				Title:         items[i].Title,
-				Condition:     items[i].Condition,
-				AcceptsOffers: items[i].AcceptsOffer,
-				Date:          crawlDate,
-				Duration:      0,
-			}
-			retListingArr = append(retListingArr, &listing)
-		}
-	}
 	logger.IncidentChannel <- types.Incident{
 		StartTime: time.Now(),
 		URL:       url,

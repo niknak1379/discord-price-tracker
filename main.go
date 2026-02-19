@@ -13,7 +13,6 @@ import (
 	discord "priceTracker/Discord"
 	logger "priceTracker/Logger"
 	proxy "priceTracker/Proxy"
-	scheduler "priceTracker/Scheduler"
 
 	"github.com/joho/godotenv"
 )
@@ -32,13 +31,14 @@ func main() {
 	// amazonTest()
 	// BestBuyTest()
 	// crawlerTest()
-	// InchMeasurement()
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
 	logger.StartIncidentListener(database.SaveAttempt, ctx.Done())
+	proxy.Init()
 	proxy.StartProxyCounter(ctx.Done())
-	go scheduler.SetChannelScheduler(ctx)
+	InchMeasurement()
+	// go scheduler.SetChannelScheduler(ctx)
 	var wg sync.WaitGroup
 	wg.Go(func() {
 		discord.Run(ctx)

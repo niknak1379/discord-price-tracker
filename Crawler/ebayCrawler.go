@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 
 	"github.com/chromedp/chromedp"
@@ -90,48 +89,22 @@ func GetEbayListings(Name string,
 	if err != nil || !visited {
 		if len(proxy) == 0 {
 			slog.Warn("Colly failed even without proxy triggering chromeDP without proxy")
-			attempts = append(attempts, &types.Attempt{
-				Crawler:   types.CrawlerEbay,
-				Proxy:     types.ProxyDisabled,
-				Method:    types.MethodColly,
-				Timestamp: time.Now(),
-				Error: func(err error) string {
-					if err != nil {
-						return err.Error()
-					} else {
-						return errors.New("error object empty but not visited").Error()
-					}
-				}(err),
-			})
+			attempts = append(attempts, makeAttemptObject(types.CrawlerEbay,
+				types.ProxyDisabled, types.MethodColly,
+				errOrMsg(err, "error object empty but not visited")))
 			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, proxy, 0, queries, attempts)
 			return listingArr, bidArr, err
 		} else {
 			slog.Warn("ebay failed, redoing request with chromedp with proxy")
-			attempts = append(attempts, &types.Attempt{
-				Crawler:   types.CrawlerEbay,
-				Proxy:     proxy[proxyIndex],
-				Method:    types.MethodColly,
-				Timestamp: time.Now(),
-				Error: func(err error) string {
-					if err != nil {
-						return err.Error()
-					} else {
-						return errors.New("error object empty but not visited").Error()
-					}
-				}(err),
-			})
+			attempts = append(attempts, makeAttemptObject(types.CrawlerEbay,
+				proxy[proxyIndex], types.MethodColly,
+				errOrMsg(err, "error object empty but not visited")))
 			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, proxy, proxyIndex, queries, attempts)
 			return listingArr, bidArr, err
 		}
 	}
 	if len(attempts) != 0 {
-		logger.IncidentChannel <- types.Incident{
-			StartTime: time.Now(),
-			URL:       url,
-			Domain:    "ebay",
-			Attempts:  attempts,
-			Resolved:  true,
-		}
+		loggIncident(url, attempts, true)
 	}
 	return listingArr, bidArr, err
 }
@@ -340,19 +313,9 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 		if len(proxy) != 0 {
 			slog.Warn("Proxy ebay chrome failover failed, calling nonproxy default",
 				slog.Any("error", err))
-			attempts = append(attempts, &types.Attempt{
-				Crawler:   types.CrawlerEbay,
-				Proxy:     proxy[proxyIndexUsed],
-				Method:    types.MethodChromeDP,
-				Timestamp: time.Now(),
-				Error: func(err error) string {
-					if err != nil {
-						return err.Error()
-					} else {
-						return errors.New("error object empty but not visited").Error()
-					}
-				}(err),
-			})
+			attempts = append(attempts, makeAttemptObject(types.CrawlerEbay,
+				proxy[proxyIndexUsed], types.MethodChromeDP,
+				errOrMsg(err, "error object empty but not visited")))
 			proxy = append(proxy[:proxyIndexUsed], proxy[proxyIndexUsed+1:]...)
 			slog.Warn("ChromDP proxy failed, triggering default crawler without this proxy",
 				slog.Any("error", err),
@@ -364,38 +327,16 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 			fileErr2 := os.WriteFile("logs/ebaySecond.png", second, 0o644)
 			slog.Error("Error in ebay failover", slog.Any("error value", err),
 				slog.Any("file error 1", fileErr1), slog.Any("file error 2", fileErr2))
-			attempts = append(attempts, &types.Attempt{
-				Crawler:   types.CrawlerEbay,
-				Proxy:     types.ProxyDisabled,
-				Method:    types.MethodChromeDP,
-				Timestamp: time.Now(),
-				Error: func(err error) string {
-					if err != nil {
-						return err.Error()
-					} else {
-						return errors.New("error object empty but not visited").Error()
-					}
-				}(err),
-			})
-			logger.IncidentChannel <- types.Incident{
-				StartTime: time.Now(),
-				URL:       url,
-				Domain:    "ebay",
-				Attempts:  attempts,
-				Resolved:  false,
-			}
+			attempts = append(attempts, makeAttemptObject(types.CrawlerEbay,
+				types.ProxyDisabled, types.MethodChromeDP,
+				errOrMsg(err, "error object empty but not visited")))
+			loggIncident(url, attempts, false)
 			return retListingArr, retBidArr, errors.Join(err, errors.New("Problem in Ebay chromeDP Failover"))
 		}
 	}
 	slog.Info("Ebay Failover returned Items, its fine for now")
 
-	logger.IncidentChannel <- types.Incident{
-		StartTime: time.Now(),
-		URL:       url,
-		Domain:    "ebay",
-		Attempts:  attempts,
-		Resolved:  true,
-	}
+	loggIncident(url, attempts, true)
 	return retListingArr, retBidArr, err
 }
 

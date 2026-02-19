@@ -15,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 
 	"github.com/chromedp/chromedp"
@@ -230,19 +229,9 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 			fileErr2 := os.WriteFile("logs/proxyFacebookSecond.png", second, 0o644)
 			fileErr3 := os.WriteFile("logs/proxyFacebookHTML.html", []byte(HTMLContent), 0o644)
 			time.Sleep(5 * time.Second)
-			attempts = append(attempts, &types.Attempt{
-				Crawler:   types.CrawlerFacebook,
-				Proxy:     types.ProxyEnabled,
-				Method:    types.MethodChromeDP,
-				Timestamp: time.Now(),
-				Error: func(err error) string {
-					if err != nil {
-						return err.Error()
-					} else {
-						return errors.New("error object empty but not visited").Error()
-					}
-				}(err),
-			})
+			attempts = append(attempts, makeAttemptObject(types.CrawlerFacebook,
+				types.ProxyEnabled, types.MethodChromeDP,
+				errOrMsg(err, "error object empty but not visited")))
 			proxy = append(proxy[:proxyIndexUsed], proxy[proxyIndexUsed+1:]...)
 			slog.Warn("facebook proxy failed, triggering no proxy crawl",
 				slog.Any("Error", err),
@@ -263,26 +252,10 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 				slog.Any("file error 2", fileErr2),
 				slog.Any("file error 3", fileErr3),
 			)
-			attempts = append(attempts, &types.Attempt{
-				Crawler:   types.CrawlerFacebook,
-				Proxy:     types.ProxyDisabled,
-				Method:    types.MethodChromeDP,
-				Timestamp: time.Now(),
-				Error: func(err error) string {
-					if err != nil {
-						return err.Error()
-					} else {
-						return errors.New("error object empty but not visited").Error()
-					}
-				}(err),
-			})
-			logger.IncidentChannel <- types.Incident{
-				StartTime: time.Now(),
-				URL:       url,
-				Domain:    "facebook",
-				Attempts:  attempts,
-				Resolved:  false,
-			}
+			attempts = append(attempts, makeAttemptObject(types.CrawlerFacebook,
+				types.ProxyDisabled, types.MethodChromeDP,
+				errOrMsg(err, "error object empty but not visited")))
+			loggIncident(url, attempts, false)
 			err = errors.Join(errors.New("Error in facebook marketplace:"), err)
 			return retArr, err
 		}
@@ -309,13 +282,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 		}
 	}
 	if len(attempts) != 0 {
-		logger.IncidentChannel <- types.Incident{
-			StartTime: time.Now(),
-			Domain:    "facebook",
-			URL:       url,
-			Attempts:  attempts,
-			Resolved:  true,
-		}
+		loggIncident(url, attempts, true)
 	}
 	return retArr, err
 }

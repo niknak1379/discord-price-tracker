@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"time"
 
-	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 
 	"github.com/gocolly/colly/v2"
@@ -97,19 +96,9 @@ func CrawlDepop(Name string,
 		if len(proxy) != 0 {
 			proxyVal = proxy[proxyIndex]
 		}
-		attempts = append(attempts, &types.Attempt{
-			Crawler:   types.CrawlerDepop,
-			Proxy:     proxyVal,
-			Method:    types.MethodColly,
-			Timestamp: time.Now(),
-			Error: func(err error) string {
-				if err != nil {
-					return err.Error()
-				} else {
-					return errors.New("error object empty but not visited").Error()
-				}
-			}(err),
-		})
+		attempts = append(attempts, makeAttemptObject(types.CrawlerDepop,
+			proxyVal, types.MethodColly,
+			errOrMsg(err, "error object empty but not visited")))
 		if len(proxy) != 0 {
 			slog.Warn("depop proxy crawl failed, retrying without this proxy",
 				slog.Any("Error", err),
@@ -119,13 +108,7 @@ func CrawlDepop(Name string,
 			return CrawlDepop(Name, Price, queries, attempts, proxy)
 		} else {
 			slog.Error("depop crawl failed with no proxy")
-			logger.IncidentChannel <- types.Incident{
-				StartTime: time.Now(),
-				URL:       url,
-				Domain:    "Depop",
-				Attempts:  attempts,
-				Resolved:  false,
-			}
+			loggIncident(url, attempts, false)
 			if err == nil {
 				err = errors.New("Depop link not visited, might have been rate limited")
 			}
@@ -189,19 +172,9 @@ func CrawlProductPage(productURL string,
 		if len(proxy) != 0 {
 			proxyVal = proxy[proxyIndex]
 		}
-		retAttempts := []*types.Attempt{{
-			Crawler:   types.CrawlerDepop,
-			Proxy:     proxyVal,
-			Method:    types.MethodColly,
-			Timestamp: time.Now(),
-			Error: func(err error) string {
-				if err != nil {
-					return err.Error()
-				} else {
-					return errors.New("product page not visited").Error()
-				}
-			}(err),
-		}}
+		retAttempts := []*types.Attempt{makeAttemptObject(types.CrawlerDepop,
+			proxyVal, types.MethodColly,
+			errOrMsg(err, "product page not visited"))}
 		if len(proxy) != 0 {
 			slog.Warn("depop product page proxy failed, retrying without this proxy",
 				slog.String("URL", productURL),

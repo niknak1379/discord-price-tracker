@@ -2,7 +2,7 @@ package crawler
 
 import (
 	"context"
-	"errors"
+
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -435,20 +435,20 @@ outerloop:
 	return true // Title is valid
 }
 
-func makeAttemptObject(crawler, proxy, method string, err error) *types.Attempt {
+func errOrMsg(err error, defaultMsg string) string {
+	if err != nil {
+		return err.Error()
+	}
+	return defaultMsg
+}
+
+func makeAttemptObject(crawler, proxy, method, errorMsg string) *types.Attempt {
 	return &types.Attempt{
 		Crawler:   crawler,
 		Proxy:     proxy,
 		Method:    method,
 		Timestamp: time.Now(),
-		Error: func(err error) string {
-			if err != nil {
-				return err.Error()
-			} else {
-				return errors.New("Price Text is empty in " + crawler +
-					" " + method).Error()
-			}
-		}(err),
+		Error:     errorMsg,
 	}
 }
 

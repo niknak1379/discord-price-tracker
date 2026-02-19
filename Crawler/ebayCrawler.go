@@ -83,7 +83,7 @@ func GetEbayListings(Name string,
 	} else {
 		slog.Info("proxy function set to nil for ebay colly")
 	}
-	EbayHTMLProcessorCallback(c, Name, desiredPrice, queries, listingArr, bidArr, &visited)
+	EbayHTMLProcessorCallback(c, Name, desiredPrice, queries, &listingArr, &bidArr, &visited)
 	err := c.Visit(url)
 	c.Wait()
 	if err != nil || !visited {
@@ -113,8 +113,8 @@ func EbayHTMLProcessorCallback(c *colly.Collector,
 	Name string,
 	desiredPrice int,
 	queries *ItemRegexInfo,
-	listingArr []*types.EbayListing,
-	bidArr []*types.EbayBids,
+	listingArr *[]*types.EbayListing,
+	bidArr *[]*types.EbayBids,
 	visited *bool,
 ) {
 	crawlDate := time.Now()
@@ -194,7 +194,7 @@ func EbayHTMLProcessorCallback(c *colly.Collector,
 				Bids:      bids,
 			}
 			slog.Info("bid", slog.Any("ebay listing information", listing))
-			bidArr = append(bidArr, &listing)
+			*bidArr = append(*bidArr, &listing)
 		} else {
 
 			// first one is price, second one is wether its bid or normal "or best offer" GetEbayListings
@@ -249,7 +249,7 @@ func EbayHTMLProcessorCallback(c *colly.Collector,
 				Duration:      0,
 			}
 			slog.Info("listing", slog.Any("ebay listing information", listing))
-			listingArr = append(listingArr, &listing)
+			*listingArr = append(*listingArr, &listing)
 		}
 	})
 }
@@ -358,7 +358,7 @@ func ParseChromedpHTML(html string,
 	var listingArr []*types.EbayListing
 	var bidArr []*types.EbayBids
 	visited := false
-	EbayHTMLProcessorCallback(c, itemName, desiredPrice, &queries, listingArr, bidArr, &visited)
+	EbayHTMLProcessorCallback(c, itemName, desiredPrice, &queries, &listingArr, &bidArr, &visited)
 	err := c.Visit(ts.URL)
 	c.Wait()
 	if !visited && err != nil {

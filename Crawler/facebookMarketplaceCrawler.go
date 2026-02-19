@@ -71,7 +71,7 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 ) ([]*types.EbayListing, []*types.EbayBids, error, error, error) {
 	retListingArr := []*types.EbayListing{}
 	retBidArr := []*types.EbayBids{}
-	queries := initTitleRegex(Names, exclusionQueries)
+	queries := InitTitleRegex(Names, exclusionQueries)
 	var ebayErr, fbErr, depopErr error
 	for _, Name := range Names {
 

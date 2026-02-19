@@ -2,12 +2,16 @@ package crawler
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	logger "priceTracker/Logger"
+	types "priceTracker/Types"
 
 	"github.com/chromedp/chromedp"
 	"github.com/dlclark/regexp2"
@@ -278,7 +282,7 @@ type ItemRegexInfo struct {
 // initTitleRegex compiles regex patterns for item matching and exclusion.
 // Words with special characters are matched exactly; others use word boundaries.
 // Returns inclusion patterns, inclusion special words, exclusion patterns, and exclusion special words.
-func initTitleRegex(itemNames []string, exclusionQueries []string) *ItemRegexInfo {
+func InitTitleRegex(itemNames []string, exclusionQueries []string) *ItemRegexInfo {
 	var (
 		allRegexPatterns [][]*regexp.Regexp
 		allSpecialWords  [][]string
@@ -429,4 +433,31 @@ outerloop:
 	}
 
 	return true // Title is valid
+}
+
+func makeAttemptObject(crawler, proxy, method string, err error) *types.Attempt {
+	return &types.Attempt{
+		Crawler:   crawler,
+		Proxy:     proxy,
+		Method:    method,
+		Timestamp: time.Now(),
+		Error: func(err error) string {
+			if err != nil {
+				return err.Error()
+			} else {
+				return errors.New("Price Text is empty in " + crawler +
+					" " + method).Error()
+			}
+		}(err),
+	}
+}
+
+func loggIncident(url string, attempts []*types.Attempt, resolved bool) {
+	logger.IncidentChannel <- types.Incident{
+		StartTime: time.Now(),
+		Domain:    ExtractDomainName(url),
+		URL:       url,
+		Attempts:  attempts,
+		Resolved:  resolved,
+	}
 }

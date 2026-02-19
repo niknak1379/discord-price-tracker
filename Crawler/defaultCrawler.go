@@ -238,7 +238,8 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 	slog.Info("ChromeDP found Selector", slog.String("Found HTML Element", priceText))
 	logger.IncidentChannel <- types.Incident{
 		StartTime: time.Now(),
-		URL:       ExtractDomainName(url),
+		Domain:    ExtractDomainName(url),
+		URL:       url,
 		Attempts:  attempts,
 		Resolved:  true,
 	}

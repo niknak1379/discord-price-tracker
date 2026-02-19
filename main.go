@@ -13,6 +13,7 @@ import (
 	discord "priceTracker/Discord"
 	logger "priceTracker/Logger"
 	proxy "priceTracker/Proxy"
+	scheduler "priceTracker/Scheduler"
 
 	"github.com/joho/godotenv"
 )
@@ -37,8 +38,9 @@ func main() {
 	logger.StartIncidentListener(database.SaveAttempt, ctx.Done())
 	proxy.Init()
 	proxy.StartProxyCounter(ctx.Done())
-	InchMeasurement()
-	// go scheduler.SetChannelScheduler(ctx)
+	// InchMeasurement()
+	// EbayFailoverTest()
+	go scheduler.SetChannelScheduler(ctx)
 	var wg sync.WaitGroup
 	wg.Go(func() {
 		discord.Run(ctx)
@@ -89,6 +91,29 @@ func crawlerTest() {
 	// 		slog.Any("itemArr", itemArr),
 	// 		slog.Any("bid arr", bids),
 	// 		slog.Any("err", err))
+}
+
+func EbayFailoverTest() {
+	slog.Info("=== Testing EbayFailover with Regex ===")
+	proxyCopy := make([]string, len(proxy.ProxyList))
+	copy(proxyCopy, proxy.ProxyList)
+	itemNames := []string{"Samsung 32\" Odyssey OLED"}
+	exclusionQueries := []string{}
+	queries := crawler.InitTitleRegex(itemNames, exclusionQueries)
+	url := crawler.ConstructEbaySearchURL(itemNames[0], 1000)
+	listings, bids, err := crawler.EbayFailover(
+		url,
+		1000,
+		itemNames[0],
+		proxyCopy,
+		0,
+		queries,
+		nil,
+	)
+	slog.Info("EbayFailover results",
+		slog.Int("listings_count", len(listings)),
+		slog.Int("bids_count", len(bids)),
+		slog.Any("error", err))
 }
 
 func InchMeasurement() {

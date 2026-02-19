@@ -2,13 +2,11 @@ package types
 
 import "time"
 
-type CrawlerType string
-
 const (
-	CrawlerEbay     CrawlerType = "ebay"
-	CrawlerFacebook CrawlerType = "facebook"
-	CrawlerDepop    CrawlerType = "depop"
-	CrawlerDefault  CrawlerType = "default"
+	CrawlerEbay     string = "ebay"
+	CrawlerFacebook string = "facebook"
+	CrawlerDepop    string = "depop"
+	CrawlerDefault  string = "default"
 )
 
 const (
@@ -22,11 +20,11 @@ const (
 )
 
 type Attempt struct {
-	Crawler   CrawlerType `bson:"Crawler"`
-	Proxy     string      `bson:"Proxy"`
-	Method    string      `bson:"Method"`
-	Timestamp time.Time   `bson:"Timestamp"`
-	Error     string      `bson:"Error"`
+	Crawler   string    `bson:"Crawler"`
+	Proxy     string    `bson:"Proxy"`
+	Method    string    `bson:"Method"`
+	Timestamp time.Time `bson:"Timestamp"`
+	Error     string    `bson:"Error"`
 }
 
 type Incident struct {

@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"context"
+	"crypto/tls"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -12,6 +13,7 @@ import (
 	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 
+	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/dlclark/regexp2"
 	"github.com/gocolly/colly/v2"
@@ -39,7 +41,7 @@ func initCrawler() *colly.Collector {
 		RandomDelay: 3 * time.Minute,
 	})
 
-	c.SetRequestTimeout(30 * time.Second)
+	c.SetRequestTimeout(60 * time.Second)
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
 		Parallelism: 2,
@@ -47,43 +49,41 @@ func initCrawler() *colly.Collector {
 		RandomDelay: 1 * time.Second,
 	})
 	extensions.RandomUserAgent(c)
-	// c.OnRequest(func(r *colly.Request) {
-	// 	r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-	// 	r.Headers.Set("Accept-Language", "en-US,en;q=0.9")
-	// 	r.Headers.Set("DNT", "1")
-	// 	r.Headers.Set("Connection", "keep-alive")
-	// 	r.Headers.Set("Upgrade-Insecure-Requests", "1")
-	// 	r.Headers.Set("Sec-Fetch-Dest", "document")
-	// 	r.Headers.Set("Sec-Fetch-Mode", "navigate")
-	// 	r.Headers.Set("Sec-Fetch-Site", "cross-site")
-	// 	r.Headers.Set("Referer", "https://www.google.com/")
-	// 	r.Headers.Set("Accept-Encoding", "gzip, deflate")
-	// })
+	c.OnRequest(func(r *colly.Request) {
+		r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+		r.Headers.Set("Accept-Language", "en-US,en;q=0.9")
+		r.Headers.Set("DNT", "1")
+		r.Headers.Set("Connection", "keep-alive")
+		r.Headers.Set("Upgrade-Insecure-Requests", "1")
+		r.Headers.Set("Sec-Fetch-Dest", "document")
+		r.Headers.Set("Sec-Fetch-Mode", "navigate")
+		r.Headers.Set("Sec-Fetch-Site", "cross-site")
+		r.Headers.Set("Referer", "https://www.google.com/")
+		r.Headers.Set("Accept-Encoding", "gzip, deflate, br")
+	})
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			ForceAttemptHTTP2:  false,
 			DisableCompression: false,
+			TLSNextProto:       map[string]func(string, *tls.Conn) http.RoundTripper{},
 		},
-		Timeout: 30 * time.Second,
+		Timeout: 60 * time.Second,
 	}
 	c.SetClient(httpClient)
-	c.OnRequest(func(r *colly.Request) {
-		r.Headers.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
-		r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-		r.Headers.Set("Accept-Language", "en-US,en;q=0.5")
-		r.Headers.Set("Accept-Encoding", "gzip, deflate")
-		r.Headers.Set("Connection", "keep-alive")
-		r.Headers.Set("Upgrade-Insecure-Requests", "1")
-	})
+	// c.OnRequest(func(r *colly.Request) {
+	// 	r.Headers.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	// 	r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	// 	r.Headers.Set("Accept-Language", "en-US,en;q=0.5")
+	// 	r.Headers.Set("Accept-Encoding", "gzip, deflate, br")
+	// 	r.Headers.Set("Connection", "keep-alive")
+	// 	r.Headers.Set("Upgrade-Insecure-Requests", "1")
+	// })
 	c.OnResponse(func(r *colly.Response) {
 		slog.Info("Response received", slog.Int("status", r.StatusCode))
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
 		slog.Error("Error", slog.Any("error", err))
-	})
-	c.WithTransport(&http.Transport{
-		DisableCompression: false,
 	})
 	return c
 }
@@ -128,7 +128,18 @@ func NewChromedpContext(timeout time.Duration, extraOpts ...chromedp.ExecAllocat
 //
 // Returns a chromedp action that executes stealth JavaScript.
 func StealthActions() chromedp.Action {
-	return chromedp.Evaluate(`
+	headers := network.Headers{
+		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"Accept-Language":           "en-US,en;q=0.5",
+		"Accept-Encoding":           "gzip, deflate",
+		"Connection":                "keep-alive",
+		"Upgrade-Insecure-Requests": "1",
+	}
+	return chromedp.Tasks{
+		network.Enable(),
+		network.SetExtraHTTPHeaders(headers),
+		chromedp.Evaluate(`
 		// Webdriver
 		Object.defineProperty(navigator, 'webdriver', {
 			get: () => undefined
@@ -168,7 +179,8 @@ func StealthActions() chromedp.Action {
 		Object.defineProperty(navigator, 'hardwareConcurrency', {
 			get: () => 8
 		});
-	`, nil)
+	`, nil),
+	}
 }
 
 // GetOpenGraphPic retrieves the product image URL from a webpage.

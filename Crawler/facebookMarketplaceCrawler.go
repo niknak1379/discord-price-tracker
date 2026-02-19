@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -21,6 +20,33 @@ import (
 
 	"github.com/chromedp/chromedp"
 )
+
+// GeocodeResponse represents the response from the geocoding API.
+type GeocodeResponse struct {
+	Results []Location `json:"results"`
+}
+
+// Location represents a geographic coordinate.
+type Location struct {
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
+}
+type Body struct {
+	Mode    string        `json:"mode"`
+	Sources []coordinates `json:"sources"`
+	Targets []coordinates `json:"targets"`
+	Units   string        `json:"units"`
+}
+type coordinates struct {
+	Location [2]float64 `json:"location"`
+}
+type dist struct {
+	Distance float64 `json:"distance"`
+	Time     float64 `json:"time"`
+}
+type distanceRes struct {
+	Sources_to_targets [][]dist `json:"sources_to_targets"`
+}
 
 // GetSecondHandListings aggregates listings from multiple second-hand sources.
 // It searches eBay, Facebook Marketplace (if enabled), and Depop (for clothing items).
@@ -45,7 +71,7 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 ) ([]*types.EbayListing, []*types.EbayBids, error, error, error) {
 	retListingArr := []*types.EbayListing{}
 	retBidArr := []*types.EbayBids{}
-	normal, special, exclusionRegexes, exclusionSpecialWords := initTitleRegex(Names, exclusionQueries)
+	queries := initTitleRegex(Names, exclusionQueries)
 	var ebayErr, fbErr, depopErr error
 	for _, Name := range Names {
 
@@ -55,20 +81,18 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 			proxyCopy := make([]string, len(proxyArr))
 			copy(proxyCopy, proxyArr)
 			// im bargen hunting here close only for those less than half price
-			depop, err3 = CrawlDepop(Name, Price/2, normal, special,
-				exclusionRegexes, exclusionSpecialWords, nil, proxyCopy)
+			depop, err3 = CrawlDepop(Name, Price/2, queries, nil, proxyCopy)
 		}
 		if facebookCrawl {
 			proxyCopy := make([]string, len(proxyArr))
 			copy(proxyCopy, proxyArr)
 			fb, err2 = MarketPlaceCrawl(Name, Price, homeLat, homeLong,
-				maxDistance, LocationCode, proxyCopy, normal,
-				special, exclusionRegexes, exclusionSpecialWords, nil)
+				maxDistance, LocationCode, proxyCopy, queries, nil)
 		}
 		proxyCopy := make([]string, len(proxyArr))
 		copy(proxyCopy, proxyArr)
 		ebay, bids, err4 := GetEbayListings(Name, Price, proxyCopy,
-			normal, special, exclusionRegexes, exclusionSpecialWords, nil)
+			queries, nil)
 
 		ebayErr = errors.Join(ebayErr, err4)
 		fbErr = errors.Join(fbErr, err2)
@@ -145,10 +169,7 @@ func FacebookURLGenerator(Name string, Price int, LocationCode string) string {
 func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	maxDistance int, LocationCode string,
 	proxy []string,
-	allRegexPatterns [][]*regexp.Regexp,
-	allSpecialWords [][]string,
-	exclusionRegexes []*regexp.Regexp,
-	exclusionSpecialWords []string,
+	queries *ItemRegexInfo,
 	attempts []*types.Attempt,
 ) ([]*types.EbayListing, error) {
 	crawlDate := time.Now()
@@ -232,8 +253,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 				slog.Any("proxy", proxy),
 			)
 			return MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode,
-				proxy, allRegexPatterns, allSpecialWords, exclusionRegexes,
-				exclusionSpecialWords, attempts)
+				proxy, queries, attempts)
 		} else {
 			fileErr1 := os.WriteFile("logs/facebookFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("logs/facebookSecond.png", second, 0o644)
@@ -269,7 +289,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	}
 	// <------------------ sanitize the list ------------>
 	for i := range items {
-		if titleCorrectnessCheck(items[i].Title, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords) &&
+		if titleCorrectnessCheck(items[i].Title, queries) &&
 			items[i].Price != 0 &&
 			items[i].Price < desiredPrice &&
 			items[i].Price >= int(float64(desiredPrice)*float64(0.25)) {

@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -20,36 +21,8 @@ import (
 	types "priceTracker/Types"
 
 	"github.com/chromedp/chromedp"
-	"github.com/dlclark/regexp2"
 	"github.com/gocolly/colly/v2"
 )
-
-// GeocodeResponse represents the response from the geocoding API.
-type GeocodeResponse struct {
-	Results []Location `json:"results"`
-}
-
-// Location represents a geographic coordinate.
-type Location struct {
-	Lat float64 `json:"lat"`
-	Lon float64 `json:"lon"`
-}
-type Body struct {
-	Mode    string        `json:"mode"`
-	Sources []coordinates `json:"sources"`
-	Targets []coordinates `json:"targets"`
-	Units   string        `json:"units"`
-}
-type coordinates struct {
-	Location [2]float64 `json:"location"`
-}
-type dist struct {
-	Distance float64 `json:"distance"`
-	Time     float64 `json:"time"`
-}
-type distanceRes struct {
-	Sources_to_targets [][]dist `json:"sources_to_targets"`
-}
 
 // ConstructEbaySearchURL builds an eBay search URL with filters for used items.
 // The price range is set to 25%-100% of the desired price to find comparable used listings.
@@ -83,11 +56,10 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 //   - exclusionSpecialWords: special character words for exclusion matching
 //
 // Returns the listings, bids, and any error encountered.
-func GetEbayListings(Name string, desiredPrice int, proxy []string,
-	allRegexPatterns [][]*regexp.Regexp,
-	allSpecialWords [][]string,
-	exclusionRegexes []*regexp.Regexp,
-	exclusionSpecialWords []string,
+func GetEbayListings(Name string,
+	desiredPrice int,
+	proxy []string,
+	queries *ItemRegexInfo,
 	attempts []*types.Attempt,
 ) ([]*types.EbayListing, []*types.EbayBids, error) {
 	url := ConstructEbaySearchURL(Name, desiredPrice)
@@ -95,7 +67,6 @@ func GetEbayListings(Name string, desiredPrice int, proxy []string,
 	slog.Info("crawling ebay url", slog.String("URL", url))
 	var listingArr []*types.EbayListing
 	var bidArr []*types.EbayBids
-	crawlDate := time.Now()
 	visited := false
 	c := initCrawler()
 
@@ -113,12 +84,73 @@ func GetEbayListings(Name string, desiredPrice int, proxy []string,
 	} else {
 		slog.Info("proxy function set to nil for ebay colly")
 	}
+	EbayHTMLProcessorCallback(c, Name, desiredPrice, queries, listingArr, bidArr, &visited)
+	err := c.Visit(url)
+	c.Wait()
+	if err != nil || !visited {
+		if len(proxy) == 0 {
+			slog.Warn("Colly failed even without proxy triggering chromeDP without proxy")
+			attempts = append(attempts, &types.Attempt{
+				Crawler:   types.CrawlerEbay,
+				Proxy:     types.ProxyDisabled,
+				Method:    types.MethodColly,
+				Timestamp: time.Now(),
+				Error: func(err error) string {
+					if err != nil {
+						return err.Error()
+					} else {
+						return errors.New("error object empty but not visited").Error()
+					}
+				}(err),
+			})
+			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, proxy, 0, queries, attempts)
+			return listingArr, bidArr, err
+		} else {
+			slog.Warn("ebay failed, redoing request with chromedp with proxy")
+			attempts = append(attempts, &types.Attempt{
+				Crawler:   types.CrawlerEbay,
+				Proxy:     proxy[proxyIndex],
+				Method:    types.MethodColly,
+				Timestamp: time.Now(),
+				Error: func(err error) string {
+					if err != nil {
+						return err.Error()
+					} else {
+						return errors.New("error object empty but not visited").Error()
+					}
+				}(err),
+			})
+			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, proxy, proxyIndex, queries, attempts)
+			return listingArr, bidArr, err
+		}
+	}
+	if len(attempts) != 0 {
+		logger.IncidentChannel <- types.Incident{
+			StartTime: time.Now(),
+			URL:       url,
+			Domain:    "ebay",
+			Attempts:  attempts,
+			Resolved:  true,
+		}
+	}
+	return listingArr, bidArr, err
+}
+
+func EbayHTMLProcessorCallback(c *colly.Collector,
+	Name string,
+	desiredPrice int,
+	queries *ItemRegexInfo,
+	listingArr []*types.EbayListing,
+	bidArr []*types.EbayBids,
+	visited *bool,
+) {
+	crawlDate := time.Now()
 	c.OnHTML("ul.srp-results > li", func(e *colly.HTMLElement) {
-		visited = true
+		*visited = true
 		title := e.ChildText(".s-card__title span.primary")
 
 		// check to see if listing is viable
-		if !titleCorrectnessCheck(title, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords) {
+		if !titleCorrectnessCheck(title, queries) {
 			slog.Info("skipping title criteria not met", slog.String("Title", title))
 			return
 		}
@@ -247,57 +279,6 @@ func GetEbayListings(Name string, desiredPrice int, proxy []string,
 			listingArr = append(listingArr, &listing)
 		}
 	})
-	err := c.Visit(url)
-	c.Wait()
-	if err != nil || !visited {
-		if len(proxy) == 0 {
-			slog.Warn("Colly failed even without proxy triggering chromeDP without proxy")
-			attempts = append(attempts, &types.Attempt{
-				Crawler:   types.CrawlerEbay,
-				Proxy:     types.ProxyDisabled,
-				Method:    types.MethodColly,
-				Timestamp: time.Now(),
-				Error: func(err error) string {
-					if err != nil {
-						return err.Error()
-					} else {
-						return errors.New("error object empty but not visited").Error()
-					}
-				}(err),
-			})
-			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, proxy, 0, allRegexPatterns,
-				allSpecialWords, exclusionRegexes, exclusionSpecialWords, attempts)
-			return listingArr, bidArr, err
-		} else {
-			slog.Warn("ebay failed, redoing request with chromedp with proxy")
-			attempts = append(attempts, &types.Attempt{
-				Crawler:   types.CrawlerEbay,
-				Proxy:     proxy[proxyIndex],
-				Method:    types.MethodColly,
-				Timestamp: time.Now(),
-				Error: func(err error) string {
-					if err != nil {
-						return err.Error()
-					} else {
-						return errors.New("error object empty but not visited").Error()
-					}
-				}(err),
-			})
-			listingArr, bidArr, err = EbayFailover(url, desiredPrice, Name, proxy, proxyIndex, allRegexPatterns,
-				allSpecialWords, exclusionRegexes, exclusionSpecialWords, attempts)
-			return listingArr, bidArr, err
-		}
-	}
-	if len(attempts) != 0 {
-		logger.IncidentChannel <- types.Incident{
-			StartTime: time.Now(),
-			URL:       url,
-			Domain:    "ebay",
-			Attempts:  attempts,
-			Resolved:  true,
-		}
-	}
-	return listingArr, bidArr, err
 }
 
 // EbayFailover attempts to retrieve eBay listings using chromedp when colly fails.
@@ -317,10 +298,7 @@ func GetEbayListings(Name string, desiredPrice int, proxy []string,
 // Returns the listings, bids, and any error encountered.
 func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 	proxyIndexUsed int,
-	allRegexPatterns [][]*regexp.Regexp,
-	allSpecialWords [][]string,
-	exclusionRegexes []*regexp.Regexp,
-	exclusionSpecialWords []string,
+	queries *ItemRegexInfo,
 	attempts []*types.Attempt,
 ) (
 	[]*types.EbayListing, []*types.EbayBids, error,
@@ -446,7 +424,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 				slog.Any("error", err),
 				slog.Any("new Proxy Arr", proxy),
 			)
-			return GetEbayListings(Name, desiredPrice, proxy, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords, attempts)
+			return GetEbayListings(Name, desiredPrice, proxy, queries, attempts)
 		} else {
 			fileErr1 := os.WriteFile("logs/ebayFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("logs/ebaySecond.png", second, 0o644)
@@ -479,7 +457,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 
 	// Sanitize the list
 	for i := range items {
-		if !titleCorrectnessCheck(items[i].Title, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords) {
+		if !titleCorrectnessCheck(items[i].Title, queries) {
 			continue
 		}
 
@@ -533,7 +511,32 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 	return retListingArr, retBidArr, err
 }
 
-var excludeRegexes []*regexp2.Regexp
+// ParseChromedpHTML - new function to parse chromedp output with colly
+func ParseChromedpHTML(html string,
+	desiredPrice int,
+	itemName string,
+	queries ItemRegexInfo,
+) ([]*types.EbayListing, []*types.EbayBids, error) {
+	// Create test server with the chromedp HTML
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(html))
+	}))
+	defer ts.Close()
+	c := initCrawler()
+
+	var listingArr []*types.EbayListing
+	var bidArr []*types.EbayBids
+	visited := false
+	EbayHTMLProcessorCallback(c, itemName, desiredPrice, &queries, listingArr, bidArr, &visited)
+	err := c.Visit(ts.URL)
+	if !visited && err != nil {
+		slog.Error("Error was nil, but ebay not visited")
+		err = errors.New("ebay page not visited")
+	}
+	c.Wait()
+	return listingArr, bidArr, err
+}
 
 // im gonna silent error this for now, it just returns
 // everything 0 if it errs on sth
@@ -645,213 +648,4 @@ func ProcessBidRawString(rawString string, currTime time.Time) (int, time.Time) 
 		)
 	}
 	return bids, endTime
-}
-
-func init() {
-	excludepatterns := []string{
-		`\bfor parts`,
-		`\bbroken`,
-		`\baccessories\b`,
-		`(?=.*\bonly\b)(?=.*\bbox\b)`,
-		`\bempty box`,
-		`\bcable\b`,
-		`\bdongle\b`,
-		`\bkids\b`,
-		`\bjunior\b`,
-		`read`,
-		`\bstand\b`,
-		`\badapter\b`,
-		`\bdefective`,
-		`damage`,
-		`problem`,
-		`replacement`,
-		`bracket`,
-		`water block`,
-		`waterblock`,
-		`\boem\b`,
-		`board`,
-		`\bdock\b`,
-	}
-
-	for _, pattern := range excludepatterns {
-		re, err := regexp2.Compile(pattern, 0)
-		if err != nil {
-			continue
-		}
-		excludeRegexes = append(excludeRegexes, re)
-	}
-}
-
-// initTitleRegex compiles regex patterns for item matching and exclusion.
-// Words with special characters are matched exactly; others use word boundaries.
-// Returns inclusion patterns, inclusion special words, exclusion patterns, and exclusion special words.
-func initTitleRegex(itemNames []string, exclusionQueries []string) ([][]*regexp.Regexp, [][]string, []*regexp.Regexp, []string) {
-	var (
-		allRegexPatterns [][]*regexp.Regexp
-		allSpecialWords  [][]string
-	)
-	slog.Info("initializing regex queries for",
-		slog.Any("name arr", itemNames),
-		slog.Any("exclusion queries", exclusionQueries))
-	for _, itemName := range itemNames {
-		words := strings.Fields(strings.ToLower(itemName))
-		var regexPatterns []*regexp.Regexp
-		var specialWords []string
-
-		for _, word := range words {
-			if strings.ContainsAny(word, "./-\"'()[]{}") {
-				// Has special characters - add to string array
-				specialWords = append(specialWords, word)
-			} else {
-				// Normal word - compile regex with word boundaries
-				pattern := regexp.MustCompile(`\b` + regexp.QuoteMeta(word) + `\b`)
-				regexPatterns = append(regexPatterns, pattern)
-			}
-		}
-
-		allRegexPatterns = append(allRegexPatterns, regexPatterns)
-		allSpecialWords = append(allSpecialWords, specialWords)
-	}
-
-	// Process user-defined exclusion queries with word boundaries
-	var exclusionRegexes []*regexp.Regexp
-	var exclusionSpecialWords []string
-
-	for _, query := range exclusionQueries {
-		query = strings.ToLower(query)
-		if strings.ContainsAny(query, "./-\"'()[]{}") {
-			// Has special characters - add to string array for exact matching
-			exclusionSpecialWords = append(exclusionSpecialWords, query)
-		} else {
-			// Normal word - compile regex with word boundaries
-			pattern := regexp.MustCompile(`\b` + regexp.QuoteMeta(query) + `\b`)
-			exclusionRegexes = append(exclusionRegexes, pattern)
-		}
-	}
-
-	return allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords
-}
-
-// checks the title to make sure the name is in the title and
-// no unwanted returned results by ebay
-//
-// this one i added when i was making the depop stuff, dont remember why
-// replacer := strings.NewReplacer(
-// 	".", " ",
-// 	"'", " ",
-// 	"'", " ",
-// )
-// listingTitle = replacer.Replace(listingTitle)
-//
-//
-// Use word boundaries for normal words
-// i needed to use boundries and cant just use simple
-// strings.contains bc otherwise it includes 321up with 321upx
-// it is a lot slower tho, but since its running longterm
-// it doesnt really matter i think
-
-// titleCorrectnessCheck validates if a listing title matches inclusion patterns
-// and does not match exclusion patterns. It uses word boundaries for normal words
-// to prevent partial matches (e.g., "32UP" matching "32UPX").
-//
-// Returns true if the title passes all checks (matches inclusion, no exclusions).
-func titleCorrectnessCheck(listingTitle string,
-	allRegexPatterns [][]*regexp.Regexp,
-	allSpecialWords [][]string,
-	exclusionRegexes []*regexp.Regexp,
-	exclusionSpecialWords []string,
-) bool {
-	// Normalize all quote variations to standard keyboard quotes
-	// Double quotes - curly quotes and escaped quotes
-	listingTitle = strings.ReplaceAll(listingTitle, "\u201C", `"`) // Left curly double quote "
-	listingTitle = strings.ReplaceAll(listingTitle, "\u201D", `"`) // Right curly double quote "
-	listingTitle = strings.ReplaceAll(listingTitle, `\"`, `"`)     // Escaped \"
-
-	// Single quotes - curly quotes and escaped quotes
-	listingTitle = strings.ReplaceAll(listingTitle, "\u2018", `'`) // Left curly single quote '
-	listingTitle = strings.ReplaceAll(listingTitle, "\u2019", `'`) // Right curly single quote '
-	listingTitle = strings.ReplaceAll(listingTitle, `\'`, `'`)     // Escaped \'
-
-	listingTitle = strings.ToLower(listingTitle)
-	atLeastOneMatched := false
-outerloop:
-	for i := range allRegexPatterns {
-		// Check regex patterns for this itemName
-		for _, pattern := range allRegexPatterns[i] {
-			if !pattern.MatchString(listingTitle) {
-				slog.Info("not matching keyword",
-					slog.String("title", listingTitle),
-					slog.String("pattern", pattern.String()),
-				)
-				continue outerloop
-			}
-		}
-
-		// Check special character words for this itemName
-		for _, word := range allSpecialWords[i] {
-			if !strings.Contains(listingTitle, word) {
-				slog.Info("not matching special char keyword",
-					slog.String("title", listingTitle),
-					slog.String("word missing", word),
-				)
-				continue outerloop
-			}
-		}
-
-		atLeastOneMatched = true
-		break
-	}
-
-	if !atLeastOneMatched {
-		return false
-	}
-
-	// Check hardcoded global exclusions (using regexp2)
-	for _, re := range excludeRegexes {
-		match, err := re.MatchString(listingTitle)
-		if err != nil {
-			continue
-		}
-		if match {
-			return false // Hardcoded exclusion matched
-		}
-	}
-
-	// Check user-defined exclusion regexes
-	for _, pattern := range exclusionRegexes {
-		if pattern.MatchString(listingTitle) {
-			slog.Info("excluding title due to user-defined exclusion pattern",
-				slog.String("title", listingTitle))
-			return false
-		}
-	}
-
-	// Check user-defined exclusion special words
-	for _, word := range exclusionSpecialWords {
-		if strings.Contains(listingTitle, word) {
-			slog.Info("excluding title due to user-defined exclusion word",
-				slog.String("title", listingTitle))
-			return false
-		}
-	}
-
-	return true // Title is valid
-}
-
-// i dont need this anymore but ill keep it just in case
-// i was being dumb and didnt see the start of the url
-// was there and i didnt have to crawl the link itself
-func getCanonicalURL(c *colly.Collector, url string) string {
-	retURL := url
-	parsed := false
-	c.OnHTML("link[rel='canonical']", func(e *colly.HTMLElement) {
-		retURL = e.Attr("href")
-		parsed = true
-	})
-	err := c.Visit(url)
-	if err != nil || !parsed {
-		// already have a url if it fails its fine
-		return retURL
-	}
-	return retURL
 }

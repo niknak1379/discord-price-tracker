@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"net/url"
-	"regexp"
 	"time"
 
 	logger "priceTracker/Logger"
@@ -40,10 +39,7 @@ func depopURLGenerator(Name string, price int) string {
 // Returns the listings and any error encountered.
 func CrawlDepop(Name string,
 	Price int,
-	allRegexPatterns [][]*regexp.Regexp,
-	allSpecialWords [][]string,
-	exclusionRegexes []*regexp.Regexp,
-	exclusionSpecialWords []string,
+	queries *ItemRegexInfo,
 	attempts []*types.Attempt,
 	proxy []string,
 ) ([]*types.EbayListing, error) {
@@ -81,7 +77,7 @@ func CrawlDepop(Name string,
 		proxyCopy := make([]string, len(proxy))
 		copy(proxyCopy, proxy)
 		listing, productAttempts, err := CrawlProductPage(productURL,
-			allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords, attempts, proxyCopy)
+			queries, attempts, proxyCopy)
 		attempts = append(attempts, productAttempts...)
 		if err != nil {
 			slog.Warn("could not visit product page")
@@ -120,8 +116,7 @@ func CrawlDepop(Name string,
 				slog.String("proxy", proxy[proxyIndex]),
 			)
 			proxy = append(proxy[:proxyIndex], proxy[proxyIndex+1:]...)
-			return CrawlDepop(Name, Price, allRegexPatterns, allSpecialWords,
-				exclusionRegexes, exclusionSpecialWords, attempts, proxy)
+			return CrawlDepop(Name, Price, queries, attempts, proxy)
 		} else {
 			slog.Error("depop crawl failed with no proxy")
 			logger.IncidentChannel <- types.Incident{
@@ -142,10 +137,7 @@ func CrawlDepop(Name string,
 }
 
 func CrawlProductPage(productURL string,
-	allRegexPatterns [][]*regexp.Regexp,
-	allSpecialWords [][]string,
-	exclusionRegexes []*regexp.Regexp,
-	exclusionSpecialWords []string,
+	queries *ItemRegexInfo,
 	attempts []*types.Attempt,
 	proxy []string,
 ) (*types.EbayListing, []*types.Attempt, error) {
@@ -174,7 +166,7 @@ func CrawlProductPage(productURL string,
 	productCollector.OnHTML("p.styles_textWrapper__v3kxJ", func(pe *colly.HTMLElement) {
 		visited = true
 		condition = pe.Text
-		if titleCorrectnessCheck(condition, allRegexPatterns, allSpecialWords, exclusionRegexes, exclusionSpecialWords) {
+		if titleCorrectnessCheck(condition, queries) {
 			approved = true
 		}
 	})
@@ -218,9 +210,7 @@ func CrawlProductPage(productURL string,
 			proxy = append(proxy[:proxyIndex], proxy[proxyIndex+1:]...)
 			proxyCopy := make([]string, len(proxy))
 			copy(proxyCopy, proxy)
-			return CrawlProductPage(productURL,
-				allRegexPatterns, allSpecialWords, exclusionRegexes,
-				exclusionSpecialWords, attempts, proxyCopy)
+			return CrawlProductPage(productURL, queries, attempts, proxyCopy)
 		}
 		return Listing, retAttempts, err
 	}

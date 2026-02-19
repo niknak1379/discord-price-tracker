@@ -4,17 +4,22 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/chromedp/chromedp"
+	"github.com/dlclark/regexp2"
 	"github.com/gocolly/colly/v2"
 	"github.com/gocolly/colly/v2/extensions"
 )
 
 // TaxRate is applied to prices to account for taxes (10% by default).
-var TaxRate = 1.1
+var (
+	TaxRate        = 1.1
+	excludeRegexes []*regexp2.Regexp
+)
 
 // initCrawler creates a colly collector with rate limiting and headers configured
 // to avoid detection. Uses a proxy by default.
@@ -225,4 +230,203 @@ func formatPrice(priceStr string) (int, error) {
 	ret = strings.Split(ret, ".")[0]
 	res, err := strconv.Atoi(ret)
 	return res, err
+}
+
+// pre compile exception regex patterns
+func init() {
+	excludepatterns := []string{
+		`\bfor parts`,
+		`\bbroken`,
+		`\baccessories\b`,
+		`(?=.*\bonly\b)(?=.*\bbox\b)`,
+		`\bempty box`,
+		`\bcable\b`,
+		`\bdongle\b`,
+		`\bkids\b`,
+		`\bjunior\b`,
+		`read`,
+		`\bstand\b`,
+		`\badapter\b`,
+		`\bdefective`,
+		`damage`,
+		`problem`,
+		`replacement`,
+		`bracket`,
+		`water block`,
+		`waterblock`,
+		`\boem\b`,
+		`board`,
+		`\bdock\b`,
+	}
+
+	for _, pattern := range excludepatterns {
+		re, err := regexp2.Compile(pattern, 0)
+		if err != nil {
+			continue
+		}
+		excludeRegexes = append(excludeRegexes, re)
+	}
+}
+
+type ItemRegexInfo struct {
+	IncludeRegex   [][]*regexp.Regexp
+	IncludeSpecial [][]string
+	ExcludeRegex   []*regexp.Regexp
+	ExcludeSpecial []string
+}
+
+// initTitleRegex compiles regex patterns for item matching and exclusion.
+// Words with special characters are matched exactly; others use word boundaries.
+// Returns inclusion patterns, inclusion special words, exclusion patterns, and exclusion special words.
+func initTitleRegex(itemNames []string, exclusionQueries []string) *ItemRegexInfo {
+	var (
+		allRegexPatterns [][]*regexp.Regexp
+		allSpecialWords  [][]string
+	)
+	slog.Info("initializing regex queries for",
+		slog.Any("name arr", itemNames),
+		slog.Any("exclusion queries", exclusionQueries))
+	for _, itemName := range itemNames {
+		words := strings.Fields(strings.ToLower(itemName))
+		var regexPatterns []*regexp.Regexp
+		var specialWords []string
+
+		for _, word := range words {
+			if strings.ContainsAny(word, "./-\"'()[]{}") {
+				// Has special characters - add to string array
+				specialWords = append(specialWords, word)
+			} else {
+				// Normal word - compile regex with word boundaries
+				pattern := regexp.MustCompile(`\b` + regexp.QuoteMeta(word) + `\b`)
+				regexPatterns = append(regexPatterns, pattern)
+			}
+		}
+
+		allRegexPatterns = append(allRegexPatterns, regexPatterns)
+		allSpecialWords = append(allSpecialWords, specialWords)
+	}
+
+	// Process user-defined exclusion queries with word boundaries
+	var exclusionRegexes []*regexp.Regexp
+	var exclusionSpecialWords []string
+
+	for _, query := range exclusionQueries {
+		query = strings.ToLower(query)
+		if strings.ContainsAny(query, "./-\"'()[]{}") {
+			// Has special characters - add to string array for exact matching
+			exclusionSpecialWords = append(exclusionSpecialWords, query)
+		} else {
+			// Normal word - compile regex with word boundaries
+			pattern := regexp.MustCompile(`\b` + regexp.QuoteMeta(query) + `\b`)
+			exclusionRegexes = append(exclusionRegexes, pattern)
+		}
+	}
+
+	return &ItemRegexInfo{
+		IncludeRegex:   allRegexPatterns,
+		IncludeSpecial: allSpecialWords,
+		ExcludeRegex:   exclusionRegexes,
+		ExcludeSpecial: exclusionSpecialWords,
+	}
+}
+
+// checks the title to make sure the name is in the title and
+// no unwanted returned results by ebay
+//
+// this one i added when i was making the depop stuff, dont remember why
+// replacer := strings.NewReplacer(
+// 	".", " ",
+// 	"'", " ",
+// 	"'", " ",
+// )
+// listingTitle = replacer.Replace(listingTitle)
+//
+//
+// Use word boundaries for normal words
+// i needed to use boundries and cant just use simple
+// strings.contains bc otherwise it includes 321up with 321upx
+// it is a lot slower tho, but since its running longterm
+// it doesnt really matter i think
+
+// titleCorrectnessCheck validates if a listing title matches inclusion patterns
+// and does not match exclusion patterns. It uses word boundaries for normal words
+// to prevent partial matches (e.g., "32UP" matching "32UPX").
+//
+// Returns true if the title passes all checks (matches inclusion, no exclusions).
+func titleCorrectnessCheck(listingTitle string, queries *ItemRegexInfo) bool {
+	// Normalize all quote variations to standard keyboard quotes
+	// Double quotes - curly quotes and escaped quotes
+	listingTitle = strings.ReplaceAll(listingTitle, "\u201C", `"`) // Left curly double quote "
+	listingTitle = strings.ReplaceAll(listingTitle, "\u201D", `"`) // Right curly double quote "
+	listingTitle = strings.ReplaceAll(listingTitle, `\"`, `"`)     // Escaped \"
+
+	// Single quotes - curly quotes and escaped quotes
+	listingTitle = strings.ReplaceAll(listingTitle, "\u2018", `'`) // Left curly single quote '
+	listingTitle = strings.ReplaceAll(listingTitle, "\u2019", `'`) // Right curly single quote '
+	listingTitle = strings.ReplaceAll(listingTitle, `\'`, `'`)     // Escaped \'
+
+	listingTitle = strings.ToLower(listingTitle)
+	atLeastOneMatched := false
+outerloop:
+	for i := range queries.IncludeRegex {
+		// Check regex patterns for this itemName
+		for _, pattern := range queries.IncludeRegex[i] {
+			if !pattern.MatchString(listingTitle) {
+				slog.Info("not matching keyword",
+					slog.String("title", listingTitle),
+					slog.String("pattern", pattern.String()),
+				)
+				continue outerloop
+			}
+		}
+
+		// Check special character words for this itemName
+		for _, word := range queries.IncludeSpecial[i] {
+			if !strings.Contains(listingTitle, word) {
+				slog.Info("not matching special char keyword",
+					slog.String("title", listingTitle),
+					slog.String("word missing", word),
+				)
+				continue outerloop
+			}
+		}
+
+		atLeastOneMatched = true
+		break
+	}
+
+	if !atLeastOneMatched {
+		return false
+	}
+
+	// Check hardcoded global exclusions (using regexp2)
+	for _, re := range excludeRegexes {
+		match, err := re.MatchString(listingTitle)
+		if err != nil {
+			continue
+		}
+		if match {
+			return false // Hardcoded exclusion matched
+		}
+	}
+
+	// Check user-defined exclusion regexes
+	for _, pattern := range queries.ExcludeRegex {
+		if pattern.MatchString(listingTitle) {
+			slog.Info("excluding title due to user-defined exclusion pattern",
+				slog.String("title", listingTitle))
+			return false
+		}
+	}
+
+	// Check user-defined exclusion special words
+	for _, word := range queries.ExcludeSpecial {
+		if strings.Contains(listingTitle, word) {
+			slog.Info("excluding title due to user-defined exclusion word",
+				slog.String("title", listingTitle))
+			return false
+		}
+	}
+
+	return true // Title is valid
 }

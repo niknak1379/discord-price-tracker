@@ -2,7 +2,6 @@ package crawler
 
 import (
 	"context"
-
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -48,17 +47,40 @@ func initCrawler() *colly.Collector {
 		RandomDelay: 1 * time.Second,
 	})
 	extensions.RandomUserAgent(c)
+	// c.OnRequest(func(r *colly.Request) {
+	// 	r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+	// 	r.Headers.Set("Accept-Language", "en-US,en;q=0.9")
+	// 	r.Headers.Set("DNT", "1")
+	// 	r.Headers.Set("Connection", "keep-alive")
+	// 	r.Headers.Set("Upgrade-Insecure-Requests", "1")
+	// 	r.Headers.Set("Sec-Fetch-Dest", "document")
+	// 	r.Headers.Set("Sec-Fetch-Mode", "navigate")
+	// 	r.Headers.Set("Sec-Fetch-Site", "cross-site")
+	// 	r.Headers.Set("Referer", "https://www.google.com/")
+	// 	r.Headers.Set("Accept-Encoding", "gzip, deflate")
+	// })
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			ForceAttemptHTTP2:  false,
+			DisableCompression: false,
+		},
+		Timeout: 30 * time.Second,
+	}
+	c.SetClient(httpClient)
 	c.OnRequest(func(r *colly.Request) {
-		r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-		r.Headers.Set("Accept-Language", "en-US,en;q=0.9")
-		r.Headers.Set("DNT", "1")
+		r.Headers.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+		r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+		r.Headers.Set("Accept-Language", "en-US,en;q=0.5")
+		r.Headers.Set("Accept-Encoding", "gzip, deflate")
 		r.Headers.Set("Connection", "keep-alive")
 		r.Headers.Set("Upgrade-Insecure-Requests", "1")
-		r.Headers.Set("Sec-Fetch-Dest", "document")
-		r.Headers.Set("Sec-Fetch-Mode", "navigate")
-		r.Headers.Set("Sec-Fetch-Site", "cross-site")
-		r.Headers.Set("Referer", "https://www.google.com/")
-		r.Headers.Set("Accept-Encoding", "gzip, deflate")
+	})
+	c.OnResponse(func(r *colly.Response) {
+		slog.Info("Response received", slog.Int("status", r.StatusCode))
+	})
+
+	c.OnError(func(r *colly.Response, err error) {
+		slog.Error("Error", slog.Any("error", err))
 	})
 	c.WithTransport(&http.Transport{
 		DisableCompression: false,
@@ -82,6 +104,8 @@ func NewChromedpContext(timeout time.Duration, extraOpts ...chromedp.ExecAllocat
 		chromedp.Flag("disable-dev-shm-usage", true),
 		chromedp.Flag("log-level", "3"),
 		chromedp.Flag("blink-settings", "imagesEnabled=false"),
+		chromedp.Flag("disable-http2", true),
+		chromedp.Flag("disable-quic", true),
 	)
 
 	opts = append(opts, extraOpts...)
@@ -440,6 +464,16 @@ func errOrMsg(err error, defaultMsg string) string {
 		return err.Error()
 	}
 	return defaultMsg
+}
+
+func firstErrorMsg(err1, err2 error, fallback string) string {
+	if err1 != nil {
+		return err1.Error()
+	}
+	if err2 != nil {
+		return err2.Error()
+	}
+	return fallback
 }
 
 func makeAttemptObject(crawler, proxy, method, errorMsg string) *types.Attempt {

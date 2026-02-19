@@ -276,6 +276,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 ) (
 	[]*types.EbayListing, []*types.EbayBids, error,
 ) {
+	time.Sleep(5 * time.Second)
 	slog.Info("chromedp failover for ebay", slog.String("URL", url))
 	var ctx context.Context
 	var cancel context.CancelFunc

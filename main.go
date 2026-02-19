@@ -38,6 +38,7 @@ func main() {
 	logger.StartIncidentListener(database.SaveAttempt, ctx.Done())
 	proxy.Init()
 	proxy.StartProxyCounter(ctx.Done())
+	// AlienwareMonitorTest()
 	// InchMeasurement()
 	// EbayFailoverTest()
 	go scheduler.SetChannelScheduler(ctx)
@@ -55,6 +56,23 @@ func main() {
 	slog.Info("Shutdown")
 	cancel()
 	wg.Wait()
+}
+
+func AlienwareMonitorTest() {
+	slog.Info("=== Testing Alienware Monitor Price ===")
+	proxyCopy := make([]string, len(proxy.ProxyList))
+	copy(proxyCopy, proxy.ProxyList)
+
+	i, err := crawler.GetPrice(
+		"https://www.bestbuy.com/product/alienware-aw3225qf-31-6-qd-oled-curved-4k-uhd-240hz-03-ms-g-sync-gaming-monitor-with-hdr-hdmi-usb-c-lunar-light/J3K4L62597",
+		"div[data-testid='price-block-customer-price']",
+		proxyCopy,
+		nil,
+	)
+
+	slog.Info("Alienware monitor price",
+		slog.Int("price", i),
+		slog.Any("error", err))
 }
 
 func amazonTest() {

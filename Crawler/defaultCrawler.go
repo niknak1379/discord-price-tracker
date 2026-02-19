@@ -69,7 +69,7 @@ func GetPrice(uri string, querySelector string, proxy []string, attempts []*type
 		if len(proxy) != 0 {
 			slog.Warn("error in getting price in crawler, triggering proxy chrome",
 				slog.Any("Error", err), slog.Any("PriceErr", priceErr))
-			attempts = append(attempts, makeAttemptObject(types.CrawlerDefault, proxy[proxyIndex], types.MethodColly, errOrMsg(err, priceErr.Error())))
+			attempts = append(attempts, makeAttemptObject(types.CrawlerDefault, proxy[proxyIndex], types.MethodColly, firstErrorMsg(err, priceErr, "unknown error")))
 			res, err2 = ChromeDPFailover(uri, querySelector, proxy, proxyIndex, attempts)
 			return res, err2
 		} else {
@@ -77,7 +77,7 @@ func GetPrice(uri string, querySelector string, proxy []string, attempts []*type
 				slog.Any("Error", err2),
 				slog.Int("Price", res),
 			)
-			attempts = append(attempts, makeAttemptObject(types.CrawlerDefault, types.ProxyDisabled, types.MethodColly, errOrMsg(err, priceErr.Error())))
+			attempts = append(attempts, makeAttemptObject(types.CrawlerDefault, types.ProxyDisabled, types.MethodColly, firstErrorMsg(err, priceErr, "unknown error")))
 			res, err2 = ChromeDPFailover(uri, querySelector, proxy, proxyIndex, attempts)
 			return res, err2
 		}
@@ -102,6 +102,7 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 	slog.Warn("ChromeDP Triggered for default crawler",
 		slog.String("URL", url), slog.String("Selector", selector),
 	)
+	time.Sleep(5 * time.Second)
 	var ctx context.Context
 	var cancel context.CancelFunc
 	if len(proxy) != 0 {

@@ -67,7 +67,7 @@ func GetEbayListings(Name string,
 	var listingArr []*types.EbayListing
 	var bidArr []*types.EbayBids
 	visited := false
-	c := initCrawler()
+	c := initCrawler(url)
 
 	if attempts == nil {
 		attempts = []*types.Attempt{}
@@ -298,8 +298,8 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 	var rawHTML string
 
 	err := chromedp.Run(ctx,
+		StealthActions(url),
 		chromedp.Navigate(url),
-		StealthActions(),
 		chromedp.Sleep(10*time.Second),
 		chromedp.FullScreenshot(&first, 70),
 		chromedp.Sleep(7*time.Second),
@@ -353,7 +353,7 @@ func ParseChromedpHTML(html string,
 		w.Write([]byte(html))
 	}))
 	defer ts.Close()
-	c := initCrawler()
+	c := initCrawler("")
 
 	var listingArr []*types.EbayListing
 	var bidArr []*types.EbayBids

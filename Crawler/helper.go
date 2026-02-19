@@ -2,9 +2,7 @@ package crawler
 
 import (
 	"context"
-	"crypto/tls"
 	"log/slog"
-	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -28,56 +26,50 @@ var (
 
 // initCrawler creates a colly collector with rate limiting and headers configured
 // to avoid detection. Uses a proxy by default.
-func initCrawler() *colly.Collector {
+func initCrawler(url string) *colly.Collector {
 	// --------------------------- initiaize scrapper headers and settings ------- //
 	var c *colly.Collector
 	c = colly.NewCollector(
 		colly.MaxDepth(1),
 		colly.AllowURLRevisit(),
 	)
+	c.SetRequestTimeout(60 * time.Second)
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*ebay.*",
 		Delay:       1 * time.Minute,
 		RandomDelay: 3 * time.Minute,
 	})
-
-	c.SetRequestTimeout(60 * time.Second)
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
 		Parallelism: 2,
 		Delay:       2 * time.Second,
 		RandomDelay: 1 * time.Second,
 	})
+
 	extensions.RandomUserAgent(c)
+	Host, Referer := FormatHostAndRefererUrls(url)
 	c.OnRequest(func(r *colly.Request) {
 		r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+		r.Headers.Set("Accept-Encoding", "gzip, deflate, br, zstd")
 		r.Headers.Set("Accept-Language", "en-US,en;q=0.9")
-		r.Headers.Set("DNT", "1")
 		r.Headers.Set("Connection", "keep-alive")
+		r.Headers.Set("Host", Host)
+		r.Headers.Set("Referer", Referer)
+		r.Headers.Set("DNT", "1")
 		r.Headers.Set("Upgrade-Insecure-Requests", "1")
 		r.Headers.Set("Sec-Fetch-Dest", "document")
 		r.Headers.Set("Sec-Fetch-Mode", "navigate")
-		r.Headers.Set("Sec-Fetch-Site", "cross-site")
-		r.Headers.Set("Referer", "https://www.google.com/")
-		r.Headers.Set("Accept-Encoding", "gzip, deflate, br")
+		r.Headers.Set("Sec-Fetch-Site", "same-origin")
 	})
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			ForceAttemptHTTP2:  false,
-			DisableCompression: false,
-			TLSNextProto:       map[string]func(string, *tls.Conn) http.RoundTripper{},
-		},
-		Timeout: 60 * time.Second,
-	}
-	c.SetClient(httpClient)
-	// c.OnRequest(func(r *colly.Request) {
-	// 	r.Headers.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-	// 	r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-	// 	r.Headers.Set("Accept-Language", "en-US,en;q=0.5")
-	// 	r.Headers.Set("Accept-Encoding", "gzip, deflate, br")
-	// 	r.Headers.Set("Connection", "keep-alive")
-	// 	r.Headers.Set("Upgrade-Insecure-Requests", "1")
-	// })
+	// httpClient := &http.Client{
+	// 	Transport: &http.Transport{
+	// 		ForceAttemptHTTP2:  false,
+	// 		DisableCompression: false,
+	// 		TLSNextProto:       map[string]func(string, *tls.Conn) http.RoundTripper{},
+	// 	},
+	// 	Timeout: 60 * time.Second,
+	// }
+	// c.SetClient(httpClient)
 	c.OnResponse(func(r *colly.Response) {
 		slog.Info("Response received", slog.Int("status", r.StatusCode))
 	})
@@ -127,14 +119,20 @@ func NewChromedpContext(timeout time.Duration, extraOpts ...chromedp.ExecAllocat
 // It masks the headless browser by setting typical browser properties.
 //
 // Returns a chromedp action that executes stealth JavaScript.
-func StealthActions() chromedp.Action {
+func StealthActions(url string) chromedp.Action {
+	_, Referer := FormatHostAndRefererUrls(url)
 	headers := network.Headers{
 		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-		"Accept-Language":           "en-US,en;q=0.5",
-		"Accept-Encoding":           "gzip, deflate",
+		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+		"Accept-Encoding":           "gzip, deflate, br, zstd",
+		"Accept-Language":           "en-US,en;q=0.9",
 		"Connection":                "keep-alive",
+		"Referer":                   Referer,
+		"DNT":                       "1",
 		"Upgrade-Insecure-Requests": "1",
+		"Sec-Fetch-Dest":            "document",
+		"Sec-Fetch-Mode":            "navigate",
+		"Sec-Fetch-Site":            "same-origin",
 	}
 	return chromedp.Tasks{
 		network.Enable(),
@@ -191,7 +189,7 @@ func StealthActions() chromedp.Action {
 //
 // Returns the image URL or an empty string if not found.
 func GetOpenGraphPic(url string) string {
-	c := initCrawler()
+	c := initCrawler(url)
 	visited := false
 	imgURL := ""
 	if strings.Contains(url, "amazon") {
@@ -236,7 +234,7 @@ func getAmazonImageChromedp(url string) string {
 	var imgURL string
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
-		StealthActions(),
+		StealthActions(url),
 		chromedp.Sleep(10*time.Second),
 		chromedp.Evaluate(`document.querySelector('button.a-button-text[alt="Continue shopping"]')?.click()`, nil),
 		chromedp.Sleep(2*time.Second),
@@ -260,6 +258,13 @@ func ExtractDomainName(url string) string {
 	// Split by . and get first part
 	parts := strings.Split(url, ".")
 	return parts[0]
+}
+
+func FormatHostAndRefererUrls(url string) (string, string) {
+	domain := ExtractDomainName(url)
+	Host := "www." + domain + ".com"
+	Referer := "https://" + Host
+	return Host, Referer
 }
 
 func formatPrice(priceStr string) (int, error) {

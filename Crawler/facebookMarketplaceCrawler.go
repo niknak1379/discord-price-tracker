@@ -199,8 +199,8 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	var HTMLContent string
 	var items []types.EbayListing
 	err := chromedp.Run(ctx,
+		StealthActions(url),
 		chromedp.Navigate(url),
-		StealthActions(),
 		chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
 		chromedp.FullScreenshot(&first, 70),
 		chromedp.OuterHTML("body", &HTMLContent),

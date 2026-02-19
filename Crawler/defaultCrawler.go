@@ -33,7 +33,7 @@ func GetPrice(uri string, querySelector string, proxy []string, attempts []*type
 	res := 0
 	crawled := false
 	slog.Info("logging url", slog.String("URI", uri))
-	c := initCrawler()
+	c := initCrawler(uri)
 	if attempts == nil {
 		attempts = []*types.Attempt{}
 	}
@@ -125,8 +125,8 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 	js := fmt.Sprintf(`document.querySelector("%s")?.innerText || ""`, selector)
 	if strings.Contains(url, "amazon") {
 		err = chromedp.Run(ctx,
+			StealthActions(url),
 			chromedp.Navigate(url),
-			StealthActions(),
 			chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
 			chromedp.FullScreenshot(&screenShot, 70),
 			chromedp.OuterHTML("body", &HTMLContent),
@@ -137,8 +137,8 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 		)
 	} else {
 		err = chromedp.Run(ctx,
+			StealthActions(url),
 			chromedp.Navigate(url),
-			StealthActions(),
 			chromedp.Sleep(time.Duration(rand.IntN(10)+30)*time.Second),
 			chromedp.FullScreenshot(&screenShot, 70),
 			chromedp.OuterHTML("body", &HTMLContent),

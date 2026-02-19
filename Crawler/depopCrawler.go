@@ -43,7 +43,7 @@ func CrawlDepop(Name string,
 	proxy []string,
 ) ([]*types.EbayListing, error) {
 	url := depopURLGenerator(Name, Price)
-	c := initCrawler()
+	c := initCrawler(url)
 
 	retArr := []*types.EbayListing{}
 	visited := false
@@ -125,7 +125,7 @@ func CrawlProductPage(productURL string,
 	proxy []string,
 ) (*types.EbayListing, []*types.Attempt, error) {
 	// Create NEW collector for product page
-	productCollector := initCrawler()
+	productCollector := initCrawler(productURL)
 	approved := false
 	visited := false
 	condition := ""

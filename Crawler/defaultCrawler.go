@@ -34,24 +34,14 @@ func GetPrice(uri string, querySelector string, proxy []string, attempts []*type
 	var err, priceErr error
 	var proxyIndex int
 	var collyHTML string
+	var c *colly.Collector
 	res := 0
 	crawled := false
 	slog.Info("logging url", slog.String("URI", uri))
-	var c *colly.Collector
 	if attempts == nil {
 		attempts = []*types.Attempt{}
 	}
-	if len(proxy) != 0 {
-		proxyIndex = rand.IntN(len(proxy))
-		c = initCrawler(uri, proxy[proxyIndex])
-		slog.Info("proxy set for default crawler",
-			slog.Any("proxyArr", proxy),
-			slog.String("proxy url", proxy[proxyIndex]),
-		)
-	} else {
-		c = initCrawler(uri, "")
-		slog.Info("proxy function set to nil")
-	}
+	c, proxyIndex = initCrawler(uri, &proxy)
 	c.OnHTML("body", func(h *colly.HTMLElement) {
 		collyHTML, _ = h.DOM.Html()
 	})
@@ -92,7 +82,7 @@ func DefaultParserCallback(c *colly.Collector, querySelector string, crawled *bo
 		if *crawled {
 			return
 		}
-		slog.Info("default crawler call back function being called")
+		slog.Info("HTML Parser being called")
 		*crawled = true
 		*price, *priceErr = formatPrice(h.Text)
 		c.OnHTMLDetach(querySelector)
@@ -109,7 +99,7 @@ func ParseDefaultChromedpHTML(html string,
 		w.Write([]byte(html))
 	}))
 	defer ts.Close()
-	c := initCrawler("", "")
+	c, _ := initCrawler("", &[]string{})
 	crawled := false
 	price := 0
 	var priceErr error
@@ -118,8 +108,8 @@ func ParseDefaultChromedpHTML(html string,
 	err := c.Visit(ts.URL)
 	c.Wait()
 	if !crawled && err == nil {
-		slog.Error("Error was nil, but ebay not visited")
-		err = errors.New("ebay page not visited")
+		slog.Error("Error was nil, but website not visited")
+		err = errors.New("website page not visited")
 	} else if priceErr != nil {
 		err = priceErr
 	}
@@ -137,7 +127,7 @@ func ParseDefaultChromedpHTML(html string,
 //
 // Returns the price and any error encountered.
 func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUsed int, attempts []*types.Attempt) (int, error) {
-	slog.Warn("ChromeDP Triggered for default crawler",
+	slog.Warn("ChromeDP and wget Triggered for default crawler",
 		slog.String("URL", url), slog.String("Selector", selector),
 	)
 	time.Sleep(5 * time.Second)

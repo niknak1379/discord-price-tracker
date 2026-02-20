@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -68,21 +67,10 @@ func GetEbayListings(Name string,
 	var bidArr []*types.EbayBids
 	visited := false
 	var c *colly.Collector
-
+	var proxyIndex int
+	c, proxyIndex = initCrawler(url, &proxy)
 	if attempts == nil {
 		attempts = []*types.Attempt{}
-	}
-	var proxyIndex int
-	if len(proxy) != 0 {
-		proxyIndex = rand.IntN(len(proxy))
-		c = initCrawler(url, proxy[proxyIndex])
-		slog.Info("proxy set for colly ebay crawler",
-			slog.Any("proxyArr", proxy),
-			slog.String("proxy url", proxy[proxyIndex]),
-		)
-	} else {
-		c = initCrawler(url, "")
-		slog.Info("proxy function set to nil for ebay colly")
 	}
 	EbayHTMLProcessorCallback(c, Name, desiredPrice, queries, &listingArr, &bidArr, &visited)
 	err := c.Visit(url)
@@ -355,7 +343,7 @@ func ParseChromedpHTML(html string,
 	}))
 	defer ts.Close()
 	var c *colly.Collector
-	c = initCrawler("", "")
+	c, _ = initCrawler("", &[]string{})
 
 	var listingArr []*types.EbayListing
 	var bidArr []*types.EbayBids

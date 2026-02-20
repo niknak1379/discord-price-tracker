@@ -30,7 +30,7 @@ var (
 
 // initCrawler creates a colly collector with rate limiting and headers configured
 // to avoid detection. Uses a proxy by default.
-func initCrawler(url, proxyURL string) *colly.Collector {
+func initCrawler(url string, proxy *[]string) (*colly.Collector, int) {
 	// --------------------------- initiaize scrapper headers and settings ------- //
 	var c *colly.Collector
 	c = colly.NewCollector(
@@ -64,6 +64,19 @@ func initCrawler(url, proxyURL string) *colly.Collector {
 		r.Headers.Set("Sec-Fetch-Mode", "navigate")
 		r.Headers.Set("Sec-Fetch-Site", "same-origin")
 	})
+	var proxyIndex int
+	var proxyURL string
+	if len(*proxy) != 0 {
+		proxyIndex = rand.IntN(len(*proxy))
+		proxyURL = (*proxy)[proxyIndex]
+		slog.Info("proxy set for crawler",
+			slog.Any("proxyArr", proxy),
+			slog.String("proxy url", (*proxy)[proxyIndex]),
+		)
+	} else {
+		proxyURL = ""
+		slog.Info("no proxy set, running on home IP")
+	}
 	httpClient := generateRandomClient(proxyURL)
 	c.SetClient(httpClient)
 	// httpClient := &http.Client{
@@ -82,7 +95,7 @@ func initCrawler(url, proxyURL string) *colly.Collector {
 	c.OnError(func(r *colly.Response, err error) {
 		slog.Error("Error", slog.Any("error", err))
 	})
-	return c
+	return c, proxyIndex
 }
 
 func InitAntiTLSClients() {
@@ -107,7 +120,22 @@ func InitAntiTLSClients() {
 			Android(). // Randomly selects Windows, macOS, Linux, Android, or iOS
 			Chrome()
 	}
-	HttpClients = append(HttpClients, &surfClient, &surfClient2, &surfClient3)
+	surfClient4 := func() *surf.Builder {
+		return surf.NewClient().
+			Builder().
+			Impersonate().
+			Windows(). // Randomly selects Windows, macOS, Linux, Android, or iOS
+			Firefox()
+	}
+	surfClient5 := func() *surf.Builder {
+		return surf.NewClient().
+			Builder().
+			Impersonate().
+			MacOS(). // Randomly selects Windows, macOS, Linux, Android, or iOS
+			Firefox()
+	}
+	HttpClients = append(HttpClients, &surfClient, &surfClient2, &surfClient3,
+		&surfClient4, &surfClient5)
 }
 
 func generateRandomClient(proxyURL string) *http.Client {
@@ -225,7 +253,7 @@ func StealthActions(url string) chromedp.Action {
 //
 // Returns the image URL or an empty string if not found.
 func GetOpenGraphPic(url string) string {
-	c := initCrawler(url, "")
+	c, _ := initCrawler(url, &[]string{})
 	visited := false
 	imgURL := ""
 	if strings.Contains(url, "amazon") {

@@ -44,23 +44,12 @@ func CrawlDepop(Name string,
 ) ([]*types.EbayListing, error) {
 	url := depopURLGenerator(Name, Price)
 	var c *colly.Collector
-
+	var proxyIndex int
+	c, proxyIndex = initCrawler(url, &proxy)
 	retArr := []*types.EbayListing{}
 	visited := false
 	if attempts == nil {
 		attempts = []*types.Attempt{}
-	}
-	var proxyIndex int
-	if len(proxy) != 0 {
-		proxyIndex = rand.IntN(len(proxy))
-		c = initCrawler(url, proxy[proxyIndex])
-		slog.Info("proxy set for default crawler",
-			slog.Any("proxyArr", proxy),
-			slog.String("proxy url", proxy[proxyIndex]),
-		)
-	} else {
-		c = initCrawler(url, "")
-		slog.Info("proxy function set to nil")
 	}
 	slog.Info("logging depop url", slog.String("Url", url))
 	c.OnHTML("ol[class^='styles_productGrid__'] li", func(e *colly.HTMLElement) {
@@ -131,17 +120,7 @@ func CrawlProductPage(productURL string,
 	visited := false
 	condition := ""
 	var proxyIndex int
-	if len(proxy) != 0 {
-		proxyIndex = rand.IntN(len(proxy))
-		productCollector = initCrawler(productURL, proxy[proxyIndex])
-		slog.Info("proxy set for default crawler",
-			slog.Any("proxyArr", proxy),
-			slog.String("proxy url", proxy[proxyIndex]),
-		)
-	} else {
-		productCollector = initCrawler(productURL, "")
-		slog.Info("proxy function set to nil")
-	}
+	productCollector, proxyIndex = initCrawler(productURL, &proxy)
 
 	// Handler for product page
 	r := rand.IntN(30)

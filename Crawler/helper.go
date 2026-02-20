@@ -3,6 +3,8 @@ package crawler
 import (
 	"context"
 	"log/slog"
+	"math/rand/v2"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -14,14 +16,15 @@ import (
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/dlclark/regexp2"
+	"github.com/enetx/surf"
 	"github.com/gocolly/colly/v2"
-	"github.com/gocolly/colly/v2/extensions"
 )
 
 // TaxRate is applied to prices to account for taxes (10% by default).
 var (
 	TaxRate        = 1.1
 	excludeRegexes []*regexp2.Regexp
+	HttpClients    []*http.Client
 )
 
 // initCrawler creates a colly collector with rate limiting and headers configured
@@ -46,7 +49,6 @@ func initCrawler(url string) *colly.Collector {
 		RandomDelay: 1 * time.Second,
 	})
 
-	extensions.RandomUserAgent(c)
 	Host, Referer := FormatHostAndRefererUrls(url)
 	c.OnRequest(func(r *colly.Request) {
 		r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
@@ -61,6 +63,8 @@ func initCrawler(url string) *colly.Collector {
 		r.Headers.Set("Sec-Fetch-Mode", "navigate")
 		r.Headers.Set("Sec-Fetch-Site", "same-origin")
 	})
+	httpClient := generateRandomClient()
+	c.SetClient(httpClient)
 	// httpClient := &http.Client{
 	// 	Transport: &http.Transport{
 	// 		ForceAttemptHTTP2:  false,
@@ -78,6 +82,39 @@ func initCrawler(url string) *colly.Collector {
 		slog.Error("Error", slog.Any("error", err))
 	})
 	return c
+}
+
+func InitAntiTLSClients() {
+	surfClient := surf.NewClient().
+		Builder().
+		Impersonate().
+		MacOS().  // Randomly selects Windows, macOS, Linux, Android, or iOS
+		Chrome(). // Latest Firefox v147
+		Build().
+		Unwrap().
+		Std()
+	surfClient2 := surf.NewClient().
+		Builder().
+		Impersonate().
+		Windows(). // Randomly selects Windows, macOS, Linux, Android, or iOS
+		Firefox(). // Latest Firefox v147
+		Build().
+		Unwrap().
+		Std()
+	surfClient3 := surf.NewClient().
+		Builder().
+		Impersonate().
+		Android(). // Randomly selects Windows, macOS, Linux, Android, or iOS
+		Chrome().
+		Build().
+		Unwrap().
+		Std()
+	HttpClients = []*http.Client{surfClient, surfClient2, surfClient3}
+}
+
+func generateRandomClient() *http.Client {
+	index := rand.IntN(len(HttpClients))
+	return HttpClients[index]
 }
 
 // NewChromedpContext creates a chromedp context with anti-detection settings configured.

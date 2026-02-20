@@ -144,6 +144,7 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 	if e == nil {
 		return res, e
 	}
+	time.Sleep(5 * time.Second)
 	var ctx context.Context
 	var cancel context.CancelFunc
 	if len(proxy) != 0 {

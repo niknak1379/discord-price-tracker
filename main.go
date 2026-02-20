@@ -29,6 +29,7 @@ func main() {
 	// 	}
 	// }()
 	godotenv.Load()
+	crawler.InitAntiTLSClients()
 	// amazonTest()
 	// ChromeDPFailoverTest()
 	// BestBuyTest()

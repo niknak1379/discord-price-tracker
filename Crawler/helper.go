@@ -25,7 +25,7 @@ import (
 var (
 	TaxRate        = 1.1
 	excludeRegexes []*regexp2.Regexp
-	HttpClients    []*surf.Builder
+	HttpClients    []*func() *surf.Builder
 )
 
 // initCrawler creates a colly collector with rate limiting and headers configured
@@ -86,27 +86,34 @@ func initCrawler(url, proxyURL string) *colly.Collector {
 }
 
 func InitAntiTLSClients() {
-	surfClient := surf.NewClient().
-		Builder().
-		Impersonate().
-		MacOS(). // Randomly selects Windows, macOS, Linux, Android, or iOS
-		Chrome() // Latest Firefox v147
-	surfClient2 := surf.NewClient().
-		Builder().
-		Impersonate().
-		Windows(). // Randomly selects Windows, macOS, Linux, Android, or iOS
-		Firefox()  // Latest Firefox v147
-	surfClient3 := surf.NewClient().
-		Builder().
-		Impersonate().
-		Android(). // Randomly selects Windows, macOS, Linux, Android, or iOS
-		Chrome()
-	HttpClients = []*surf.Builder{surfClient, surfClient2, surfClient3}
+	surfClient := func() *surf.Builder {
+		return surf.NewClient().
+			Builder().
+			Impersonate().
+			MacOS(). // Randomly selects Windows, macOS, Linux, Android, or iOS
+			Chrome() // Latest Firefox v147
+	}
+	surfClient2 := func() *surf.Builder {
+		return surf.NewClient().
+			Builder().
+			Impersonate().
+			Windows(). // Randomly selects Windows, macOS, Linux, Android, or iOS
+			Firefox()  // Latest Firefox v147
+	}
+	surfClient3 := func() *surf.Builder {
+		return surf.NewClient().
+			Builder().
+			Impersonate().
+			Android(). // Randomly selects Windows, macOS, Linux, Android, or iOS
+			Chrome()
+	}
+	HttpClients = append(HttpClients, &surfClient, &surfClient2, &surfClient3)
 }
 
 func generateRandomClient(proxyURL string) *http.Client {
 	index := rand.IntN(len(HttpClients))
-	return HttpClients[index].Proxy(g.String(proxyURL)).Build().Unwrap().Std()
+	ClientFunc := *HttpClients[index]
+	return ClientFunc().Proxy(g.String(proxyURL)).Build().Unwrap().Std()
 }
 
 // NewChromedpContext creates a chromedp context with anti-detection settings configured.

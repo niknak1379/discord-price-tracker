@@ -48,6 +48,13 @@ func TestBidProcessingFunction(t *testing.T) {
 			ExpectedBid:  12,
 			ExpectedTime: time.Time{}.Add(8*time.Second + 5*time.Minute),
 		},
+		{
+			Name:         "Bid String with day only",
+			TextInput:    "12 bids · Time left2d left (Today 02:30 PM)",
+			TimeInput:    time.Time{},
+			ExpectedBid:  12,
+			ExpectedTime: time.Time{}.Add(2 * 24 * time.Hour),
+		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.Name, func(t *testing.T) {

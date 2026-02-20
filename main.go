@@ -5,12 +5,15 @@ import (
 	"log/slog"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
+	"sync"
 
 	crawler "priceTracker/Crawler"
 	database "priceTracker/Database"
 	discord "priceTracker/Discord"
 	logger "priceTracker/Logger"
 	proxy "priceTracker/Proxy"
+	scheduler "priceTracker/Scheduler"
 
 	"github.com/joho/godotenv"
 )
@@ -28,8 +31,9 @@ func main() {
 	godotenv.Load()
 	// amazonTest()
 	// ChromeDPFailoverTest()
-	BestBuyTest()
+	// BestBuyTest()
 	// crawlerTest()
+	// WgetFailoverTest()
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
@@ -39,21 +43,21 @@ func main() {
 	// AlienwareMonitorTest()
 	// InchMeasurement()
 	// EbayFailoverTest()
-	// go scheduler.SetChannelScheduler(ctx)
-	// var wg sync.WaitGroup
-	// wg.Go(func() {
-	// 	discord.Run(ctx)
-	// })
-	//
-	// // make the program run unless sigINT is recieved
-	// stop := make(chan os.Signal, 1)
-	// signal.Notify(stop, os.Interrupt)
-	// slog.Info("Graceful Shutdown setup")
-	//
-	// <-stop
-	// slog.Info("Shutdown")
+	go scheduler.SetChannelScheduler(ctx)
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		discord.Run(ctx)
+	})
+
+	// make the program run unless sigINT is recieved
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	slog.Info("Graceful Shutdown setup")
+
+	<-stop
+	slog.Info("Shutdown")
 	cancel()
-	// wg.Wait()
+	wg.Wait()
 }
 
 func AlienwareMonitorTest() {
@@ -93,6 +97,20 @@ func ChromeDPFailoverTest() {
 		nil,
 	)
 	slog.Info("ChromeDPFailover result",
+		slog.Int("price", price),
+		slog.Any("error", err))
+}
+
+func WgetFailoverTest() {
+	slog.Info("=== Testing WgetFailover ===")
+	price, err := crawler.WgetFailover(
+		"https://www.bestbuy.com/product/alienware-aw3225qf-31-6-qd-oled-curved-4k-uhd-240hz-03-ms-g-sync-gaming-monitor-with-hdr-hdmi-usb-c-lunar-light/J3K4L62597",
+		"div[data-testid='price-block-customer-price']",
+		nil,
+		0,
+		nil,
+	)
+	slog.Info("WgetFailover result",
 		slog.Int("price", price),
 		slog.Any("error", err))
 }

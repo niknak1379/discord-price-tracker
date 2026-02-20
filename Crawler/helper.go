@@ -90,14 +90,14 @@ func initCrawler(url string) *colly.Collector {
 // Returns the context and cancel function.
 func NewChromedpContext(timeout time.Duration, extraOpts ...chromedp.ExecAllocatorOption) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		// emulation.SetUserAgentOverride("Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:101.0) Gecko/20100101 Firefox/101.0"),
 		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("disable-dev-shm-usage", true),
 		chromedp.Flag("log-level", "3"),
 		chromedp.Flag("blink-settings", "imagesEnabled=false"),
-		chromedp.Flag("disable-http2", true),
-		chromedp.Flag("disable-quic", true),
+		chromedp.Flag("headless", false),
 	)
 
 	opts = append(opts, extraOpts...)
@@ -233,8 +233,8 @@ func getAmazonImageChromedp(url string) string {
 
 	var imgURL string
 	err := chromedp.Run(ctx,
-		chromedp.Navigate(url),
 		StealthActions(url),
+		chromedp.Navigate(url),
 		chromedp.Sleep(10*time.Second),
 		chromedp.Evaluate(`document.querySelector('button.a-button-text[alt="Continue shopping"]')?.click()`, nil),
 		chromedp.Sleep(2*time.Second),

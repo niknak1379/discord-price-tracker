@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -139,6 +140,10 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 		slog.String("URL", url), slog.String("Selector", selector),
 	)
 	time.Sleep(5 * time.Second)
+	res, e := WgetFailover(url, selector, proxy, proxyIndexUsed, attempts)
+	if e == nil {
+		return res, e
+	}
 	var ctx context.Context
 	var cancel context.CancelFunc
 	if len(proxy) != 0 {
@@ -161,10 +166,10 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 		err = chromedp.Run(ctx,
 			StealthActions(url),
 			chromedp.Navigate(url),
-			chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
+			chromedp.Sleep(time.Duration(rand.IntN(5)+2)*time.Second),
 			chromedp.FullScreenshot(&screenShot, 70),
 			chromedp.Evaluate(`document.querySelector('button.a-button-text[alt="Continue shopping"]')?.click()`, nil),
-			chromedp.Sleep(5*time.Second),
+			chromedp.Sleep(15*time.Second),
 			chromedp.OuterHTML("body", &HTMLContent),
 		)
 	} else {
@@ -208,7 +213,7 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 		}
 	}
 
-	res, err := ParseDefaultChromedpHTML(HTMLContent, selector)
+	res, err = ParseDefaultChromedpHTML(HTMLContent, selector)
 	if err != nil {
 		slog.Info("ChromeDP found Selector", slog.Int("Found Price", res))
 		loggIncident(url, attempts, true)
@@ -218,5 +223,40 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 
 	}
 
+	return int(float64(res) * TaxRate), nil
+}
+
+func WgetFailover(url string, selector string, proxy []string, proxyIndexUsed int, attempts []*types.Attempt) (int, error) {
+	slog.Warn("WgetFailover triggered",
+		slog.String("URL", url),
+		slog.String("Selector", selector))
+
+	args := []string{
+		"--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+		"--header=Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"--header=Accept-Language: en-US,en;q=0.5",
+		"--header=Accept-Encoding: gzip, deflate",
+		"--header=Connection: keep-alive",
+		"--header=Upgrade-Insecure-Requests: 1",
+		"--compression=auto",
+		"-qO-",
+		url,
+	}
+	if len(proxy) != 0 {
+		args = append(args, "-e", "use_proxy=yes", "-e", "http_proxy="+proxy[proxyIndexUsed])
+	}
+	cmd := exec.Command("wget", args...)
+	html, err := cmd.CombinedOutput()
+	if err != nil {
+		slog.Error("wget failed", slog.Any("error", err), slog.String("output", string(html)))
+		return 0, fmt.Errorf("wget failed: %w, output: %s", err, string(html))
+	}
+	res, err := ParseDefaultChromedpHTML(string(html), selector)
+	if err != nil {
+		slog.Error("ParseDefaultChromedpHTML failed", slog.Any("error", err))
+		return 0, err
+	}
+
+	slog.Info("WgetFailover found price", slog.Int("price", res))
 	return int(float64(res) * TaxRate), nil
 }

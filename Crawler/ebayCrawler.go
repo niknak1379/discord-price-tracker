@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	Proxy "priceTracker/Proxy"
 	types "priceTracker/Types"
 
 	"github.com/chromedp/chromedp"
@@ -313,6 +314,10 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 		}
 	}
 	slog.Info("Ebay Failover returned Items, its fine for now")
+	if len(proxy) != 0 {
+		slog.Info("recording proxy successs in chromedp ebay")
+		Proxy.ProxySuccessChannel <- proxy[proxyIndexUsed]
+	}
 
 	loggIncident(url, attempts, true)
 	return retListingArr, retBidArr, err

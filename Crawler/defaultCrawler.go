@@ -200,6 +200,7 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 		slog.Info("ChromeDP found Selector", slog.Int("Found Price", res))
 		loggIncident(url, attempts, true)
 		if len(proxy) != 0 {
+			slog.Info("recording proxy success in chromdp")
 			Proxy.ProxySuccessChannel <- proxy[proxyIndexUsed]
 		}
 	} else {

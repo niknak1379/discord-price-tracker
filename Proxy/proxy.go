@@ -73,7 +73,7 @@ func StartProxyCounter(done <-chan struct{}) {
 					}
 				}
 			case ProxyURL := <-ProxySuccessChannel:
-				slog.Info("recieved success from proxy",
+				slog.Info("recieved success from proxy success channel",
 					slog.String("proxy", ProxyURL),
 				)
 				ProxySuccessCounterMap[ProxyURL]++

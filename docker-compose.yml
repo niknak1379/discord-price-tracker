@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     environment:
-      - PROXY_URL_LIST=gluetun,gluetun2
+      - PROXY_URL_LIST=gluetun,gluetun2,gluetun3
       - APPLICATION_ID=${APPLICATION_ID}
       - PUBLIC_KEY=${PUBLIC_KEY}
       - MONGODB_URI=${MONGODB_URI}
@@ -20,22 +20,16 @@ services:
     depends_on:
       - gluetun
       - gluetun2
+      - gluetun3
     volumes:
       - log-data:/app/logs
-
   gluetun:
     image: qmcgaw/gluetun
-    # container_name: gluetun
-    # line above must be uncommented to allow external containers to connect.
-    # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/connect-a-container-to-gluetun.md#external-container-to-gluetun
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
-    # ports:
-    #   - 8888:8888/tcp # HTTP proxy
-    #   - 8000:8000/tcp # Control server
     volumes:
       - gluetun-data:/gluetun
     environment:
@@ -43,8 +37,6 @@ services:
       - VPN_SERVICE_PROVIDER=protonvpn
       - VPN_TYPE=openvpn
       - OPENVPN_PROTOCOL=tcp
-      # - WIREGUARD_PRIVATE_KEY=SK7sYYNKH1sCevlEzFkz2gvmcAd3O/yiH0Y8c+wt8mM=
-      # OpenVPN:
       - OPENVPN_USER=${OPENVPN_USER}
       - OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
       - FREE_ONLY=on
@@ -53,7 +45,6 @@ services:
       - UPDATER_PERIOD=12h
       - HTTPPROXY_STEALTH=on
       - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"none"}
-
   gluetun2:
     image: qmcgaw/gluetun
     restart: unless-stopped
@@ -69,7 +60,21 @@ services:
       - SERVER_COUNTRIES=USA
       - HTTPPROXY=on
       - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"none"}
-
+  gluetun3:
+    image: qmcgaw/gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=mullvad
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
+      - SERVER_COUNTRIES=USA
+      - HTTPPROXY=on
+      - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"none"}
 volumes:
   log-data:
   gluetun-data:

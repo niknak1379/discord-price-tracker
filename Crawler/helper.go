@@ -152,7 +152,7 @@ func generateRandomClient(proxyURL string) *http.Client {
 //   - extraOpts: optional additional chromedp options
 //
 // Returns the context and cancel function.
-func NewChromedpContext(timeout time.Duration, extraOpts ...chromedp.ExecAllocatorOption) (context.Context, context.CancelFunc) {
+func NewChromedpContext(timeout time.Duration, proxy *[]string, proxyIndex int) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		// emulation.SetUserAgentOverride("Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:101.0) Gecko/20100101 Firefox/101.0"),
 		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
@@ -164,8 +164,17 @@ func NewChromedpContext(timeout time.Duration, extraOpts ...chromedp.ExecAllocat
 		chromedp.Flag("headless", false),
 	)
 
-	opts = append(opts, extraOpts...)
-
+	var proxyURL string
+	if len(*proxy) != 0 {
+		proxyURL = (*proxy)[proxyIndex]
+		opts = append(opts, chromedp.ProxyServer(proxyURL))
+		slog.Info("proxy set for crawler",
+			slog.Any("proxyArr", proxy),
+			slog.String("proxy url", (*proxy)[proxyIndex]),
+		)
+	} else {
+		slog.Info("no proxy set, running on home IP")
+	}
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	ctx, ctxCancel := chromedp.NewContext(allocCtx)
 	ctx, timeoutCancel := context.WithTimeout(ctx, timeout)
@@ -292,7 +301,7 @@ func GetOpenGraphPic(url string) string {
 func getAmazonImageChromedp(url string) string {
 	var ctx context.Context
 	var cancel context.CancelFunc
-	ctx, cancel = NewChromedpContext(90 * time.Second)
+	ctx, cancel = NewChromedpContext(90*time.Second, &[]string{}, 0)
 	defer cancel()
 
 	var imgURL string

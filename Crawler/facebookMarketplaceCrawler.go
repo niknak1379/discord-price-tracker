@@ -179,17 +179,8 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	var proxyIndexUsed int
 	if len(proxy) != 0 {
 		proxyIndexUsed = rand.IntN(len(proxy))
-		proxyURL := proxy[proxyIndexUsed]
-		ctx, cancel = NewChromedpContext(90*time.Second,
-			chromedp.ProxyServer(proxyURL),
-		)
-		slog.Info("proxy set for ebay chromeDP",
-			slog.String("proxy url", proxy[proxyIndexUsed]),
-		)
-	} else {
-		slog.Info("proxy set to nil for ebay chromeDP")
-		ctx, cancel = NewChromedpContext(90 * time.Second)
 	}
+	ctx, cancel = NewChromedpContext(90, &proxy, proxyIndexUsed)
 	if attempts == nil {
 		attempts = []*types.Attempt{}
 	}

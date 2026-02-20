@@ -138,18 +138,7 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 	time.Sleep(5 * time.Second)
 	var ctx context.Context
 	var cancel context.CancelFunc
-	if len(proxy) != 0 {
-		proxyURL := proxy[proxyIndexUsed]
-		ctx, cancel = NewChromedpContext(90*time.Second,
-			chromedp.ProxyServer(proxyURL),
-		)
-		slog.Info("proxy set for default chromeDP",
-			slog.String("proxy url", proxy[proxyIndexUsed]),
-		)
-	} else {
-		slog.Info("proxy set to nil for chromeDP")
-		ctx, cancel = NewChromedpContext(90 * time.Second)
-	}
+	ctx, cancel = NewChromedpContext(90, &proxy, proxyIndexUsed)
 
 	var screenShot []byte
 	var HTMLContent string

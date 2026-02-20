@@ -269,19 +269,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 	slog.Info("chromedp failover for ebay", slog.String("URL", url))
 	var ctx context.Context
 	var cancel context.CancelFunc
-	if len(proxy) != 0 {
-		proxyURL := proxy[proxyIndexUsed]
-		ctx, cancel = NewChromedpContext(90*time.Second,
-			chromedp.ProxyServer(proxyURL),
-		)
-		slog.Info("proxy set for ebay chromeDP",
-			slog.String("proxy url", proxy[proxyIndexUsed]),
-		)
-	} else {
-		slog.Info("proxy set to nil for ebay chromeDP")
-		ctx, cancel = NewChromedpContext(90 * time.Second)
-	}
-
+	ctx, cancel = NewChromedpContext(90, &proxy, proxyIndexUsed)
 	var first []byte
 	var second []byte
 	var rawHTML string

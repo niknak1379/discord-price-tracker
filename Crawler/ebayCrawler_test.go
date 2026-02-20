@@ -3,6 +3,8 @@ package crawler
 import (
 	"testing"
 	"time"
+
+	types "priceTracker/Types"
 )
 
 func TestBidProcessingFunction(t *testing.T) {
@@ -64,6 +66,29 @@ func TestBidProcessingFunction(t *testing.T) {
 			}
 			if resTime != testCase.ExpectedTime {
 				t.Errorf("Expected time: %v, returned time %v", testCase.ExpectedTime, resTime)
+			}
+		})
+	}
+}
+
+func testHTMLProcessingFunction(t *testing.T) {
+	tests := []struct {
+		Name            string
+		AdditionalNames []string
+		ExclusionNames  []string
+		DesiredPrice    int
+		HTMLInput       string
+		ExpectedListing []*types.EbayListing
+	}{}
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			queries := InitTitleRegex(test.AdditionalNames,
+				test.ExclusionNames,
+			)
+			listings, _, err := ParseChromedpHTML(test.HTMLInput,
+				test.DesiredPrice, test.Name, *queries)
+			if err != nil {
+				t.Errorf("Did not expect Error, recieved: %v", err)
 			}
 		})
 	}

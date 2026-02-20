@@ -11,6 +11,7 @@ import (
 	"time"
 
 	logger "priceTracker/Logger"
+	Proxy "priceTracker/Proxy"
 	types "priceTracker/Types"
 
 	"github.com/chromedp/cdproto/network"
@@ -90,6 +91,9 @@ func initCrawler(url string, proxy *[]string) (*colly.Collector, int) {
 	// c.SetClient(httpClient)
 	c.OnResponse(func(r *colly.Response) {
 		slog.Info("Response received", slog.Int("status", r.StatusCode))
+		if r.StatusCode == 200 && len(*proxy) != 0 {
+			Proxy.ProxySuccessChannel <- proxyURL
+		}
 	})
 
 	c.OnError(func(r *colly.Response, err error) {

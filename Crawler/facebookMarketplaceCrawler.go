@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	Proxy "priceTracker/Proxy"
 	types "priceTracker/Types"
 
 	"github.com/chromedp/chromedp"
@@ -214,7 +215,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 
 	cancel()
 	var retArr []*types.EbayListing
-	if len(items) == 0 {
+	if len(items) == 0 || err != nil {
 		if len(proxy) != 0 {
 			fileErr1 := os.WriteFile("logs/proxyFacebookFirst.png", first, 0o644)
 			fileErr2 := os.WriteFile("logs/proxyFacebookSecond.png", second, 0o644)
@@ -274,6 +275,9 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	}
 	if len(attempts) != 0 {
 		loggIncident(url, attempts, true)
+	}
+	if len(proxy) != 0 {
+		Proxy.ProxySuccessChannel <- proxy[proxyIndexUsed]
 	}
 	return retArr, err
 }

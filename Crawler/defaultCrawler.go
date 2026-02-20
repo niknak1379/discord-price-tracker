@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	Proxy "priceTracker/Proxy"
 	types "priceTracker/Types"
 
 	"github.com/chromedp/chromedp"
@@ -198,6 +199,9 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 	if err != nil {
 		slog.Info("ChromeDP found Selector", slog.Int("Found Price", res))
 		loggIncident(url, attempts, true)
+		if len(proxy) != 0 {
+			Proxy.ProxySuccessChannel <- proxy[proxyIndexUsed]
+		}
 	} else {
 		slog.Error("ChromeDP failed")
 		loggIncident(url, attempts, false)

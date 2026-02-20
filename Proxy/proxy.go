@@ -13,10 +13,13 @@ import (
 )
 
 var (
-	RestartThreshold        = 5
+	FailureRestartThreshold = 5
+	SuccessRestartThreshold = 15
 	ProxyList               []string
 	ProxyIncidentCounterMap map[string]int
 	ProxyCounterChannel     chan []*types.Attempt
+	ProxySuccessChannel     chan string
+	ProxySuccessCounterMap  map[string]int
 )
 
 func Init() {
@@ -41,8 +44,10 @@ func Init() {
 		)
 	}
 	ProxyIncidentCounterMap = make(map[string]int)
+	ProxySuccessCounterMap = make(map[string]int)
 	for _, proxyURL := range ProxyList {
 		ProxyIncidentCounterMap[proxyURL] = 0
+		ProxySuccessCounterMap[proxyURL] = 0
 	}
 }
 
@@ -62,10 +67,20 @@ func StartProxyCounter(done <-chan struct{}) {
 						slog.Info("chromeDP attempt Found, incrementing counter")
 						ProxyIncidentCounterMap[AttemptArr[i].Proxy]++
 					}
-					if ProxyIncidentCounterMap[AttemptArr[i].Proxy] >= RestartThreshold {
+					if ProxyIncidentCounterMap[AttemptArr[i].Proxy] >= FailureRestartThreshold {
 						RestartGluetun(AttemptArr[i].Proxy)
 						ProxyIncidentCounterMap[AttemptArr[i].Proxy] = 0
 					}
+				}
+			case ProxyURL := <-ProxySuccessChannel:
+				slog.Info("recieved success from proxy",
+					slog.String("proxy", ProxyURL),
+				)
+				ProxySuccessCounterMap[ProxyURL]++
+				if ProxySuccessCounterMap[ProxyURL] >= SuccessRestartThreshold {
+					slog.Info("reiched Success counter threshold, restarting proxy")
+					RestartGluetun(ProxyURL)
+					ProxySuccessCounterMap[ProxyURL] = 0
 				}
 			case <-done:
 				return

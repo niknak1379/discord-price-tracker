@@ -7,6 +7,7 @@ require (
 	github.com/chromedp/cdproto v0.0.0-20250803210736-d308e07a266d
 	github.com/chromedp/chromedp v0.14.2
 	github.com/dlclark/regexp2 v1.11.5
+	github.com/enetx/g v1.0.214
 	github.com/enetx/surf v1.0.193
 	github.com/go-echarts/go-echarts/v2 v2.6.7
 	github.com/go-echarts/snapshot-chromedp v0.0.5
@@ -26,7 +27,6 @@ require (
 	github.com/antchfx/xpath v1.3.5 // indirect
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
-	github.com/enetx/g v1.0.214 // indirect
 	github.com/enetx/http v1.0.28 // indirect
 	github.com/enetx/http2 v1.0.26 // indirect
 	github.com/enetx/http3 v1.0.7 // indirect

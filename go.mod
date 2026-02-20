@@ -4,13 +4,16 @@ go 1.25.5
 
 require (
 	github.com/bwmarrin/discordgo v0.29.0
+	github.com/chromedp/cdproto v0.0.0-20250803210736-d308e07a266d
 	github.com/chromedp/chromedp v0.14.2
 	github.com/dlclark/regexp2 v1.11.5
+	github.com/enetx/surf v1.0.193
 	github.com/go-echarts/go-echarts/v2 v2.6.7
 	github.com/go-echarts/snapshot-chromedp v0.0.5
 	github.com/gocolly/colly/v2 v2.3.0
 	github.com/jedib0t/go-pretty/v6 v6.7.8
 	github.com/joho/godotenv v1.5.1
+	github.com/lithammer/fuzzysearch v1.1.8
 	go.mongodb.org/mongo-driver/v2 v2.4.1
 )
 
@@ -22,14 +25,12 @@ require (
 	github.com/antchfx/xmlquery v1.5.0 // indirect
 	github.com/antchfx/xpath v1.3.5 // indirect
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
-	github.com/chromedp/cdproto v0.0.0-20250803210736-d308e07a266d // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/enetx/g v1.0.214 // indirect
 	github.com/enetx/http v1.0.28 // indirect
 	github.com/enetx/http2 v1.0.26 // indirect
 	github.com/enetx/http3 v1.0.7 // indirect
 	github.com/enetx/iter v0.0.0-20250912135656-f1583323588f // indirect
-	github.com/enetx/surf v1.0.193 // indirect
 	github.com/enetx/utls v0.0.0-20260115181616-c525a7d559c8 // indirect
 	github.com/go-json-experiment/json v0.0.0-20251027170946-4849db3c2f7e // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
@@ -42,7 +43,6 @@ require (
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/klauspost/compress v1.18.4 // indirect
-	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/nlnwa/whatwg-url v0.6.2 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect

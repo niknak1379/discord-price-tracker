@@ -361,7 +361,7 @@ func ParseChromedpHTML(html string,
 	EbayHTMLProcessorCallback(c, itemName, desiredPrice, &queries, &listingArr, &bidArr, &visited)
 	err := c.Visit(ts.URL)
 	c.Wait()
-	if !visited && err != nil {
+	if !visited && err == nil {
 		slog.Error("Error was nil, but ebay not visited")
 		err = errors.New("ebay page not visited")
 	}

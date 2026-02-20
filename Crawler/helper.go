@@ -16,6 +16,7 @@ import (
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/dlclark/regexp2"
+	"github.com/enetx/g"
 	"github.com/enetx/surf"
 	"github.com/gocolly/colly/v2"
 )
@@ -24,12 +25,12 @@ import (
 var (
 	TaxRate        = 1.1
 	excludeRegexes []*regexp2.Regexp
-	HttpClients    []*http.Client
+	HttpClients    []*surf.Builder
 )
 
 // initCrawler creates a colly collector with rate limiting and headers configured
 // to avoid detection. Uses a proxy by default.
-func initCrawler(url string) *colly.Collector {
+func initCrawler(url, proxyURL string) *colly.Collector {
 	// --------------------------- initiaize scrapper headers and settings ------- //
 	var c *colly.Collector
 	c = colly.NewCollector(
@@ -63,7 +64,7 @@ func initCrawler(url string) *colly.Collector {
 		r.Headers.Set("Sec-Fetch-Mode", "navigate")
 		r.Headers.Set("Sec-Fetch-Site", "same-origin")
 	})
-	httpClient := generateRandomClient()
+	httpClient := generateRandomClient(proxyURL)
 	c.SetClient(httpClient)
 	// httpClient := &http.Client{
 	// 	Transport: &http.Transport{
@@ -88,33 +89,24 @@ func InitAntiTLSClients() {
 	surfClient := surf.NewClient().
 		Builder().
 		Impersonate().
-		MacOS().  // Randomly selects Windows, macOS, Linux, Android, or iOS
-		Chrome(). // Latest Firefox v147
-		Build().
-		Unwrap().
-		Std()
+		MacOS(). // Randomly selects Windows, macOS, Linux, Android, or iOS
+		Chrome() // Latest Firefox v147
 	surfClient2 := surf.NewClient().
 		Builder().
 		Impersonate().
 		Windows(). // Randomly selects Windows, macOS, Linux, Android, or iOS
-		Firefox(). // Latest Firefox v147
-		Build().
-		Unwrap().
-		Std()
+		Firefox()  // Latest Firefox v147
 	surfClient3 := surf.NewClient().
 		Builder().
 		Impersonate().
 		Android(). // Randomly selects Windows, macOS, Linux, Android, or iOS
-		Chrome().
-		Build().
-		Unwrap().
-		Std()
-	HttpClients = []*http.Client{surfClient, surfClient2, surfClient3}
+		Chrome()
+	HttpClients = []*surf.Builder{surfClient, surfClient2, surfClient3}
 }
 
-func generateRandomClient() *http.Client {
+func generateRandomClient(proxyURL string) *http.Client {
 	index := rand.IntN(len(HttpClients))
-	return HttpClients[index]
+	return HttpClients[index].Proxy(g.String(proxyURL)).Build().Unwrap().Std()
 }
 
 // NewChromedpContext creates a chromedp context with anti-detection settings configured.
@@ -226,7 +218,7 @@ func StealthActions(url string) chromedp.Action {
 //
 // Returns the image URL or an empty string if not found.
 func GetOpenGraphPic(url string) string {
-	c := initCrawler(url)
+	c := initCrawler(url, "")
 	visited := false
 	imgURL := ""
 	if strings.Contains(url, "amazon") {

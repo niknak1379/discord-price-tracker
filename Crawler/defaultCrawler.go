@@ -37,18 +37,19 @@ func GetPrice(uri string, querySelector string, proxy []string, attempts []*type
 	res := 0
 	crawled := false
 	slog.Info("logging url", slog.String("URI", uri))
-	c := initCrawler(uri)
+	var c *colly.Collector
 	if attempts == nil {
 		attempts = []*types.Attempt{}
 	}
 	if len(proxy) != 0 {
 		proxyIndex = rand.IntN(len(proxy))
-		c.SetProxy(proxy[proxyIndex])
+		c = initCrawler(uri, proxy[proxyIndex])
 		slog.Info("proxy set for default crawler",
 			slog.Any("proxyArr", proxy),
 			slog.String("proxy url", proxy[proxyIndex]),
 		)
 	} else {
+		c = initCrawler(uri, "")
 		slog.Info("proxy function set to nil")
 	}
 	c.OnHTML("body", func(h *colly.HTMLElement) {
@@ -108,7 +109,7 @@ func ParseDefaultChromedpHTML(html string,
 		w.Write([]byte(html))
 	}))
 	defer ts.Close()
-	c := initCrawler("")
+	c := initCrawler("", "")
 	crawled := false
 	price := 0
 	var priceErr error

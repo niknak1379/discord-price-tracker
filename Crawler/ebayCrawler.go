@@ -67,7 +67,7 @@ func GetEbayListings(Name string,
 	var listingArr []*types.EbayListing
 	var bidArr []*types.EbayBids
 	visited := false
-	c := initCrawler(url)
+	var c *colly.Collector
 
 	if attempts == nil {
 		attempts = []*types.Attempt{}
@@ -75,12 +75,13 @@ func GetEbayListings(Name string,
 	var proxyIndex int
 	if len(proxy) != 0 {
 		proxyIndex = rand.IntN(len(proxy))
-		c.SetProxy(proxy[proxyIndex])
+		c = initCrawler(url, proxy[proxyIndex])
 		slog.Info("proxy set for colly ebay crawler",
 			slog.Any("proxyArr", proxy),
 			slog.String("proxy url", proxy[proxyIndex]),
 		)
 	} else {
+		c = initCrawler(url, "")
 		slog.Info("proxy function set to nil for ebay colly")
 	}
 	EbayHTMLProcessorCallback(c, Name, desiredPrice, queries, &listingArr, &bidArr, &visited)
@@ -353,7 +354,8 @@ func ParseChromedpHTML(html string,
 		w.Write([]byte(html))
 	}))
 	defer ts.Close()
-	c := initCrawler("")
+	var c *colly.Collector
+	c = initCrawler("", "")
 
 	var listingArr []*types.EbayListing
 	var bidArr []*types.EbayBids

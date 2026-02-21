@@ -698,10 +698,11 @@ func GetAllItems(ChannelID string, exludedFields []string) []*Item {
 		return []*Item{}
 	}
 	projection := bson.D{}
+	sort := bson.D{{Key: "Name", Value: 1}}
 	for _, field := range exludedFields {
 		projection = append(projection, bson.E{Key: field, Value: 0})
 	}
-	opts := options.Find().SetProjection(projection)
+	opts := options.Find().SetProjection(projection).SetSort(sort)
 	cursor, err := Table.Find(ctx, bson.M{}, opts)
 	if err != nil {
 		panic(err)

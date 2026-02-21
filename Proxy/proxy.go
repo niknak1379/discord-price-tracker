@@ -54,6 +54,7 @@ func Init() {
 func StartProxyCounter(done <-chan struct{}) {
 	slog.Info("starting proxy counter")
 	ProxyCounterChannel = make(chan []*types.Attempt, 100)
+	ProxySuccessChannel = make(chan string, 100)
 	go func() {
 		for {
 			select {

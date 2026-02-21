@@ -111,13 +111,14 @@ func EbayHTMLProcessorCallback(c *colly.Collector,
 	c.OnHTML("ul.srp-results > li", func(e *colly.HTMLElement) {
 		*visited = true
 		title := e.ChildText(".s-card__title span.primary")
+		title = strings.ReplaceAll(strings.ReplaceAll(title, "\t", ""), "\n", "")
 
 		// check to see if listing is viable
 		if !titleCorrectnessCheck(title, queries) {
 			slog.Info("skipping title criteria not met", slog.String("Title", title))
 			return
 		}
-		condition := e.ChildText("div.s-card__subtitle:last-child")
+		condition := e.ChildText("div.s-card__subtitle-row:last-child")
 		// checks wether element is a bid or not
 		isBid := false
 		e.ForEachWithBreak("div.s-card__attribute-row", func(i int, child *colly.HTMLElement) bool {

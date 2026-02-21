@@ -5,17 +5,18 @@ package types
 import "time"
 
 type EbayListing struct {
-	ItemName         string        `bson:"ItemName"`
-	Price            int           `bson:"Price"`
-	URL              string        `bson:"URL"`
-	Duration         time.Duration `bson:"Duration"`
-	Title            string        `bson:"Title"`
-	Condition        string        `bson:"Condition"`
-	Date             time.Time     `bson:"Date"`
-	PriceIncreaseNum int           `bson:"PriceIncreaseNum"`
-	PriceDecreaseNum int           `bson:"PriceDecreaseNum"`
-	TotalPriceChange int           `bson:"TotalPriceChange"`
-	AcceptsOffers    bool          `bson:"AcceptsOffers"`
+	ItemName  string        `bson:"ItemName"`
+	Price     int           `bson:"Price"`
+	URL       string        `bson:"URL"`
+	Duration  time.Duration `bson:"Duration"`
+	Title     string        `bson:"Title"`
+	Condition string        `bson:"Condition"`
+	// up time, bad name for the filed but i already ran it
+	Date             time.Time `bson:"Date"`
+	PriceIncreaseNum int       `bson:"PriceIncreaseNum"`
+	PriceDecreaseNum int       `bson:"PriceDecreaseNum"`
+	TotalPriceChange int       `bson:"TotalPriceChange"`
+	AcceptsOffers    bool      `bson:"AcceptsOffers"`
 }
 type EbayBids struct {
 	ItemName  string    `bson:"ItemName"`

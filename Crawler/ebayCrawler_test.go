@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -71,25 +72,144 @@ func TestBidProcessingFunction(t *testing.T) {
 	}
 }
 
-func testHTMLProcessingFunction(t *testing.T) {
+func TestHTMLProcessingFunction(t *testing.T) {
 	tests := []struct {
 		Name            string
 		AdditionalNames []string
 		ExclusionNames  []string
 		DesiredPrice    int
-		HTMLInput       string
+		HTMLFilePath    string
 		ExpectedListing []*types.EbayListing
-	}{}
+		ExpectedBids    []*types.EbayBids
+	}{{
+		Name:            "Samsung odyssey G80sd",
+		AdditionalNames: []string{},
+		ExclusionNames:  []string{},
+		DesiredPrice:    1000,
+		HTMLFilePath:    "testdata/listingTest1",
+		ExpectedListing: []*types.EbayListing{
+			{
+				ItemName:      "Samsung odyssey G80sd",
+				Title:         "SAMSUNG 32\" Odyssey G80SD 4K UHD Smart Gaming MonitorLS32D802UANXGO",
+				Price:         302,
+				URL:           "https://www.ebay.com/itm/277491998203",
+				Condition:     "Pre-Owned",
+				AcceptsOffers: true,
+			},
+		},
+		ExpectedBids: []*types.EbayBids{},
+	}}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			queries := InitTitleRegex(test.AdditionalNames,
-				test.ExclusionNames,
+			InitAntiTLSClients()
+			queries := InitTitleRegex(append(test.AdditionalNames,
+				test.Name), test.ExclusionNames,
 			)
-			listings, _, err := ParseChromedpHTML(test.HTMLInput,
+			HTMLInput := loadTestFile(t, test.HTMLFilePath)
+			listings, bids, err := ParseChromedpHTML(HTMLInput,
 				test.DesiredPrice, test.Name, *queries)
 			if err != nil {
 				t.Errorf("Did not expect Error, recieved: %v", err)
 			}
+			if len(listings) != len(test.ExpectedListing) {
+				t.Errorf("Listing count mismatch: expected %d, got %d",
+					len(test.ExpectedListing), len(listings))
+				return
+			}
+			for i := range listings {
+				compareEbayListings(t, i, test.ExpectedListing[i], listings[i])
+			}
+			if len(bids) != len(test.ExpectedBids) {
+				t.Errorf("Bids count mismatch: expected %d, got %d",
+					len(test.ExpectedBids), len(bids))
+				return
+			}
+			for i := range bids {
+				compareEbayBids(t, i, test.ExpectedBids[i], bids[i])
+			}
 		})
+	}
+}
+
+func loadTestFile(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("Failed to load fixture: %v", err)
+	}
+	return string(data)
+}
+
+func compareEbayListings(t *testing.T, index int, expected, actual *types.EbayListing) {
+	if expected.ItemName != actual.ItemName {
+		t.Errorf("Listing[%d].ItemName mismatch: expected=%q, got=%q",
+			index, expected.ItemName, actual.ItemName)
+	}
+	if expected.Price != actual.Price {
+		t.Errorf("Listing[%d].Price mismatch: expected=%d, got=%d",
+			index, expected.Price, actual.Price)
+	}
+	if expected.URL != actual.URL {
+		t.Errorf("Listing[%d].URL mismatch: expected=%q, got=%q",
+			index, expected.URL, actual.URL)
+	}
+	if expected.Duration != actual.Duration {
+		t.Errorf("Listing[%d].Duration mismatch: expected=%v, got=%v",
+			index, expected.Duration, actual.Duration)
+	}
+	if expected.Title != actual.Title {
+		t.Errorf("Listing[%d].Title mismatch: expected=%q, got=%q",
+			index, expected.Title, actual.Title)
+	}
+	if expected.Condition != actual.Condition {
+		t.Errorf("Listing[%d].Condition mismatch: expected=%q, got=%q",
+			index, expected.Condition, actual.Condition)
+	}
+	if expected.PriceIncreaseNum != actual.PriceIncreaseNum {
+		t.Errorf("Listing[%d].PriceIncreaseNum mismatch: expected=%d, got=%d",
+			index, expected.PriceIncreaseNum, actual.PriceIncreaseNum)
+	}
+	if expected.PriceDecreaseNum != actual.PriceDecreaseNum {
+		t.Errorf("Listing[%d].PriceDecreaseNum mismatch: expected=%d, got=%d",
+			index, expected.PriceDecreaseNum, actual.PriceDecreaseNum)
+	}
+	if expected.TotalPriceChange != actual.TotalPriceChange {
+		t.Errorf("Listing[%d].TotalPriceChange mismatch: expected=%d, got=%d",
+			index, expected.TotalPriceChange, actual.TotalPriceChange)
+	}
+	if expected.AcceptsOffers != actual.AcceptsOffers {
+		t.Errorf("Listing[%d].AcceptsOffers mismatch: expected=%v, got=%v",
+			index, expected.AcceptsOffers, actual.AcceptsOffers)
+	}
+}
+
+func compareEbayBids(t *testing.T, index int, expected, actual *types.EbayBids) {
+	if expected.ItemName != actual.ItemName {
+		t.Errorf("Bid[%d].ItemName mismatch: expected=%q, got=%q",
+			index, expected.ItemName, actual.ItemName)
+	}
+	if expected.Title != actual.Title {
+		t.Errorf("Bid[%d].Title mismatch: expected=%q, got=%q",
+			index, expected.Title, actual.Title)
+	}
+	if expected.Condition != actual.Condition {
+		t.Errorf("Bid[%d].Condition mismatch: expected=%q, got=%q",
+			index, expected.Condition, actual.Condition)
+	}
+	if expected.Price != actual.Price {
+		t.Errorf("Bid[%d].Price mismatch: expected=%d, got=%d",
+			index, expected.Price, actual.Price)
+	}
+	if expected.URL != actual.URL {
+		t.Errorf("Bid[%d].URL mismatch: expected=%q, got=%q",
+			index, expected.URL, actual.URL)
+	}
+	if expected.Bids != actual.Bids {
+		t.Errorf("Bid[%d].Bids mismatch: expected=%d, got=%d",
+			index, expected.Bids, actual.Bids)
+	}
+	if !expected.EndDate.Equal(actual.EndDate) {
+		t.Errorf("Bid[%d].EndDate mismatch: expected=%v, got=%v",
+			index, expected.EndDate, actual.EndDate)
 	}
 }

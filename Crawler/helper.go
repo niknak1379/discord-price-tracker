@@ -67,7 +67,7 @@ func initCrawler(url string, proxy *[]string) (*colly.Collector, int) {
 	})
 	var proxyIndex int
 	var proxyURL string
-	if len(*proxy) != 0 {
+	if len(*proxy) > 0 {
 		proxyIndex = rand.IntN(len(*proxy))
 		proxyURL = (*proxy)[proxyIndex]
 		slog.Info("proxy set for crawler",

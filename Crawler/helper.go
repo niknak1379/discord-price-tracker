@@ -80,18 +80,12 @@ func initCrawler(url string, proxy *[]string) (*colly.Collector, int) {
 	}
 	httpClient := generateRandomClient(proxyURL)
 	c.SetClient(httpClient)
-	// httpClient := &http.Client{
-	// 	Transport: &http.Transport{
-	// 		ForceAttemptHTTP2:  false,
-	// 		DisableCompression: false,
-	// 		TLSNextProto:       map[string]func(string, *tls.Conn) http.RoundTripper{},
-	// 	},
-	// 	Timeout: 60 * time.Second,
-	// }
-	// c.SetClient(httpClient)
 	c.OnResponse(func(r *colly.Response) {
 		slog.Info("Response received", slog.Int("status", r.StatusCode))
 		if r.StatusCode == 200 && len(*proxy) != 0 {
+			slog.Info("sending porxyURL through proxy channel",
+				slog.String("proxy", proxyURL),
+			)
 			Proxy.ProxySuccessChannel <- proxyURL
 		}
 	})

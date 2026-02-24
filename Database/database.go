@@ -63,6 +63,7 @@ type IncidentTimeSeries struct {
 
 // Item represents a tracked product with all its data.
 type Item struct {
+	ID                       bson.ObjectID        `bson:"_id,omitempty"`
 	Name                     string               `bson:"Name"`
 	AlternateTrackingQueries []string             `bson:"AlternateTrackingQueries"`
 	TrackingExclusionQueries []string             `bson:"TrackingExclusionQueries"`
@@ -561,7 +562,7 @@ func AddNewPrice(Name string, uri string, newPrice int, date time.Time, ChannelI
 
 	historicalLow, err := GetLowestHistoricalPrice(Name, ChannelID)
 	if err != nil {
-		panic(err)
+		return Price{}, err
 	}
 	if newPrice < historicalLow.Price {
 		UpdateLowestHistoricalPrice(Name, price, ChannelID)
@@ -705,13 +706,15 @@ func GetAllItems(ChannelID string, exludedFields []string) []*Item {
 	opts := options.Find().SetProjection(projection).SetSort(sort)
 	cursor, err := Table.Find(ctx, bson.M{}, opts)
 	if err != nil {
-		panic(err)
+		slog.Error("error in getallitems", slog.Any("error", err))
+		return []*Item{}
 	}
 	var result []*Item
 	err = cursor.All(ctx, &result)
 	defer cursor.Close(ctx)
 	if err != nil {
-		panic(err)
+		slog.Error("error in getallitems", slog.Any("error", err))
+		return []*Item{}
 	}
 	return result
 }

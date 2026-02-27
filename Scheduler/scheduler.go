@@ -197,9 +197,11 @@ func updateSingleItem(item *database.Item, Channel *database.Channel, IR *Incide
 	}
 
 	// notify discord if price has changed more than %5
+	priceChangePercentage := math.Abs(float64(item.CurrentLowestPrice.Price-currLow.Price)) / float64(item.CurrentLowestPrice.Price)
+
 	if !item.SuppressNotifications &&
 		item.CurrentLowestPrice != currLow &&
-		math.Abs(float64(item.CurrentLowestPrice.Price-currLow.Price))/float64(item.CurrentLowestPrice.Price) > 0.05 {
+		priceChangePercentage > 0.05 {
 		discord.PriceChangeAlert(item.Name, currLow.Price,
 			item.CurrentLowestPrice, currLow.Url, Channel.ChannelID)
 	}

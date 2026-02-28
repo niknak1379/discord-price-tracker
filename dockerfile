@@ -4,7 +4,7 @@ COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
 COPY *.go ./
-RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o priceTracker
+RUN go build -ldflags="-s -w" -o priceTracker
 
 FROM chromedp/headless-shell:latest
 

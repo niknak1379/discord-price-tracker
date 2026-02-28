@@ -133,8 +133,9 @@ func addRoutine(ctx context.Context, Item *database.Item, Channel *database.Chan
 
 func removeRoutine(Item *database.Item) {
 	itemKey := Item.ID.String()
-	crawlDetails := activeRoutines[itemKey]
-	crawlDetails.Cancel()
+	if crawlDetails, ok := activeRoutines[itemKey]; ok && crawlDetails.Cancel != nil {
+		crawlDetails.Cancel()
+	}
 	delete(activeRoutines, itemKey)
 	slog.Info("removed crawl Routine for Item", slog.Any("item", Item))
 }

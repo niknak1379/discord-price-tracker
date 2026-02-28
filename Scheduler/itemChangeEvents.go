@@ -19,24 +19,24 @@ func itemChangeEventBusInit(ctx context.Context) {
 func ProcessItemChangeEvent(ctx context.Context) {
 	for {
 		select {
-		// cases it has to handle
-		// 1. item change
-		// 2. new item and item removal
 		case Event := <-database.ItemChangeChannel:
 			switch Event.Change {
-			// actually for edit i just have to update the object pointer i dont need to
-			// fully restart,
-			// NVM forgot map struct fields are not editable
 			case Edit:
 				itemKey := Event.Item.ID.String()
-				Channel := activeRoutines[itemKey].Channel
-				removeRoutine(Event.Item)
-				addRoutine(ctx, Event.Item, Channel)
+				if crawlDetails, ok := activeRoutines[itemKey]; ok {
+					removeRoutine(Event.Item)
+					addRoutine(ctx, Event.Item, crawlDetails.Channel)
+				}
 			case Remove:
-				removeRoutine(Event.Item)
+				itemKey := Event.Item.ID.String()
+				if _, ok := activeRoutines[itemKey]; ok {
+					removeRoutine(Event.Item)
+				}
 			case Add:
 				itemKey := Event.Item.ID.String()
-				addRoutine(ctx, Event.Item, activeRoutines[itemKey].Channel)
+				if crawlDetails, ok := activeRoutines[itemKey]; ok {
+					addRoutine(ctx, Event.Item, crawlDetails.Channel)
+				}
 			}
 		case <-ctx.Done():
 			return

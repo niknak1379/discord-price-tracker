@@ -24,6 +24,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
+var exludedFields = []string{"PriceHistory", "ListingsHistory", "EbayListings", "EbayBids"}
+
 type ItemChangeEvent struct {
 	Item   *Item
 	Change int
@@ -36,6 +38,14 @@ const (
 	Remove
 	Add
 )
+
+func sendItemChangeEvent(item *Item, change int) {
+	if ItemChangeChannel != nil && item != nil {
+		Event := ItemChangeEvent{Item: item, Change: change}
+		slog.Info("sending item change event", slog.Any("event", Event))
+		ItemChangeChannel <- Event
+	}
+}
 
 // TrackingInfo stores a single price tracking source.
 type TrackingInfo struct {
@@ -168,6 +178,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 	updateChannelLength(Channel.ChannelID, 1)
 	UpdateAggregateReport(itemName, Channel.ChannelID)
 	i, err = GetItem(itemName, Channel.ChannelID, "PriceHistory", "ListingsHistory")
+	sendItemChangeEvent(&i, Add)
 	return i, err
 }
 
@@ -193,7 +204,16 @@ func AddAlternateTrackingName(Name, AlternateName, ChannelID string) error {
 		},
 	}
 	res := Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update)
-	return res.Err()
+	if res.Err() != nil {
+		return res.Err()
+	}
+	var item Item
+	err = res.Decode(&item)
+	if err != nil {
+		return err
+	}
+	sendItemChangeEvent(&item, Edit)
+	return nil
 }
 
 // RemoveAlternateTrackingName removes an alternate tracking name by index.
@@ -237,6 +257,7 @@ func RemoveAlternateTrackingName(Name string, index int, ChannelID string) (Item
 	if err != nil {
 		return result, err
 	}
+	sendItemChangeEvent(&result, Edit)
 	return result, err
 }
 
@@ -272,6 +293,7 @@ func EditAlternateTrackingName(Name string, index int, newName string, ChannelID
 	if err != nil {
 		return result, err
 	}
+	sendItemChangeEvent(&result, Edit)
 	return result, nil
 }
 
@@ -295,8 +317,13 @@ func AddTrackingExclusionQuery(Name, ExclusionQuery, ChannelID string) error {
 			"TrackingExclusionQueries": ExclusionQuery,
 		},
 	}
-	res := Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update)
-	return res.Err()
+	var item Item
+	err = Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update).Decode(&item)
+	if err != nil {
+		return err
+	}
+	sendItemChangeEvent(&item, Edit)
+	return nil
 }
 
 // RemoveTrackingExclusionQuery removes an exclusion query by index.
@@ -340,6 +367,7 @@ func RemoveTrackingExclusionQuery(Name string, index int, ChannelID string) (Ite
 	if err != nil {
 		return result, err
 	}
+	sendItemChangeEvent(&result, Edit)
 	return result, err
 }
 
@@ -351,7 +379,7 @@ func RemoveTrackingExclusionQuery(Name string, index int, ChannelID string) (Ite
 //
 // Returns the list of exclusion queries and any error encountered.
 func GetTrackingExclusionQueries(Name, ChannelID string) ([]string, error) {
-	item, err := GetItem(Name, ChannelID, "PriceHistory", "ListingsHistory", "EbayListings", "EbayBids")
+	item, err := GetItem(Name, ChannelID, exludedFields...)
 	if err != nil {
 		return []string{}, err
 	}
@@ -368,7 +396,7 @@ func GetTrackingExclusionQueries(Name, ChannelID string) ([]string, error) {
 //
 // Returns any error encountered.
 func SetDesiredPrice(Name, ChannelID string, price int) error {
-	item, err := GetItem(Name, ChannelID, "PriceHistory", "ListingsHistory", "EbayListings", "EbayBids")
+	item, err := GetItem(Name, ChannelID, exludedFields...)
 	if err != nil {
 		slog.Error("Error getting Item in setdesiredprice",
 			slog.Any("error", err),
@@ -396,6 +424,8 @@ func SetDesiredPrice(Name, ChannelID string, price int) error {
 			slog.Any("error", err),
 		)
 	}
+	item, _ = GetItem(Name, ChannelID, exludedFields...)
+	sendItemChangeEvent(&item, Edit)
 	return err
 }
 
@@ -418,8 +448,13 @@ func SetFacebookCrawl(Name string, Crawl bool, ChannelID string) error {
 			"FacebookCrawl": Crawl,
 		},
 	}
-	res := Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update)
-	return res.Err()
+	var item Item
+	err = Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update).Decode(&item)
+	if err != nil {
+		return err
+	}
+	sendItemChangeEvent(&item, Edit)
+	return nil
 }
 
 // EditTimer updates the scraping interval for an item.
@@ -444,8 +479,13 @@ func EditTimer(Name string, NewTimer int, ChannelID string) error {
 			"Timer": NewTimer,
 		},
 	}
-	res := Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update)
-	return res.Err()
+	var item Item
+	err = Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update).Decode(&item)
+	if err != nil {
+		return err
+	}
+	sendItemChangeEvent(&item, Edit)
+	return nil
 }
 
 // EditSuppress enables or disables notifications for an item.
@@ -467,8 +507,13 @@ func EditSuppress(Name string, Suppress bool, ChannelID string) error {
 			"SuppressNotifications": Suppress,
 		},
 	}
-	res := Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update)
-	return res.Err()
+	var item Item
+	err = Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update).Decode(&item)
+	if err != nil {
+		return err
+	}
+	sendItemChangeEvent(&item, Edit)
+	return nil
 }
 
 // EditName renames an item in the database.
@@ -500,6 +545,7 @@ func EditName(oldName string, newName string, ChannelID string) (Item, error) {
 		)
 		return Item{}, err
 	}
+	sendItemChangeEvent(&res, Edit)
 	return res, err
 }
 
@@ -539,8 +585,8 @@ func AddNewPrice(Name string, uri string, newPrice int, date time.Time, ChannelI
 					"as":    "price",
 					"cond": bson.M{
 						"$and": []bson.M{
-							{"$gte": []interface{}{"$$price.Date", startOfDay}},
-							{"$eq": []interface{}{"$$price.Url", uri}},
+							{"$gte": []any{"$$price.Date", startOfDay}},
+							{"$eq": []any{"$$price.Url", uri}},
 						},
 					},
 				},
@@ -700,6 +746,7 @@ func UpdateLowestPrice(Name string, newLow *Price, ChannelID string) (Item, erro
 		slog.Error("could not update lowest price", slog.Any("Error", err))
 		return res, err
 	}
+	sendItemChangeEvent(&res, Edit)
 	return res, err
 }
 
@@ -957,13 +1004,16 @@ func RemoveItem(itemName string, ChannelID string) int64 {
 		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return 0
 	}
+	var item Item
 	filter := bson.M{"Name": bson.M{"$regex": "^" + itemName + "$", "$options": "i"}}
-	results, err := Table.DeleteOne(ctx, filter)
+	err = Table.FindOneAndDelete(ctx, filter).Decode(&item)
 	if err != nil {
 		slog.Error("couldnt remove from DB", slog.Any("Error", err))
+		return 0
 	}
 	updateChannelLength(ChannelID, -1)
-	return results.DeletedCount
+	sendItemChangeEvent(&item, Remove)
+	return 1
 }
 
 // AddTrackingInfo adds a new tracking source (URL and selector) to an item.
@@ -997,6 +1047,7 @@ func AddTrackingInfo(itemName string, uri string, querySelector string, ChannelI
 	if err != nil {
 		return result, *p, err
 	}
+	sendItemChangeEvent(&result, Edit)
 	return result, *p, err
 }
 
@@ -1041,6 +1092,7 @@ func RemoveTrackingInfo(itemName string, index int, ChannelID string) (Item, err
 	if err != nil {
 		return result, err
 	}
+	sendItemChangeEvent(&result, Edit)
 	return result, err
 }
 

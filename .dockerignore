@@ -8,3 +8,27 @@ logs/
 debug-page.html
 debug-screenshot.png
 
+# Git
+.git
+.gitignore
+
+# GitHub
+.github
+
+# Documentation
+*.md
+
+# Docker
+dockerfile
+docker-compose.yml
+
+# Go test files
+*_test.go
+*.test
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+

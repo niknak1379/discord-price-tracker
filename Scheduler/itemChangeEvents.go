@@ -35,8 +35,12 @@ func ProcessItemChangeEvent(ctx context.Context) {
 		case Event := <-itemChangeChannel:
 			switch Event.Change {
 			case Edit:
+				removeRoutine(ctx, Event.Item, ChannelID)
+				addRoutine(ctx, Event.Item, ChannelID)
 			case Remove:
+				removeRoutine(ctx, Event.Item, ChannelID)
 			case Add:
+				addRoutine(ctx, Event.Item, ChannelID)
 			}
 
 		case <-ctx.Done():

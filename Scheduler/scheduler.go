@@ -10,8 +10,9 @@ import (
 )
 
 type crawlDetails struct {
-	Item   *database.Item
-	Cancel context.CancelFunc
+	Item    *database.Item
+	Channel *database.Channel
+	Cancel  context.CancelFunc
 }
 
 var (
@@ -29,6 +30,7 @@ func SetChannelScheduler(ctx context.Context) {
 	slog.Info("first crawl start time", slog.Any("start time", time.Now()))
 
 	activeRoutines = make(map[string]crawlDetails) // Track running goroutines
+	itemChangeEventBusInit(ctx)
 	// for running it once immediately on deployment
 	//
 	go func() {
@@ -46,7 +48,7 @@ func SetChannelScheduler(ctx context.Context) {
 	loadAndStartItems(ctx)
 
 	// Check for new/deleted items every half hour
-	refreshTicker := time.NewTicker(30 * time.Minute)
+	refreshTicker := time.NewTicker(4 * time.Hour)
 	defer refreshTicker.Stop()
 	for {
 		select {
@@ -115,8 +117,9 @@ func addRoutine(ctx context.Context, Item *database.Item, Channel *database.Chan
 	}
 
 	activeRoutines[itemKey] = crawlDetails{
-		Cancel: cancel,
-		Item:   Item,
+		Cancel:  cancel,
+		Item:    Item,
+		Channel: Channel,
 	}
 	slog.Info("Initializing Crawler Schedule",
 		slog.String("item", Item.Name),

@@ -24,6 +24,19 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
+type ItemChangeEvent struct {
+	Item   *Item
+	Change int
+}
+
+var ItemChangeChannel chan ItemChangeEvent
+
+const (
+	Edit int = iota
+	Remove
+	Add
+)
+
 // TrackingInfo stores a single price tracking source.
 type TrackingInfo struct {
 	URI       string `bson:"URI"`
@@ -1040,6 +1053,7 @@ func InitDB(context context.Context) {
 	godotenv.Load()
 	ctx = context
 	var err error
+	ItemChangeChannel = make(chan ItemChangeEvent, 100)
 	// Use the SetServerAPIOptions() method to set the version of the Stable API on the client
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.Client().ApplyURI(os.Getenv("MONGODB_URI")).SetServerAPIOptions(serverAPI)

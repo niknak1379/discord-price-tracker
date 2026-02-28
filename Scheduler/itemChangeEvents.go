@@ -6,24 +6,14 @@ import (
 	database "priceTracker/Database"
 )
 
-var itemChangeChannel chan itemChangeEvent
-
-type (
-	itemChangeEvent struct {
-		Item   *database.Item
-		Change int
-	}
-)
-
 const (
 	Edit int = iota
 	Remove
 	Add
 )
 
-func itemChangeEventBusInit() {
-	itemChangeChannel = make(chan itemChangeEvent, 100)
-	go ProcessItemChangeEvent(context.TODO())
+func itemChangeEventBusInit(ctx context.Context) {
+	go ProcessItemChangeEvent(ctx)
 }
 
 func ProcessItemChangeEvent(ctx context.Context) {
@@ -32,17 +22,22 @@ func ProcessItemChangeEvent(ctx context.Context) {
 		// cases it has to handle
 		// 1. item change
 		// 2. new item and item removal
-		case Event := <-itemChangeChannel:
+		case Event := <-database.ItemChangeChannel:
 			switch Event.Change {
+			// actually for edit i just have to update the object pointer i dont need to
+			// fully restart,
+			// NVM forgot map struct fields are not editable
 			case Edit:
-				removeRoutine(ctx, Event.Item, ChannelID)
-				addRoutine(ctx, Event.Item, ChannelID)
+				itemKey := Event.Item.ID.String()
+				Channel := activeRoutines[itemKey].Channel
+				removeRoutine(Event.Item)
+				addRoutine(ctx, Event.Item, Channel)
 			case Remove:
-				removeRoutine(ctx, Event.Item, ChannelID)
+				removeRoutine(Event.Item)
 			case Add:
-				addRoutine(ctx, Event.Item, ChannelID)
+				itemKey := Event.Item.ID.String()
+				addRoutine(ctx, Event.Item, activeRoutines[itemKey].Channel)
 			}
-
 		case <-ctx.Done():
 			return
 		}

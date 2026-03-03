@@ -2,7 +2,6 @@ package crawler
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
@@ -50,7 +49,7 @@ func GetPrice(uri string, querySelector string, proxy []string, attempts []*type
 	err = c.Visit(uri)
 	c.Wait()
 	if !crawled {
-		err = errors.New("Error in default crawler: could not crawl, html element does not exist")
+		err = types.MakeError(types.ErrDefault, "element not found", uri)
 	}
 	if err != nil || priceErr != nil {
 		var res int
@@ -92,7 +91,7 @@ func DefaultParserCallback(c *colly.Collector, querySelector string, crawled *bo
 
 // ParseChromedpHTML - new function to parse chromedp output with colly
 func ParseDefaultChromedpHTML(html string,
-	querySelector string,
+	querySelector, url string,
 ) (int, error) {
 	// Create test server with the chromedp HTML
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -110,7 +109,7 @@ func ParseDefaultChromedpHTML(html string,
 	c.Wait()
 	if !crawled && err == nil {
 		slog.Error("Error was nil, but website not visited")
-		err = errors.New("website page not visited")
+		err = types.MakeError(types.ErrDefault, "selector not found", url)
 	} else if priceErr != nil {
 		err = priceErr
 	}
@@ -191,12 +190,13 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 				types.ProxyDisabled, types.MethodChromeDP,
 				errOrMsg(err, "Price Text is empty in chromeDP")))
 			loggIncident(url, attempts, false)
-			return 0, fmt.Errorf("selector %s not found for url %s, %w in default crawler", selector, url, err)
+			err = types.MakeError(types.ErrDefault, err.Error(), url)
+			return 0, err
 		}
 	}
 
-	res, err = ParseDefaultChromedpHTML(HTMLContent, selector)
-	if err != nil {
+	res, err = ParseDefaultChromedpHTML(HTMLContent, selector, url)
+	if err == nil {
 		slog.Info("ChromeDP found Selector", slog.Int("Found Price", res))
 		loggIncident(url, attempts, true)
 		if len(proxy) != 0 {
@@ -206,10 +206,9 @@ func ChromeDPFailover(url string, selector string, proxy []string, proxyIndexUse
 	} else {
 		slog.Error("ChromeDP failed")
 		loggIncident(url, attempts, false)
-
 	}
 
-	return int(float64(res) * TaxRate), nil
+	return int(float64(res) * TaxRate), err
 }
 
 func WgetFailover(url string, selector string, proxy []string, proxyIndexUsed int, attempts []*types.Attempt) (int, error) {
@@ -237,7 +236,7 @@ func WgetFailover(url string, selector string, proxy []string, proxyIndexUsed in
 		slog.Error("wget failed", slog.Any("error", err), slog.String("output", string(html)))
 		return 0, fmt.Errorf("wget failed: %w, output: %s", err, string(html))
 	}
-	res, err := ParseDefaultChromedpHTML(string(html), selector)
+	res, err := ParseDefaultChromedpHTML(string(html), selector, url)
 	if err != nil {
 		slog.Error("ParseDefaultChromedpHTML failed", slog.Any("error", err))
 		return 0, err

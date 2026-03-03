@@ -39,18 +39,19 @@ type Incident struct {
 }
 
 type CrawlError struct {
-	Err error
-	URL string
+	SentenialErr error
+	Err          error
+	URL          string
 }
 
 var (
-	ErrEbay     = &CrawlError{Err: errors.New("error in crawling ebay")}
-	ErrFacebook = &CrawlError{Err: errors.New("error in crawling facebook")}
-	ErrDepop    = &CrawlError{Err: errors.New("error in crawling depop")}
-	ErrDefault  = &CrawlError{Err: errors.New("error in crawling url")}
+	ErrEbay     error = errors.New("error in crawling ebay")
+	ErrFacebook       = errors.New("error in crawling facebook")
+	ErrDepop          = errors.New("error in crawling depop")
+	ErrDefault        = errors.New("error in crawling url")
 )
 
-func (err *CrawlError) Error() string { return err.Err.Error() }
-func WithURL(err error, url string) *CrawlError {
-	return &CrawlError{Err: err, URL: url}
+func (err *CrawlError) Error() string { return errors.Join(err.SentenialErr, err.Err).Error() }
+func MakeError(sentenialErr error, errString string, url string) *CrawlError {
+	return &CrawlError{SentenialErr: sentenialErr, Err: errors.New(errString), URL: url}
 }

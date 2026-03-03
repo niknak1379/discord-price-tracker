@@ -34,7 +34,7 @@ func ProcessItemChangeEvent(ctx context.Context) {
 				}
 			case Add:
 				itemKey := Event.Item.ID.String()
-				if crawlDetails, ok := activeRoutines[itemKey]; ok {
+				if crawlDetails, ok := activeRoutines[itemKey]; !ok {
 					addRoutine(ctx, Event.Item, crawlDetails.Channel)
 				}
 			}

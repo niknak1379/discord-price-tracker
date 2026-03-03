@@ -1,11 +1,11 @@
 package discord
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
 	"os"
-	"strings"
 	"time"
 
 	database "priceTracker/Database"
@@ -105,15 +105,10 @@ func PriceChangeAlert(itemName string, newPrice int, oldPrice database.Price, UR
 //   - URL: the URL being crawled
 //   - err: the error that occurred
 //   - ChannelID: the Discord channel ID
-func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
-	var s string
-	if err != nil {
-		s = fmt.Sprintf("Crawler could not find price for %s in url %s, with error %s investigate logs for further information",
-			itemName, URL, err.Error())
-	} else {
-		s = fmt.Sprintf("returned price of 0 for item %s, with url %s", itemName, URL)
-	}
-	slog.Error(s)
+func CrawlErrorAlert(itemName string, err error, ChannelID string) {
+	slog.Error(err.Error())
+	var CrawlError types.CrawlError
+	errors.As(err, CrawlError)
 	nameField := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter("Problematic Item", 42),
 		Value:  itemName,
@@ -121,7 +116,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	}
 	urlField := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter("Problematic URL", 42),
-		Value:  URL,
+		Value:  CrawlError.URL,
 		Inline: false,
 	}
 
@@ -137,7 +132,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 	Fields = append(Fields, &nameField, &urlField, &errField)
 	//
 	// <--------------- send screenshots of failed crawl --------->
-	if strings.Contains(err.Error(), "facebook") {
+	if errors.Is(err, types.ErrFacebook) {
 		reader, err := os.Open("logs/facebookSecond.png")
 		reader2, err2 := os.Open("logs/facebookFirst.png")
 		reader3, err3 := os.Open("logs/proxyFacebookSecond.png")
@@ -169,7 +164,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		Discord.ChannelFileSend(ChannelID, "proxyHTML.html", reader5)
 		Discord.ChannelFileSend(ChannelID, "facebook.html", reader6)
 	}
-	if strings.Contains(err.Error(), "Ebay") {
+	if errors.Is(err, types.ErrEbay) {
 		reader, err := os.Open("logs/ebaySecond.png")
 		reader2, err2 := os.Open("logs/ebayFirst.png")
 		defer reader.Close()
@@ -181,7 +176,7 @@ func CrawlErrorAlert(itemName string, URL string, err error, ChannelID string) {
 		Discord.ChannelFileSend(ChannelID, "second.png", reader)
 		Discord.ChannelFileSend(ChannelID, "first.png", reader2)
 	}
-	if strings.Contains(err.Error(), "default") {
+	if errors.Is(err, types.ErrDefault) {
 		reader, err := os.Open("logs/failoverSS.png")
 		reader2, err2 := os.Open("logs/failoverHTML.html")
 		reader3, err3 := os.Open("logs/collyHTML.html")

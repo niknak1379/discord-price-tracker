@@ -67,9 +67,7 @@ func GetEbayListings(Name string,
 	var listingArr []*types.EbayListing
 	var bidArr []*types.EbayBids
 	visited := false
-	var c *colly.Collector
-	var proxyIndex int
-	c, proxyIndex = initCrawler(url, &proxy)
+	c, proxyIndex := initCrawler(url, &proxy)
 	if attempts == nil {
 		attempts = []*types.Attempt{}
 	}
@@ -288,8 +286,11 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 	cancel()
 	var retListingArr []*types.EbayListing
 	var retBidArr []*types.EbayBids
-	retListingArr, retBidArr, err = ParseChromedpHTML(rawHTML, desiredPrice, Name, *queries)
+	if err == nil {
+		retListingArr, retBidArr, err = ParseChromedpHTML(rawHTML, desiredPrice, Name, *queries)
+	}
 	if err != nil {
+		err = types.MakeError(types.ErrEbay, err.Error(), url)
 		if len(proxy) != 0 {
 			slog.Warn("Proxy ebay chrome failover failed, calling nonproxy default",
 				slog.Any("error", err))

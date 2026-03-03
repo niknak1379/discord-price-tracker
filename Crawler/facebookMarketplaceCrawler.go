@@ -248,7 +248,11 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 				types.ProxyDisabled, types.MethodChromeDP,
 				errOrMsg(err, "error object empty but not visited")))
 			loggIncident(url, attempts, false)
-			err = errors.Join(errors.New("Error in facebook marketplace:"), err)
+			ErrMsg := "empty error object but not visited"
+			if err != nil {
+				ErrMsg = err.Error()
+			}
+			err = types.MakeError(types.ErrFacebook, ErrMsg, url)
 			return retArr, err
 		}
 	}

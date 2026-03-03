@@ -75,7 +75,7 @@ func updatePrice(Name string, Tracker *database.TrackingInfo, date time.Time,
 			slog.Int("Returned Price", newPrice))
 		IR.DefaultTrackers[Tracker.URI] += 1
 		if HasIncidentRateLimitReached(IR) {
-			discord.CrawlErrorAlert(Name, Tracker.URI, err, ChannelID)
+			discord.CrawlErrorAlert(Name, err, ChannelID)
 		}
 		return database.Price{}, err
 	}
@@ -117,7 +117,7 @@ func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Chann
 		slog.Warn("Second-hand eBay crawl failed", slog.String("item", item.Name))
 		incidentRate.EbayTracker++
 		if HasIncidentRateLimitReached(incidentRate) {
-			discord.CrawlErrorAlert(item.Name, "Second Hand eBay", ebayErr, Channel.ChannelID)
+			discord.CrawlErrorAlert(item.Name, ebayErr, Channel.ChannelID)
 		}
 	} else {
 		incidentRate.EbayTracker = 0
@@ -128,7 +128,7 @@ func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Chann
 		slog.Warn("Second-hand Facebook crawl failed", slog.String("item", item.Name))
 		incidentRate.FacebookTracker++
 		if HasIncidentRateLimitReached(incidentRate) {
-			discord.CrawlErrorAlert(item.Name, "Second Hand Facebook", fbErr, Channel.ChannelID)
+			discord.CrawlErrorAlert(item.Name, fbErr, Channel.ChannelID)
 		}
 	} else {
 		incidentRate.FacebookTracker = 0
@@ -139,7 +139,7 @@ func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Chann
 		slog.Warn("Second-hand Depop crawl failed", slog.String("item", item.Name))
 		incidentRate.DepopTracker++
 		if HasIncidentRateLimitReached(incidentRate) {
-			discord.CrawlErrorAlert(item.Name, "Second Hand Depop", depopErr, Channel.ChannelID)
+			discord.CrawlErrorAlert(item.Name, depopErr, Channel.ChannelID)
 		}
 	} else {
 		incidentRate.DepopTracker = 0

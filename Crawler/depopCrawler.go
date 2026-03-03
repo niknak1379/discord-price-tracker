@@ -99,13 +99,16 @@ func CrawlDepop(Name string,
 		} else {
 			slog.Error("depop crawl failed with no proxy")
 			loggIncident(url, attempts, false)
-			if err == nil {
-				err = errors.New("Depop link not visited, might have been rate limited")
+			ErrMsg := "error object empty but not visited"
+			if err != nil {
+				ErrMsg = err.Error()
 			}
-			return retArr, err
+			return retArr, types.MakeError(types.ErrDepop, ErrMsg, url)
 		}
 	}
-
+	if len(attempts) != 0 {
+		loggIncident(url, attempts, true)
+	}
 	return retArr, nil
 }
 

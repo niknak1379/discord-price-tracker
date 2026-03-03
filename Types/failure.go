@@ -51,7 +51,10 @@ var (
 	ErrDefault        = errors.New("error in crawling url")
 )
 
-func (err *CrawlError) Error() string { return errors.Join(err.SentenialErr, err.Err).Error() }
+func (err CrawlError) Error() string {
+	return errors.Join(err.SentenialErr, err.Err).Error() + err.URL
+}
+
 func MakeError(sentenialErr error, errString string, url string) *CrawlError {
 	return &CrawlError{SentenialErr: sentenialErr, Err: errors.New(errString), URL: url}
 }

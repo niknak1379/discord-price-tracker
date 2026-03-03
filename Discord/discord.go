@@ -4,7 +4,6 @@ package discord
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -15,6 +14,7 @@ import (
 
 	charts "priceTracker/Charts"
 	database "priceTracker/Database"
+	types "priceTracker/Types"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -67,7 +67,7 @@ var (
 						},
 						{
 							Name:  "Ebay",
-							Value: "Ebay",
+							Value: "ebay",
 						},
 						{
 							Name:  "Default",
@@ -593,8 +593,17 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 	"get_logs": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		customAcknowledge(discord, i)
 		crawlType := i.ApplicationCommandData().Options[0].StringValue()
-		CrawlErrorAlert("Logs", "User Requested",
-			errors.New(crawlType), i.ChannelID)
+		var err error
+		switch crawlType {
+		case "ebay":
+			err = types.ErrEbay
+		case "default":
+			err = types.ErrDefault
+		case "facebook":
+			err = types.ErrFacebook
+		}
+		CrawlErrorAlert("Logs",
+			err, i.ChannelID)
 	},
 	"add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		switch i.Type {
@@ -620,8 +629,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 				database.ChannelMap[i.ChannelID],
 			)
 			if err != nil {
-				content = fmt.Sprint(err)
-				CrawlErrorAlert(itemName, uri, err, i.ChannelID)
+				CrawlErrorAlert(itemName, err, i.ChannelID)
 				return
 			} else {
 				em = setEmbed(&addRes)

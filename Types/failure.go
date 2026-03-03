@@ -1,6 +1,9 @@
 package types
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 const (
 	CrawlerEbay     string = "ebay"
@@ -33,4 +36,21 @@ type Incident struct {
 	Domain    string     `bson:"Domain"`
 	Attempts  []*Attempt `bson:"Attempts"`
 	Resolved  bool       `bson:"Resolved"`
+}
+
+type CrawlError struct {
+	Err error
+	URL string
+}
+
+var (
+	ErrEbay     = &CrawlError{Err: errors.New("error in crawling ebay")}
+	ErrFacebook = &CrawlError{Err: errors.New("error in crawling facebook")}
+	ErrDepop    = &CrawlError{Err: errors.New("error in crawling depop")}
+	ErrDefault  = &CrawlError{Err: errors.New("error in crawling url")}
+)
+
+func (err *CrawlError) Error() string { return err.Err.Error() }
+func WithURL(err error, url string) *CrawlError {
+	return &CrawlError{Err: err, URL: url}
 }

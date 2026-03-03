@@ -108,7 +108,7 @@ func PriceChangeAlert(itemName string, newPrice int, oldPrice database.Price, UR
 func CrawlErrorAlert(itemName string, err error, ChannelID string) {
 	slog.Error(err.Error())
 	var CrawlError types.CrawlError
-	errors.As(err, CrawlError)
+	errors.As(err, &CrawlError)
 	nameField := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter("Problematic Item", 42),
 		Value:  itemName,

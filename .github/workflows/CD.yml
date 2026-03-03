@@ -52,7 +52,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: .env
-    needs: dockerize
+    needs: [dockerize, test]
     steps:
       - name: Tailscale
         uses: tailscale/github-action@v4

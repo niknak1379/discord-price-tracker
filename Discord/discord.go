@@ -176,8 +176,8 @@ var (
 			},
 		},
 		{
-			Name:        "set_price",
-			Description: "Manually set desired price for an item",
+			Name:        "set_secondhand_price",
+			Description: "Manually set second-hand price filter for an item",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "name",
@@ -191,6 +191,19 @@ var (
 					Description: "Desired price",
 					Type:        discordgo.ApplicationCommandOptionInteger,
 					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "remove_trackers",
+			Description: "Remove all trackers from an item",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "name",
+					Description:  "Item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
 				},
 			},
 		},
@@ -876,8 +889,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			}
 		}
 	},
-	"set_price": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
-		// get command inputs from discord
+	"set_secondhand_price": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		options := i.ApplicationCommandData().Options
 		itemName := options[0].StringValue()
 		switch i.Type {
@@ -886,12 +898,29 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		default:
 			customAcknowledge(discord, i)
 			desiredPrice := int(options[1].IntValue())
-			err := database.SetDesiredPrice(itemName, i.ChannelID, desiredPrice)
+			err := database.SetSecondHandPrice(itemName, i.ChannelID, desiredPrice)
 			if err != nil {
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
 				SendSuccessEmbed(discord, i.ChannelID,
-					fmt.Sprintf("Price for '%s' set to $%d", itemName, desiredPrice))
+					fmt.Sprintf("Second-hand price for '%s' set to $%d", itemName, desiredPrice))
+			}
+		}
+	},
+	"remove_trackers": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		options := i.ApplicationCommandData().Options
+		itemName := options[0].StringValue()
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoComplete(itemName, 0, i, discord)
+		default:
+			customAcknowledge(discord, i)
+			err := database.RemoveAllTrackers(itemName, i.ChannelID)
+			if err != nil {
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
+			} else {
+				SendSuccessEmbed(discord, i.ChannelID,
+					fmt.Sprintf("All trackers removed from '%s'", itemName))
 			}
 		}
 	},

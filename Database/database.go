@@ -435,6 +435,7 @@ func RemoveAllTrackers(Name, ChannelID string) error {
 			return err
 		}
 	}
+	sendItemChangeEvent(&item, Edit)
 	return nil
 }
 

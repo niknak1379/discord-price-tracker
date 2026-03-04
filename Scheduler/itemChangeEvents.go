@@ -20,6 +20,7 @@ func ProcessItemChangeEvent(ctx context.Context) {
 	for {
 		select {
 		case Event := <-database.ItemChangeChannel:
+			activeRoutinesMutex.Lock()
 			switch Event.Change {
 			case Edit:
 				itemKey := Event.Item.ID.String()
@@ -34,10 +35,11 @@ func ProcessItemChangeEvent(ctx context.Context) {
 				}
 			case Add:
 				itemKey := Event.Item.ID.String()
-				if crawlDetails, ok := activeRoutines[itemKey]; !ok {
-					addRoutine(ctx, Event.Item, crawlDetails.Channel)
+				if _, ok := activeRoutines[itemKey]; !ok {
+					addRoutine(ctx, Event.Item, &Event.Channel)
 				}
 			}
+			activeRoutinesMutex.Unlock()
 		case <-ctx.Done():
 			return
 		}

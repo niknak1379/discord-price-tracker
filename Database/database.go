@@ -27,8 +27,9 @@ import (
 var exludedFields = []string{"PriceHistory", "ListingsHistory", "EbayListings", "EbayBids"}
 
 type ItemChangeEvent struct {
-	Item   *Item
-	Change int
+	Item    *Item
+	Change  int
+	Channel Channel
 }
 
 var ItemChangeChannel chan ItemChangeEvent
@@ -39,9 +40,9 @@ const (
 	Add
 )
 
-func sendItemChangeEvent(item *Item, change int) {
+func sendItemChangeEvent(item *Item, change int, channel Channel) {
 	if ItemChangeChannel != nil && item != nil {
-		Event := ItemChangeEvent{Item: item, Change: change}
+		Event := ItemChangeEvent{Item: item, Change: change, Channel: channel}
 		slog.Info("sending item change event", slog.Any("event", Event))
 		ItemChangeChannel <- Event
 	}
@@ -180,7 +181,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 	updateChannelLength(Channel.ChannelID, 1)
 	UpdateAggregateReport(itemName, Channel.ChannelID)
 	i, err = GetItem(itemName, Channel.ChannelID, "PriceHistory", "ListingsHistory")
-	sendItemChangeEvent(&i, Add)
+	sendItemChangeEvent(&i, Add, *Channel)
 	return i, err
 }
 
@@ -214,7 +215,7 @@ func AddAlternateTrackingName(Name, AlternateName, ChannelID string) error {
 	if err != nil {
 		return err
 	}
-	sendItemChangeEvent(&item, Edit)
+	sendItemChangeEvent(&item, Edit, Channel{})
 	return nil
 }
 
@@ -259,7 +260,7 @@ func RemoveAlternateTrackingName(Name string, index int, ChannelID string) (Item
 	if err != nil {
 		return result, err
 	}
-	sendItemChangeEvent(&result, Edit)
+	sendItemChangeEvent(&result, Edit, Channel{})
 	return result, err
 }
 
@@ -295,7 +296,7 @@ func EditAlternateTrackingName(Name string, index int, newName string, ChannelID
 	if err != nil {
 		return result, err
 	}
-	sendItemChangeEvent(&result, Edit)
+	sendItemChangeEvent(&result, Edit, Channel{})
 	return result, nil
 }
 
@@ -324,7 +325,7 @@ func AddTrackingExclusionQuery(Name, ExclusionQuery, ChannelID string) error {
 	if err != nil {
 		return err
 	}
-	sendItemChangeEvent(&item, Edit)
+	sendItemChangeEvent(&item, Edit, Channel{})
 	return nil
 }
 
@@ -369,7 +370,7 @@ func RemoveTrackingExclusionQuery(Name string, index int, ChannelID string) (Ite
 	if err != nil {
 		return result, err
 	}
-	sendItemChangeEvent(&result, Edit)
+	sendItemChangeEvent(&result, Edit, Channel{})
 	return result, err
 }
 
@@ -414,7 +415,7 @@ func SetSecondHandPrice(Name, ChannelID string, price int) error {
 		)
 	}
 	item, _ = GetItem(Name, ChannelID, exludedFields...)
-	sendItemChangeEvent(&item, Edit)
+	sendItemChangeEvent(&item, Edit, Channel{})
 	return err
 }
 
@@ -435,7 +436,7 @@ func RemoveAllTrackers(Name, ChannelID string) error {
 			return err
 		}
 	}
-	sendItemChangeEvent(&item, Edit)
+	sendItemChangeEvent(&item, Edit, Channel{})
 	return nil
 }
 
@@ -463,7 +464,7 @@ func SetFacebookCrawl(Name string, Crawl bool, ChannelID string) error {
 	if err != nil {
 		return err
 	}
-	sendItemChangeEvent(&item, Edit)
+	sendItemChangeEvent(&item, Edit, Channel{})
 	return nil
 }
 
@@ -494,7 +495,7 @@ func EditTimer(Name string, NewTimer int, ChannelID string) error {
 	if err != nil {
 		return err
 	}
-	sendItemChangeEvent(&item, Edit)
+	sendItemChangeEvent(&item, Edit, Channel{})
 	return nil
 }
 
@@ -522,7 +523,7 @@ func EditSuppress(Name string, Suppress bool, ChannelID string) error {
 	if err != nil {
 		return err
 	}
-	sendItemChangeEvent(&item, Edit)
+	sendItemChangeEvent(&item, Edit, Channel{})
 	return nil
 }
 
@@ -555,7 +556,7 @@ func EditName(oldName string, newName string, ChannelID string) (Item, error) {
 		)
 		return Item{}, err
 	}
-	sendItemChangeEvent(&res, Edit)
+	sendItemChangeEvent(&res, Edit, Channel{})
 	return res, err
 }
 
@@ -756,7 +757,7 @@ func UpdateLowestPrice(Name string, newLow *Price, ChannelID string) (Item, erro
 		slog.Error("could not update lowest price", slog.Any("Error", err))
 		return res, err
 	}
-	sendItemChangeEvent(&res, Edit)
+	sendItemChangeEvent(&res, Edit, Channel{})
 	return res, err
 }
 
@@ -1022,7 +1023,7 @@ func RemoveItem(itemName string, ChannelID string) int64 {
 		return 0
 	}
 	updateChannelLength(ChannelID, -1)
-	sendItemChangeEvent(&item, Remove)
+	sendItemChangeEvent(&item, Remove, Channel{})
 	return 1
 }
 
@@ -1057,7 +1058,7 @@ func AddTrackingInfo(itemName string, uri string, querySelector string, ChannelI
 	if err != nil {
 		return result, *p, err
 	}
-	sendItemChangeEvent(&result, Edit)
+	sendItemChangeEvent(&result, Edit, Channel{})
 	return result, *p, err
 }
 
@@ -1102,7 +1103,7 @@ func RemoveTrackingInfo(itemName string, index int, ChannelID string) (Item, err
 	if err != nil {
 		return result, err
 	}
-	sendItemChangeEvent(&result, Edit)
+	sendItemChangeEvent(&result, Edit, Channel{})
 	return result, err
 }
 

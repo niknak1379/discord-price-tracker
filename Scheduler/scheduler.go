@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"math/rand/v2"
+	"sync"
 	"time"
 
 	database "priceTracker/Database"
@@ -16,9 +17,10 @@ type crawlDetails struct {
 }
 
 var (
-	backUpAmazonQuery = "div#apex_desktop span.priceToPay"
-	exludedFields     = []string{"PriceHistory", "ListingsHistory", "EbayListings"}
-	activeRoutines    map[string]crawlDetails
+	backUpAmazonQuery   = "div#apex_desktop span.priceToPay"
+	exludedFields       = []string{"PriceHistory", "ListingsHistory", "EbayListings"}
+	activeRoutines      map[string]crawlDetails
+	activeRoutinesMutex sync.Mutex
 )
 
 // SetChannelScheduler initializes and runs the scheduler for all channels.
@@ -55,9 +57,11 @@ func SetChannelScheduler(ctx context.Context) {
 		case <-ctx.Done():
 			slog.Info("channel scheduler stopping")
 			// Cancel all item routines
+			activeRoutinesMutex.Lock()
 			for _, crawl := range activeRoutines {
 				crawl.Cancel()
 			}
+			activeRoutinesMutex.Unlock()
 			return
 		case <-refreshTicker.C:
 			slog.Info("refreshing item list")
@@ -73,6 +77,7 @@ func loadAndStartItems(ctx context.Context) {
 	for _, Channel := range database.ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
 		for _, item := range itemsArr {
+			activeRoutinesMutex.Lock()
 			itemKey := item.ID.String()
 			currentItems[itemKey] = true
 
@@ -88,6 +93,7 @@ func loadAndStartItems(ctx context.Context) {
 					removeRoutine(crawlDetails.Item)
 				} else {
 					slog.Info("suppression and timer unchanged skipping")
+					activeRoutinesMutex.Unlock()
 					continue // Timer unchanged, skip
 				}
 			}
@@ -96,15 +102,18 @@ func loadAndStartItems(ctx context.Context) {
 			r := rand.IntN(240) + 60
 			time.Sleep(time.Duration(r) * time.Second)
 			addRoutine(ctx, item, Channel)
+			activeRoutinesMutex.Unlock()
 		}
 		// delete if not found in current items
 	}
+	activeRoutinesMutex.Lock()
 	for itemKey, crawl := range activeRoutines {
 		if _, ok := currentItems[itemKey]; !ok {
 			slog.Info("stopping routine for deleted item", slog.String("item", itemKey))
 			removeRoutine(crawl.Item)
 		}
 	}
+	activeRoutinesMutex.Unlock()
 }
 
 func addRoutine(ctx context.Context, Item *database.Item, Channel *database.Channel) {
@@ -124,20 +133,18 @@ func addRoutine(ctx context.Context, Item *database.Item, Channel *database.Chan
 	slog.Info("Initializing Crawler Schedule",
 		slog.String("item", Item.Name),
 		slog.String("timer", newTimer.String()))
-	go func(itemCtx context.Context, itemKey string) {
-		itemCrawlRoutine(itemCtx, Item, Channel)
-		// Clean up when routine exits
-		delete(activeRoutines, itemKey)
-	}(itemCtx, itemKey)
+	go itemCrawlRoutine(itemCtx, Item, Channel)
 }
 
 func removeRoutine(Item *database.Item) {
+	slog.Info("removing crawl Routine for Item", slog.Any("item", Item))
 	itemKey := Item.ID.String()
 	if crawlDetails, ok := activeRoutines[itemKey]; ok && crawlDetails.Cancel != nil {
 		crawlDetails.Cancel()
+		delete(activeRoutines, itemKey)
+	} else {
+		slog.Warn("trying to remove non-existatnt crawl routine")
 	}
-	delete(activeRoutines, itemKey)
-	slog.Info("removed crawl Routine for Item", slog.Any("item", Item))
 }
 
 func itemCrawlRoutine(ctx context.Context, item *database.Item, Channel *database.Channel) {

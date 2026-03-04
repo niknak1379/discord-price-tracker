@@ -103,9 +103,17 @@ func handleSecondHandListingsUpdate(item *database.Item, Channel *database.Chann
 		BidsMap[oldEbayBids[i].URL] = oldEbayBids[i]
 	}
 
+	// set second hand price
+	var SecondHandPrice int
+	if item.SecondHandPrice == 0 {
+		SecondHandPrice = item.CurrentLowestPrice.Price
+	} else {
+		SecondHandPrice = int(math.Min(float64(item.SecondHandPrice), float64(item.CurrentLowestPrice.Price)))
+	}
+
 	ebayListings, ebayBids, ebayErr, fbErr, depopErr := crawler.GetSecondHandListings(
 		append(item.AlternateTrackingQueries, item.Name),
-		item.CurrentLowestPrice.Price,
+		SecondHandPrice,
 		Channel.Lat, Channel.Long, Channel.Distance,
 		item.Type, Channel.LocationCode, item.FacebookCrawl,
 		item.TrackingExclusionQueries,

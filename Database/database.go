@@ -88,21 +88,22 @@ type IncidentTimeSeries struct {
 type Item struct {
 	ID                       bson.ObjectID        `bson:"_id,omitempty"`
 	Name                     string               `bson:"Name"`
-	AlternateTrackingQueries []string             `bson:"AlternateTrackingQueries"`
-	TrackingExclusionQueries []string             `bson:"TrackingExclusionQueries"`
-	TrackingList             []*TrackingInfo      `bson:"TrackingList"`
-	LowestPrice              Price                `bson:"LowestPrice"`
-	PriceHistory             []*Price             `bson:"PriceHistory"`
-	CurrentLowestPrice       Price                `bson:"CurrentLowestPrice"`
-	Timer                    int                  `bson:"Timer"`
 	Type                     string               `bson:"Type"`
 	ImgURL                   string               `bson:"ImgURL"`
+	TrackingList             []*TrackingInfo      `bson:"TrackingList"`
+	SuppressNotifications    bool                 `bson:"SuppressNotifications"`
+	FacebookCrawl            bool                 `bson:"FacebookCrawl"`
+	SecondHandPrice          int                  `bson:"SecondHandPrice"`
+	Timer                    int                  `bson:"Timer"`
+	CurrentLowestPrice       Price                `bson:"CurrentLowestPrice"`
+	LowestPrice              Price                `bson:"LowestPrice"`
+	SevenDayAggregate        AggregateReport      `bson:"SevenDayAggregate"`
+	AlternateTrackingQueries []string             `bson:"AlternateTrackingQueries"`
+	TrackingExclusionQueries []string             `bson:"TrackingExclusionQueries"`
+	PriceHistory             []*Price             `bson:"PriceHistory"`
 	EbayListings             []*types.EbayListing `bson:"EbayListings"`
 	EbayBids                 []*types.EbayBids    `bson:"EbayBids"`
 	ListingsHistory          []*types.EbayListing `bson:"ListingsHistory"`
-	SevenDayAggregate        AggregateReport      `bson:"SevenDayAggregate"`
-	SuppressNotifications    bool                 `bson:"SuppressNotifications"`
-	FacebookCrawl            bool                 `bson:"FacebookCrawl"`
 }
 
 var (
@@ -164,6 +165,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 		TrackingList:             arr,
 		PriceHistory:             PriceArr,
 		CurrentLowestPrice:       *p,
+		SecondHandPrice:          p.Price,
 		Timer:                    Timer,
 		EbayListings:             ebayListings,
 		ListingsHistory:          ebayListings,
@@ -395,7 +397,28 @@ func GetTrackingExclusionQueries(Name, ChannelID string) ([]string, error) {
 //   - price: the desired price to set
 //
 // Returns any error encountered.
-func SetDesiredPrice(Name, ChannelID string, price int) error {
+func SetSecondHandPrice(Name, ChannelID string, price int) error {
+	update := bson.M{
+		"$set": bson.M{
+			"SecondHandPrice": price,
+		},
+	}
+	var item Item
+	err := Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update).Decode(&item)
+	if err != nil {
+		return err
+	}
+	if err != nil {
+		slog.Error("Error updating lowest price in setdesiredprice",
+			slog.Any("error", err),
+		)
+	}
+	item, _ = GetItem(Name, ChannelID, exludedFields...)
+	sendItemChangeEvent(&item, Edit)
+	return err
+}
+
+func RemoveAllTrackers(Name, ChannelID string) error {
 	item, err := GetItem(Name, ChannelID, exludedFields...)
 	if err != nil {
 		slog.Error("Error getting Item in setdesiredprice",
@@ -412,21 +435,7 @@ func SetDesiredPrice(Name, ChannelID string, price int) error {
 			return err
 		}
 	}
-
-	DesiredPrice := &Price{
-		Price: price,
-		Date:  time.Now(),
-		Url:   "Don't Worry About It",
-	}
-	_, err = UpdateLowestPrice(Name, DesiredPrice, ChannelID)
-	if err != nil {
-		slog.Error("Error updating lowest price in setdesiredprice",
-			slog.Any("error", err),
-		)
-	}
-	item, _ = GetItem(Name, ChannelID, exludedFields...)
-	sendItemChangeEvent(&item, Edit)
-	return err
+	return nil
 }
 
 // SetFacebookCrawl enables or disables Facebook Marketplace crawling for an item.

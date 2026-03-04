@@ -1145,7 +1145,8 @@ func validateURI(uri string, querySelector string) (*Price, *TrackingInfo, error
 	copy(proxyCopy, proxy.ProxyList)
 	pr, err := crawler.GetPrice(uri, querySelector, proxyCopy, nil)
 	if err != nil {
-		if strings.Contains(uri, "amazon") {
+		if strings.Contains(uri, "amazon") ||
+			strings.Contains(uri, "https://a.co") {
 			proxyCopy := make([]string, len(proxy.ProxyList))
 			copy(proxyCopy, proxy.ProxyList)
 			pr, err := crawler.GetPrice(uri, "div#apex_desktop span.priceToPay",

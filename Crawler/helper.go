@@ -263,7 +263,8 @@ func GetOpenGraphPic(url string) string {
 	c, _ := initCrawler(url, &[]string{})
 	visited := false
 	imgURL := ""
-	if strings.Contains(url, "amazon") {
+	if strings.Contains(url, "amazon") ||
+		strings.Contains(url, "https://a.co") {
 		c.OnHTML("img#landingImage", func(e *colly.HTMLElement) {
 			imgURL = e.Attr("src")
 			visited = true
@@ -284,7 +285,8 @@ func GetOpenGraphPic(url string) string {
 		slog.Warn("could not get Open Graph picture", slog.Any("ERROR: ", err), slog.Any("Visited: ", visited))
 
 		// Fallback to chromedp for Amazon
-		if strings.Contains(url, "amazon") {
+		if strings.Contains(url, "amazon") ||
+			strings.Contains(url, "https://a.co") {
 			imgURL = getAmazonImageChromedp(url)
 		}
 

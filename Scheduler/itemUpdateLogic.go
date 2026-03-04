@@ -65,7 +65,8 @@ func updatePrice(Name string, Tracker *database.TrackingInfo, date time.Time,
 	proxyCopy := make([]string, len(proxy.ProxyList))
 	copy(proxyCopy, proxy.ProxyList)
 	newPrice, err := crawler.GetPrice(Tracker.URI, Tracker.HtmlQuery, proxyCopy, nil)
-	if err != nil && strings.Contains(Tracker.URI, "amazon") {
+	if err != nil && strings.Contains(Tracker.URI, "amazon") ||
+		strings.Contains(Tracker.URI, "https://a.co") {
 		proxyCopy := make([]string, len(proxy.ProxyList))
 		copy(proxyCopy, proxy.ProxyList)
 		newPrice, err = crawler.GetPrice(Tracker.URI, backUpAmazonQuery, proxyCopy, nil)

@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"math"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	database "priceTracker/Database"
@@ -132,82 +134,56 @@ func CrawlErrorAlert(itemName string, err error, ChannelID string) {
 	Fields = append(Fields, &nameField, &urlField, &errField)
 	//
 	// <--------------- send screenshots of failed crawl --------->
-	if errors.Is(err, types.ErrFacebook) {
-		reader, err := os.Open("logs/facebookSecond.png")
-		reader2, err2 := os.Open("logs/facebookFirst.png")
-		reader3, err3 := os.Open("logs/proxyFacebookSecond.png")
-		reader4, err4 := os.Open("logs/proxyFacebookFirst.png")
-		reader5, err5 := os.Open("logs/proxyFacebookHTML.html")
-		reader6, err6 := os.Open("logs/facebookHTML.html")
+	var files []*os.File
+	var fileErr error
+	switch {
+	case errors.Is(err, types.ErrFacebook):
+		files, fileErr = getLogFilesForItem(itemName, types.CrawlerFacebook)
+	case errors.Is(err, types.ErrEbay):
+		files, fileErr = getLogFilesForItem(itemName, types.CrawlerEbay)
+	case errors.Is(err, types.ErrDefault):
+		files, fileErr = getLogFilesForItem(itemName, types.CrawlerDefault)
+	case errors.Is(err, types.ErrDepop):
+		files, fileErr = getLogFilesForItem(itemName, types.CrawlerDepop)
 
-		defer reader.Close()
-		defer reader2.Close()
-		defer reader3.Close()
-		defer reader4.Close()
-		defer reader5.Close()
-		defer reader6.Close()
-		if err != nil || err2 != nil || err3 != nil ||
-			err4 != nil || err5 != nil || err6 != nil {
-			slog.Error("Could not load error images",
-				slog.Any("err", err),
-				slog.Any("err2", err2),
-				slog.Any("err3", err3),
-				slog.Any("err4", err4),
-				slog.Any("err5", err5),
-				slog.Any("err6", err6),
+	}
+	if fileErr != nil {
+		slog.Error("Could not get log files", slog.Any("error", fileErr))
+	}
+	for _, f := range files {
+		defer f.Close()
+		_, err := Discord.ChannelFileSend(ChannelID, filepath.Base(f.Name()), f)
+		if err != nil {
+			slog.Error("error in sending error logs",
+				slog.Any("error", err),
 			)
 		}
-		Discord.ChannelFileSend(ChannelID, "second.png", reader)
-		Discord.ChannelFileSend(ChannelID, "first.png", reader2)
-		Discord.ChannelFileSend(ChannelID, "proxySecond.png", reader3)
-		Discord.ChannelFileSend(ChannelID, "proxyFirst.png", reader4)
-		Discord.ChannelFileSend(ChannelID, "proxyHTML.html", reader5)
-		Discord.ChannelFileSend(ChannelID, "facebook.html", reader6)
-	}
-	if errors.Is(err, types.ErrEbay) {
-		reader, err := os.Open("logs/ebaySecond.png")
-		reader2, err2 := os.Open("logs/ebayFirst.png")
-		defer reader.Close()
-		defer reader2.Close()
-		if err != nil || err2 != nil {
-			slog.Error("Could not load error images", slog.Any("Error", err),
-				slog.Any("Error", err2))
-		}
-		Discord.ChannelFileSend(ChannelID, "second.png", reader)
-		Discord.ChannelFileSend(ChannelID, "first.png", reader2)
-	}
-	if errors.Is(err, types.ErrDefault) {
-		reader, err := os.Open("logs/failoverSS.png")
-		reader2, err2 := os.Open("logs/failoverHTML.html")
-		reader3, err3 := os.Open("logs/collyHTML.html")
-		reader4, err4 := os.Open("logs/proxyFailoverSS.png")
-		reader5, err5 := os.Open("logs/proxyFailoverHTML.html")
-		defer reader.Close()
-		defer reader2.Close()
-		defer reader3.Close()
-		defer reader4.Close()
-		defer reader5.Close()
-		if err != nil || err2 != nil || err3 != nil ||
-			err4 != nil || err5 != nil {
-			slog.Error("Could not send error image",
-				slog.Any("Error", err),
-				slog.Any("Error HTML File", err2),
-				slog.Any("err3", err3),
-				slog.Any("err4", err4),
-				slog.Any("err5", err5),
-			)
-		}
-		Discord.ChannelFileSend(ChannelID, "collyHTML.html", reader3)
-		Discord.ChannelFileSend(ChannelID, "failoverSS.png", reader)
-		Discord.ChannelFileSend(ChannelID, "failoverHTML.html", reader2)
-		Discord.ChannelFileSend(ChannelID, "proxyFailoverSS.png", reader4)
-		Discord.ChannelFileSend(ChannelID, "proxyFailoverHTML.html", reader5)
 	}
 	Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
 		Title:  "Error",
 		Fields: Fields,
 		Color:  red,
 	})
+}
+
+func getLogFilesForItem(itemName, crawlType string) ([]*os.File, error) {
+	entries, err := os.ReadDir("logs")
+	if err != nil {
+		return nil, fmt.Errorf("could not read logs directory: %w", err)
+	}
+	var files []*os.File
+	for _, entry := range entries {
+		if !entry.IsDir() &&
+			strings.Contains(entry.Name(), itemName) &&
+			strings.Contains(entry.Name(), crawlType) {
+			f, err := os.Open("logs/" + entry.Name())
+			if err != nil {
+				continue // skip files that can't be opened
+			}
+			files = append(files, f)
+		}
+	}
+	return files, nil
 }
 
 // SendGraphPng sends a price history graph as a file to a Discord channel.

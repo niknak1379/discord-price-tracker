@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -51,7 +52,7 @@ func Init() {
 	}
 }
 
-func StartProxyCounter(done <-chan struct{}) {
+func StartProxyCounter(ctx context.Context) {
 	slog.Info("starting proxy counter")
 	ProxyCounterChannel = make(chan []*types.Attempt)
 	ProxySuccessChannel = make(chan string)
@@ -83,7 +84,7 @@ func StartProxyCounter(done <-chan struct{}) {
 					RestartGluetun(ProxyURL)
 					ProxySuccessCounterMap[ProxyURL] = 0
 				}
-			case <-done:
+			case <-ctx.Done():
 				return
 			}
 		}

@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"context"
 	"log/slog"
 
 	proxy "priceTracker/Proxy"
@@ -12,7 +13,7 @@ var (
 	IncidentCounter int
 )
 
-func StartIncidentListener(dbFunc func(*types.Incident), done <-chan struct{}) {
+func StartIncidentListener(dbFunc func(*types.Incident), ctx context.Context) {
 	IncidentChannel = make(chan types.Incident, 100)
 	go func() {
 		for {
@@ -21,7 +22,7 @@ func StartIncidentListener(dbFunc func(*types.Incident), done <-chan struct{}) {
 				slog.Warn("logging Incident", slog.Any("incident", Incident))
 				dbFunc(&Incident)
 				proxy.ProxyCounterChannel <- Incident.Attempts
-			case <-done:
+			case <-ctx.Done():
 				return
 			}
 		}

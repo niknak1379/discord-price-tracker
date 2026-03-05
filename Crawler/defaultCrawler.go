@@ -48,30 +48,24 @@ func GetPrice(name, uri, querySelector string, proxy []string, attempts []*types
 	DefaultParserCallback(c, querySelector, &crawled, &res, &priceErr)
 	err = c.Visit(uri)
 	c.Wait()
-	logger.LogFileChannel <- makeCrawlFilesObject(name, types.CrawlerDefault, collyHTML, nil)
+	proxyString := types.ProxyDisabled
+	if len(proxy) != 0 {
+		proxyString = proxy[proxyIndex]
+	}
+	logger.LogFileChannel <- makeCrawlFilesObject(name, types.CrawlerDefault, collyHTML, proxyString, nil)
 	if !crawled {
 		err = types.MakeError(types.ErrDefault, "element not found", uri)
 	}
 	if err != nil || priceErr != nil {
-		if len(proxy) != 0 {
-			slog.Warn("error in getting price in crawler, triggering proxy chrome",
-				slog.Any("Error", err), slog.Any("PriceErr", priceErr))
-			attempts = append(attempts, makeAttemptObject(types.CrawlerDefault, proxy[proxyIndex],
-				types.MethodColly,
-				firstErrorMsg(err, priceErr, "unknown error")))
-			res, err2 := ChromeDPFailover(name, uri, querySelector, proxy, proxyIndex, attempts)
-			return res, err2
-		} else {
-			slog.Warn("no proxy default crawler failed, triggering chromeDPFailover no proxy",
-				slog.Any("Error", err),
-				slog.Int("Price", res),
-			)
-			attempts = append(attempts,
-				makeAttemptObject(types.CrawlerDefault, types.ProxyDisabled, types.MethodColly,
-					firstErrorMsg(err, priceErr, "unknown error")))
-			res, err2 := ChromeDPFailover(name, uri, querySelector, proxy, proxyIndex, attempts)
-			return res, err2
-		}
+		slog.Warn("error in getting price in crawler, triggering chrome",
+			slog.Any("Error", err), slog.Any("PriceErr", priceErr),
+			slog.String("proxy", proxyString),
+		)
+		attempts = append(attempts, makeAttemptObject(types.CrawlerDefault, proxyString,
+			types.MethodColly,
+			firstErrorMsg(err, priceErr, "unknown error")))
+		res, err2 := ChromeDPFailover(name, uri, querySelector, proxy, proxyIndex, attempts)
+		return res, err2
 	}
 	if len(attempts) != 0 {
 		loggIncident(uri, attempts, true)
@@ -165,12 +159,17 @@ func ChromeDPFailover(name, url, selector string, proxy []string, proxyIndexUsed
 		)
 	}
 	cancel()
-	logger.LogFileChannel <- makeCrawlFilesObject(name, types.CrawlerDefault, HTMLContent, screenShot)
+	proxyString := types.ProxyDisabled
+	if len(proxy) != 0 {
+		proxyString = proxy[proxyIndexUsed]
+	}
+	logger.LogFileChannel <- makeCrawlFilesObject(name, types.CrawlerDefault,
+		HTMLContent, proxyString, screenShot)
 	if err != nil {
+		attempts = append(attempts, makeAttemptObject(types.CrawlerDefault,
+			proxyString, types.MethodChromeDP,
+			errOrMsg(err, "Price Text is empty in chromeDP")))
 		if len(proxy) != 0 {
-			attempts = append(attempts, makeAttemptObject(types.CrawlerDefault,
-				proxy[proxyIndexUsed], types.MethodChromeDP,
-				errOrMsg(err, "Price Text is empty in chromeDP")))
 			proxy = append(proxy[:proxyIndexUsed], proxy[proxyIndexUsed+1:]...)
 			slog.Warn("ChromDP proxy failed, triggering default crawler without this proxy",
 				slog.Any("error", err),
@@ -182,9 +181,6 @@ func ChromeDPFailover(name, url, selector string, proxy []string, proxyIndexUsed
 			slog.Error("error in default chromedp", slog.String("selector", selector),
 				slog.String("URL", url), slog.Any("ChromeDP Error", err),
 			)
-			attempts = append(attempts, makeAttemptObject(types.CrawlerDefault,
-				types.ProxyDisabled, types.MethodChromeDP,
-				errOrMsg(err, "Price Text is empty in chromeDP")))
 			loggIncident(url, attempts, false)
 			err = types.MakeError(types.ErrDefault, err.Error(), url)
 			return 0, err

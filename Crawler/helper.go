@@ -587,10 +587,11 @@ func loggIncident(url string, attempts []*types.Attempt, resolved bool) {
 	}
 }
 
-func makeCrawlFilesObject(Name, CrawlType, HTMLString string,
+func makeCrawlFilesObject(Name, CrawlType, HTMLString, proxy string,
 	ScreenShot []byte,
 ) *logger.CrawlFiles {
 	return &logger.CrawlFiles{
+		Proxy:      proxy,
 		ItemName:   Name,
 		CrawlType:  CrawlType,
 		HTMLString: HTMLString,

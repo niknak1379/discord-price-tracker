@@ -211,15 +211,18 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 		}))
 		`, &items),
 	)
-	logger.LogFileChannel <- makeCrawlFilesObject(Name, types.CrawlerFacebook, HTMLContent, first)
+	proxyString := types.ProxyDisabled
+	if len(proxy) != 0 {
+		proxyString = proxy[proxyIndexUsed]
+	}
+	logger.LogFileChannel <- makeCrawlFilesObject(Name, types.CrawlerFacebook, HTMLContent, proxyString, first)
 	cancel()
 	var retArr []*types.EbayListing
 	if len(items) == 0 || err != nil {
+		attempts = append(attempts, makeAttemptObject(types.CrawlerFacebook,
+			proxyString, types.MethodChromeDP,
+			errOrMsg(err, "error object empty but not visited")))
 		if len(proxy) != 0 {
-			time.Sleep(5 * time.Second)
-			attempts = append(attempts, makeAttemptObject(types.CrawlerFacebook,
-				types.ProxyEnabled, types.MethodChromeDP,
-				errOrMsg(err, "error object empty but not visited")))
 			proxy = append(proxy[:proxyIndexUsed], proxy[proxyIndexUsed+1:]...)
 			slog.Warn("facebook proxy failed, triggering no proxy crawl",
 				slog.Any("Error", err),
@@ -230,9 +233,6 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 				proxy, queries, attempts)
 		} else {
 			slog.Error("Error in marketplace", slog.Any("error value", err))
-			attempts = append(attempts, makeAttemptObject(types.CrawlerFacebook,
-				types.ProxyDisabled, types.MethodChromeDP,
-				errOrMsg(err, "error object empty but not visited")))
 			loggIncident(url, attempts, false)
 			ErrMsg := "empty error object but not visited"
 			if err != nil {

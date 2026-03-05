@@ -11,7 +11,6 @@ import (
 	"time"
 
 	logger "priceTracker/Logger"
-	Proxy "priceTracker/Proxy"
 	types "priceTracker/Types"
 
 	"github.com/chromedp/cdproto/network"
@@ -86,7 +85,6 @@ func initCrawler(url string, proxy *[]string) (*colly.Collector, int) {
 			slog.Info("sending porxyURL through proxy channel",
 				slog.String("proxy", proxyURL),
 			)
-			Proxy.ProxySuccessChannel <- proxyURL
 		}
 	})
 

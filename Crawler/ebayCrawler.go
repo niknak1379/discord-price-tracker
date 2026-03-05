@@ -96,6 +96,9 @@ func GetEbayListings(Name string,
 	if len(attempts) != 0 {
 		loggIncident(url, attempts, true)
 	}
+	if len(proxy) != 0 {
+		Proxy.ProxySuccessChannel <- proxyString
+	}
 	return listingArr, bidArr, err
 }
 
@@ -321,7 +324,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 	slog.Info("Ebay Failover returned Items, its fine for now")
 	if len(proxy) != 0 {
 		slog.Info("recording proxy successs in chromedp ebay")
-		Proxy.ProxySuccessChannel <- proxy[proxyIndexUsed]
+		Proxy.ProxySuccessChannel <- proxyString
 	}
 
 	loggIncident(url, attempts, true)

@@ -23,7 +23,7 @@ jobs:
         run: go test -v -race ./...
 
   dockerize:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment: .env
     steps:
       - name: Checkout repository

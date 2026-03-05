@@ -9,6 +9,7 @@ import (
 	"time"
 
 	logger "priceTracker/Logger"
+	Proxy "priceTracker/Proxy"
 	types "priceTracker/Types"
 
 	"github.com/gocolly/colly/v2"
@@ -118,6 +119,10 @@ func CrawlDepop(Name string,
 	if len(attempts) != 0 {
 		loggIncident(url, attempts, true)
 	}
+	if len(proxy) != 0 {
+		Proxy.ProxySuccessChannel <- proxyString
+	}
+
 	return retArr, nil
 }
 
@@ -195,5 +200,9 @@ func CrawlProductPage(productURL string,
 			slog.String("URL", productURL),
 		)
 	}
+	if len(proxy) != 0 {
+		Proxy.ProxySuccessChannel <- proxy[proxyIndex]
+	}
+
 	return Listing, attempts, err
 }

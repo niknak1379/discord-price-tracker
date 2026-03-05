@@ -69,13 +69,13 @@ func PriceHistoryChart(Names []string, month int, ChannelID string) error {
 		charts.WithInitializationOpts(opts.Initialization{
 			BackgroundColor: "white",
 			Width:           "1100px",
-			Height:          "600px",
+			Height:          "800px",
 		}),
 		charts.WithGridOpts(opts.Grid{
 			Show:         opts.Bool(true),
 			ContainLabel: opts.Bool(true),
 			Top:          "100px",
-			Bottom:       "100px",
+			Bottom:       "150px",
 		}),
 		charts.WithLegendOpts(
 			opts.Legend{
@@ -198,13 +198,13 @@ func IncidentsByDomainChart(data []database.DomainTimeSeries) error {
 		charts.WithInitializationOpts(opts.Initialization{
 			BackgroundColor: "white",
 			Width:           "1100px",
-			Height:          "600px",
+			Height:          "800px",
 		}),
 		charts.WithGridOpts(opts.Grid{
 			Show:         opts.Bool(true),
 			ContainLabel: opts.Bool(true),
 			Top:          "100px",
-			Bottom:       "100px",
+			Bottom:       "150px",
 		}),
 		charts.WithLegendOpts(
 			opts.Legend{
@@ -288,13 +288,13 @@ func IncidentsByDomainMethodProxyChart(data []database.IncidentTimeSeries) error
 		charts.WithInitializationOpts(opts.Initialization{
 			BackgroundColor: "white",
 			Width:           "1100px",
-			Height:          "600px",
+			Height:          "800px",
 		}),
 		charts.WithGridOpts(opts.Grid{
 			Show:         opts.Bool(true),
 			ContainLabel: opts.Bool(true),
 			Top:          "100px",
-			Bottom:       "100px",
+			Bottom:       "150px",
 		}),
 		charts.WithLegendOpts(
 			opts.Legend{

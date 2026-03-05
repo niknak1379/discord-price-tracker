@@ -70,6 +70,9 @@ func GetPrice(name, uri, querySelector string, proxy []string, attempts []*types
 	if len(attempts) != 0 {
 		loggIncident(uri, attempts, true)
 	}
+	if len(proxy) != 0 {
+		Proxy.ProxySuccessChannel <- proxyString
+	}
 	return int(float64(res) * TaxRate), err
 }
 
@@ -195,7 +198,7 @@ func ChromeDPFailover(name, url, selector string, proxy []string, proxyIndexUsed
 		loggIncident(url, attempts, true)
 		if len(proxy) != 0 {
 			slog.Info("recording proxy success in chromdp")
-			Proxy.ProxySuccessChannel <- proxy[proxyIndexUsed]
+			Proxy.ProxySuccessChannel <- proxyString
 		}
 	} else {
 		slog.Error("ChromeDP failed")

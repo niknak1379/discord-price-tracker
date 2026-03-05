@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"time"
 
+	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 
 	"github.com/gocolly/colly/v2"
@@ -52,6 +53,16 @@ func CrawlDepop(Name string,
 		attempts = []*types.Attempt{}
 	}
 	slog.Info("logging depop url", slog.String("Url", url))
+	var collyHTML string
+	c.OnHTML("body", func(h *colly.HTMLElement) {
+		collyHTML, _ = h.DOM.Html()
+	})
+	proxyString := types.ProxyDisabled
+	if len(proxy) != 0 {
+		proxyString = proxy[proxyIndex]
+	}
+	CrawlObj := makeCrawlFilesObject(Name, types.CrawlerEbay, collyHTML, proxyString, nil)
+
 	c.OnHTML("ol[class^='styles_productGrid__'] li", func(e *colly.HTMLElement) {
 		visited = true
 		price, _ := formatPrice(e.ChildText("p.styles_price__H8qdh"))
@@ -82,14 +93,11 @@ func CrawlDepop(Name string,
 	c.Wait()
 
 	if err != nil || !visited {
-		proxyVal := types.ProxyDisabled
-		if len(proxy) != 0 {
-			proxyVal = proxy[proxyIndex]
-		}
 		attempts = append(attempts, makeAttemptObject(types.CrawlerDepop,
-			proxyVal, types.MethodColly,
+			proxyString, types.MethodColly,
 			errOrMsg(err, "error object empty but not visited")))
 		if len(proxy) != 0 {
+			logger.LogFileChannel <- CrawlObj
 			slog.Warn("depop proxy crawl failed, retrying without this proxy",
 				slog.Any("Error", err),
 				slog.String("proxy", proxy[proxyIndex]),
@@ -99,6 +107,7 @@ func CrawlDepop(Name string,
 		} else {
 			slog.Error("depop crawl failed with no proxy")
 			loggIncident(url, attempts, false)
+			logger.WriteLogFiles(CrawlObj)
 			ErrMsg := "error object empty but not visited"
 			if err != nil {
 				ErrMsg = err.Error()

@@ -56,6 +56,13 @@ var (
 			Description: "Returns the latest HTML and pictures recorded",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
+					Name:         "name",
+					Description:  "Item name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
 					Name:        "crawl",
 					Description: "Item Type",
 					Type:        discordgo.ApplicationCommandOptionString,
@@ -604,19 +611,25 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		}
 	},
 	"get_logs": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
-		customAcknowledge(discord, i)
-		crawlType := i.ApplicationCommandData().Options[0].StringValue()
-		var err error
-		switch crawlType {
-		case "ebay":
-			err = types.ErrEbay
-		case "default":
-			err = types.ErrDefault
-		case "facebook":
-			err = types.ErrFacebook
+		options := i.ApplicationCommandData().Options
+		switch i.Type {
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			autoComplete(options[0].StringValue(), 0, i, discord)
+		default:
+			customAcknowledge(discord, i)
+			crawlType := i.ApplicationCommandData().Options[0].StringValue()
+			var err error
+			switch crawlType {
+			case "ebay":
+				err = types.ErrEbay
+			case "default":
+				err = types.ErrDefault
+			case "facebook":
+				err = types.ErrFacebook
+			}
+			CrawlErrorAlert(options[0].StringValue(),
+				err, i.ChannelID)
 		}
-		CrawlErrorAlert("Logs",
-			err, i.ChannelID)
 	},
 	"add": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
 		switch i.Type {
@@ -934,25 +947,14 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			return
 		case discordgo.InteractionApplicationCommand:
 			newName := options[1].StringValue()
-			getRes, err := database.EditName(oldName, newName, i.ChannelID)
-			var embedArr []*discordgo.MessageEmbed
+			_, err := database.EditName(oldName, newName, i.ChannelID)
 			customAcknowledge(discord, i)
 			if err != nil {
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
-				em := setEmbed(&getRes)
-				embedArr = append(embedArr, em...)
-			}
-
-			for _, embed := range embedArr {
-				_, err = discord.ChannelMessageSendEmbed(i.ChannelID, embed)
-				if err != nil {
-					slog.Error("failed to send embed",
-						slog.Any("Embed", embed),
-						slog.Any("value", err),
-					)
-					SendErrorEmbed(discord, i.ChannelID, err.Error())
-				}
+				SendSuccessEmbed(discord, i.ChannelID,
+					fmt.Sprintf("Name Successfully changed from %s to %s", oldName, newName),
+				)
 			}
 		}
 	},

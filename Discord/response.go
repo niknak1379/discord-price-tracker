@@ -108,7 +108,7 @@ func PriceChangeAlert(itemName string, newPrice int, oldPrice database.Price, UR
 //   - err: the error that occurred
 //   - ChannelID: the Discord channel ID
 func CrawlErrorAlert(itemName string, err error, ChannelID string) {
-	slog.Error(err.Error())
+	slog.Error(err.Error(), slog.String("Name", itemName))
 	var CrawlError types.CrawlError
 	errors.As(err, &CrawlError)
 	nameField := discordgo.MessageEmbedField{
@@ -145,10 +145,18 @@ func CrawlErrorAlert(itemName string, err error, ChannelID string) {
 		files, fileErr = getLogFilesForItem(itemName, types.CrawlerDefault)
 	case errors.Is(err, types.ErrDepop):
 		files, fileErr = getLogFilesForItem(itemName, types.CrawlerDepop)
-
 	}
-	if fileErr != nil {
+	if fileErr != nil || len(files) == 0 {
 		slog.Error("Could not get log files", slog.Any("error", fileErr))
+		if fileErr == nil {
+			fileErr = errors.New("file array length is zero")
+		}
+		maxLen := int(math.Min(float64(len(fileErr.Error())), 1023))
+		Fields = append(Fields, &discordgo.MessageEmbedField{
+			Name:   "did not find any log files",
+			Value:  fileErr.Error()[:maxLen],
+			Inline: false,
+		})
 	}
 	for _, f := range files {
 		defer f.Close()

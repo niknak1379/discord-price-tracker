@@ -130,7 +130,7 @@ func ChromeDPFailover(name, url, selector string, proxy []string, proxyIndexUsed
 		slog.String("URL", url), slog.String("Selector", selector),
 	)
 	time.Sleep(5 * time.Second)
-	res, e := WgetFailover(url, selector, proxy, proxyIndexUsed, attempts)
+	res, e := WgetFailover(url, selector, proxy, proxyIndexUsed, &attempts)
 	if e == nil {
 		return res, e
 	}
@@ -209,7 +209,7 @@ func ChromeDPFailover(name, url, selector string, proxy []string, proxyIndexUsed
 	return int(float64(res) * TaxRate), err
 }
 
-func WgetFailover(url string, selector string, proxy []string, proxyIndexUsed int, attempts []*types.Attempt) (int, error) {
+func WgetFailover(url string, selector string, proxy []string, proxyIndexUsed int, attempts *[]*types.Attempt) (int, error) {
 	slog.Warn("WgetFailover triggered",
 		slog.String("URL", url),
 		slog.String("Selector", selector))
@@ -231,12 +231,20 @@ func WgetFailover(url string, selector string, proxy []string, proxyIndexUsed in
 	cmd := exec.Command("wget", args...)
 	html, err := cmd.CombinedOutput()
 	if err != nil {
-		slog.Error("wget failed", slog.Any("error", err), slog.String("output", string(html)))
+		slog.Warn("wget failed to connect", slog.Any("error", err), slog.String("output", string(html)))
+		*attempts = append(*attempts, makeAttemptObject(types.CrawlerDefault,
+			proxy[proxyIndexUsed], types.MethodChromeDP,
+			errOrMsg(err, "Price Text is empty in chromeDP")))
+
 		return 0, fmt.Errorf("wget failed: %w, output: %s", err, string(html))
 	}
 	res, err := ParseDefaultChromedpHTML(string(html), selector, url)
 	if err != nil {
-		slog.Error("ParseDefaultChromedpHTML failed", slog.Any("error", err))
+		slog.Warn("wget failed, could not find element", slog.Any("error", err))
+		*attempts = append(*attempts, makeAttemptObject(types.CrawlerDefault,
+			proxy[proxyIndexUsed], types.MethodChromeDP,
+			errOrMsg(err, "Price Text is empty in chromeDP")))
+
 		return 0, err
 	}
 

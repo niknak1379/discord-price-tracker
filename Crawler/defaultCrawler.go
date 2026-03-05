@@ -240,6 +240,9 @@ func WgetFailover(url string, selector string, proxy []string, proxyIndexUsed in
 		return 0, err
 	}
 
+	if len(proxy) != 0 {
+		Proxy.ProxySuccessChannel <- proxy[proxyIndexUsed]
+	}
 	slog.Info("WgetFailover found price", slog.Int("price", res))
 	return int(float64(res) * TaxRate), nil
 }

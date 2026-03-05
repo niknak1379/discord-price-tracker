@@ -203,6 +203,5 @@ func CrawlProductPage(productURL string,
 	if len(proxy) != 0 {
 		Proxy.ProxySuccessChannel <- proxy[proxyIndex]
 	}
-
 	return Listing, attempts, err
 }

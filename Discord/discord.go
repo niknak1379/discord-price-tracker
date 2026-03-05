@@ -617,13 +617,15 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			autoComplete(options[0].StringValue(), 0, i, discord)
 		default:
 			customAcknowledge(discord, i)
-			crawlType := i.ApplicationCommandData().Options[0].StringValue()
+			crawlType := i.ApplicationCommandData().Options[1].StringValue()
 			var err error
 			switch crawlType {
 			case "ebay":
 				err = types.ErrEbay
 			case "default":
 				err = types.ErrDefault
+			case "depop":
+				err = types.ErrDepop
 			case "facebook":
 				err = types.ErrFacebook
 			}

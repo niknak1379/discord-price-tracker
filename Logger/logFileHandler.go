@@ -46,7 +46,6 @@ func processLogFiles(ctx context.Context) {
 					)
 				}
 			}
-			return
 		case <-ctx.Done():
 			return
 		}

@@ -137,7 +137,7 @@ func AddItem(itemName string, uri string, query string, Type string, Timer int, 
 	if Timer <= 0 {
 		return Item{}, errors.New("Invalid Timer value")
 	}
-	p, t, err := validateURI(uri, query)
+	p, t, err := validateURI(itemName, uri, query)
 	if err != nil {
 		slog.Error("invalid url for add", slog.Any("Error", err))
 		return Item{}, err
@@ -1042,7 +1042,7 @@ func AddTrackingInfo(itemName string, uri string, querySelector string, ChannelI
 		slog.Error("couldnt load channel", slog.Any("Error", err))
 		return Item{}, Price{}, err
 	}
-	p, t, err := validateURI(uri, querySelector)
+	p, t, err := validateURI(itemName, uri, querySelector)
 	if err != nil {
 		return Item{}, *p, err
 	}
@@ -1135,7 +1135,7 @@ func InitDB(context context.Context) {
 	slog.Info("DB Successfully Pinged")
 }
 
-func validateURI(uri string, querySelector string) (*Price, *TrackingInfo, error) {
+func validateURI(name, uri, querySelector string) (*Price, *TrackingInfo, error) {
 	_, err := url.ParseRequestURI(uri)
 	if err != nil {
 		slog.Error("Invalid url")
@@ -1143,13 +1143,13 @@ func validateURI(uri string, querySelector string) (*Price, *TrackingInfo, error
 	}
 	proxyCopy := make([]string, len(proxy.ProxyList))
 	copy(proxyCopy, proxy.ProxyList)
-	pr, err := crawler.GetPrice(uri, querySelector, proxyCopy, nil)
+	pr, err := crawler.GetPrice(name, uri, querySelector, proxyCopy, nil)
 	if err != nil {
 		if strings.Contains(uri, "amazon") ||
 			strings.Contains(uri, "https://a.co") {
 			proxyCopy := make([]string, len(proxy.ProxyList))
 			copy(proxyCopy, proxy.ProxyList)
-			pr, err := crawler.GetPrice(uri, "div#apex_desktop span.priceToPay",
+			pr, err := crawler.GetPrice(name, uri, "div#apex_desktop span.priceToPay",
 				proxyCopy, nil)
 			tracking := TrackingInfo{
 				URI:       uri,

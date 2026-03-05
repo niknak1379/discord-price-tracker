@@ -587,15 +587,13 @@ func loggIncident(url string, attempts []*types.Attempt, resolved bool) {
 	}
 }
 
-func appendCrawlFilesArr(FileArr []*logger.CrawlFiles,
-	Name, CrawlType, HTMLString string,
+func makeCrawlFilesObject(Name, CrawlType, HTMLString string,
 	ScreenShot []byte,
-) []*logger.CrawlFiles {
-	FileArr = append(FileArr, &logger.CrawlFiles{
+) *logger.CrawlFiles {
+	return &logger.CrawlFiles{
 		ItemName:   Name,
 		CrawlType:  CrawlType,
 		HTMLString: HTMLString,
 		ScreenShot: ScreenShot,
-	})
-	return FileArr
+	}
 }

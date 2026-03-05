@@ -68,6 +68,7 @@ func AlienwareMonitorTest() {
 	copy(proxyCopy, proxy.ProxyList)
 
 	i, err := crawler.GetPrice(
+		"sth",
 		"https://www.bestbuy.com/product/alienware-aw3225qf-31-6-qd-oled-curved-4k-uhd-240hz-03-ms-g-sync-gaming-monitor-with-hdr-hdmi-usb-c-lunar-light/J3K4L62597",
 		"div[data-testid='price-block-customer-price']",
 		proxyCopy,
@@ -82,7 +83,8 @@ func AlienwareMonitorTest() {
 func amazonTest() {
 	proxyCopy := make([]string, len(proxy.ProxyList))
 	copy(proxyCopy, proxy.ProxyList)
-	i, err := crawler.GetPrice("https://www.amazon.com/dp/B0B3F8V4JG?ref=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&ref_=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&social_share=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&language=en-US",
+	i, err := crawler.GetPrice("sth",
+		"https://www.amazon.com/dp/B0B3F8V4JG?ref=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&ref_=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&social_share=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&language=en-US",
 		"form#addToCart span.a-price-whole", proxyCopy, nil)
 	slog.Info("price", slog.Int("int", i), slog.Any("error", err))
 }
@@ -92,6 +94,7 @@ func ChromeDPFailoverTest() {
 	proxyCopy := make([]string, len(proxy.ProxyList))
 	copy(proxyCopy, proxy.ProxyList)
 	price, err := crawler.ChromeDPFailover(
+		"sth",
 		"https://www.amazon.com/dp/B0B3F8V4JG?ref=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&ref_=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&social_share=cm_sw_r_ud_dp_EX1QNBD4J564MEHGZ4Y1&language=en-US",
 		"form#addToCart span.a-price-whole",
 		proxyCopy,
@@ -120,7 +123,8 @@ func WgetFailoverTest() {
 func BestBuyTest() {
 	proxyCopy := make([]string, len(proxy.ProxyList))
 	copy(proxyCopy, proxy.ProxyList)
-	i, err := crawler.GetPrice("https://www.bestbuy.com/product/msi-mpg-322urx-qd-oled-32-quantum-dot-oled-uhd-240hz-0-03ms-gaming-monitor-with-hdr400-displayport-2-1a-hdmi-usb-black/J3P7TX99VT/sku/6614908?sb_share_source=PDP&ref=app_pdp&loc=pdp_page",
+	i, err := crawler.GetPrice("sth",
+		"https://www.bestbuy.com/product/msi-mpg-322urx-qd-oled-32-quantum-dot-oled-uhd-240hz-0-03ms-gaming-monitor-with-hdr400-displayport-2-1a-hdmi-usb-black/J3P7TX99VT/sku/6614908?sb_share_source=PDP&ref=app_pdp&loc=pdp_page",
 		"div[data-testid='price-block-customer-price']", proxyCopy, nil)
 	slog.Info("price", slog.Int("int", i), slog.Any("error", err))
 }

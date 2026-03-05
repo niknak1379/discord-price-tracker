@@ -399,20 +399,16 @@ func GetTrackingExclusionQueries(Name, ChannelID string) ([]string, error) {
 //
 // Returns any error encountered.
 func SetSecondHandPrice(Name, ChannelID string, price int) error {
+	Table, err := loadChannelTable(ChannelID)
 	update := bson.M{
 		"$set": bson.M{
 			"SecondHandPrice": price,
 		},
 	}
 	var item Item
-	err := Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update).Decode(&item)
+	err = Table.FindOneAndUpdate(ctx, bson.M{"Name": Name}, update).Decode(&item)
 	if err != nil {
 		return err
-	}
-	if err != nil {
-		slog.Error("Error updating lowest price in setdesiredprice",
-			slog.Any("error", err),
-		)
 	}
 	item, _ = GetItem(Name, ChannelID, exludedFields...)
 	sendItemChangeEvent(&item, Edit, Channel{})

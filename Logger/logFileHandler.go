@@ -16,10 +16,13 @@ type CrawlFiles struct {
 var LogFileChannel chan *CrawlFiles
 
 func InitLogFileChannel(ctx context.Context) {
-	LogFileChannel = make(chan *CrawlFiles, 10)
+	LogFileChannel = make(chan *CrawlFiles)
 	go processLogFiles(ctx)
 }
 
+// this might cause a race condition since im not waiting for the file
+// write to finish the discrod error alert might not be able to open the
+// file
 func processLogFiles(ctx context.Context) {
 	for {
 		select {

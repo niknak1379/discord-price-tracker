@@ -11,11 +11,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	logger "priceTracker/Logger"
 	Proxy "priceTracker/Proxy"
 	types "priceTracker/Types"
 
@@ -71,6 +71,11 @@ func GetEbayListings(Name string,
 	if attempts == nil {
 		attempts = []*types.Attempt{}
 	}
+	var collyHTML string
+	c.OnHTML("body", func(h *colly.HTMLElement) {
+		collyHTML, _ = h.DOM.Html()
+	})
+	logger.LogFileChannel <- makeCrawlFilesObject(Name, types.CrawlerEbay, collyHTML, nil)
 	EbayHTMLProcessorCallback(c, Name, desiredPrice, queries, &listingArr, &bidArr, &visited)
 	err := c.Visit(url)
 	c.Wait()
@@ -271,7 +276,6 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 	var cancel context.CancelFunc
 	ctx, cancel = NewChromedpContext(90, &proxy, proxyIndexUsed)
 	var first []byte
-	var second []byte
 	var rawHTML string
 
 	err := chromedp.Run(ctx,
@@ -280,10 +284,10 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 		chromedp.Sleep(10*time.Second),
 		chromedp.FullScreenshot(&first, 70),
 		chromedp.Sleep(7*time.Second),
-		chromedp.FullScreenshot(&second, 70),
 		chromedp.OuterHTML("html", &rawHTML),
 	)
 	cancel()
+	logger.LogFileChannel <- makeCrawlFilesObject(Name, types.CrawlerEbay, rawHTML, first)
 	var retListingArr []*types.EbayListing
 	var retBidArr []*types.EbayBids
 	if err == nil {
@@ -304,10 +308,7 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 			)
 			return GetEbayListings(Name, desiredPrice, proxy, queries, attempts)
 		} else {
-			fileErr1 := os.WriteFile("logs/ebayFirst.png", first, 0o644)
-			fileErr2 := os.WriteFile("logs/ebaySecond.png", second, 0o644)
-			slog.Error("Error in ebay failover", slog.Any("error value", err),
-				slog.Any("file error 1", fileErr1), slog.Any("file error 2", fileErr2))
+			slog.Error("ebay failover no proxy failed", slog.Any("error value", err))
 			attempts = append(attempts, makeAttemptObject(types.CrawlerEbay,
 				types.ProxyDisabled, types.MethodChromeDP,
 				errOrMsg(err, "error object empty but not visited")))

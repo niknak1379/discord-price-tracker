@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	logger "priceTracker/Logger"
 	Proxy "priceTracker/Proxy"
 	types "priceTracker/Types"
 
@@ -187,18 +188,16 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	}
 
 	var first []byte
-	var second []byte
 	var HTMLContent string
 	var items []types.EbayListing
 	err := chromedp.Run(ctx,
 		StealthActions(url),
 		chromedp.Navigate(url),
 		chromedp.Sleep(time.Duration(rand.IntN(10)+15)*time.Second),
-		chromedp.FullScreenshot(&first, 70),
-		chromedp.OuterHTML("body", &HTMLContent),
 		chromedp.Evaluate(`document.querySelector('div.xdg88n9.x10l6tqk.x1tk7jg1.x1vjfegm')?.click()`, nil),
+		chromedp.OuterHTML("body", &HTMLContent),
+		chromedp.FullScreenshot(&first, 70),
 		chromedp.Sleep(3*time.Second),
-		chromedp.FullScreenshot(&second, 70),
 		chromedp.Evaluate(`
 		Array.from(document.querySelectorAll("div[data-virtualized='false']")).map(e => ({
 				Title: e.querySelector('span.x1lliihq.x6ikm8r.x10wlt62.x1n2onr6')?.innerText || '',
@@ -212,14 +211,11 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 		}))
 		`, &items),
 	)
-
+	logger.LogFileChannel <- makeCrawlFilesObject(Name, types.CrawlerFacebook, HTMLContent, first)
 	cancel()
 	var retArr []*types.EbayListing
 	if len(items) == 0 || err != nil {
 		if len(proxy) != 0 {
-			fileErr1 := os.WriteFile("logs/proxyFacebookFirst.png", first, 0o644)
-			fileErr2 := os.WriteFile("logs/proxyFacebookSecond.png", second, 0o644)
-			fileErr3 := os.WriteFile("logs/proxyFacebookHTML.html", []byte(HTMLContent), 0o644)
 			time.Sleep(5 * time.Second)
 			attempts = append(attempts, makeAttemptObject(types.CrawlerFacebook,
 				types.ProxyEnabled, types.MethodChromeDP,
@@ -228,22 +224,12 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 			slog.Warn("facebook proxy failed, triggering no proxy crawl",
 				slog.Any("Error", err),
 				slog.Int("ItemArr length", len(items)),
-				slog.Any("wirte Err", fileErr1),
-				slog.Any("write err 2", fileErr2),
-				slog.Any("write err 3", fileErr3),
 				slog.Any("proxy", proxy),
 			)
 			return MarketPlaceCrawl(Name, desiredPrice, homeLat, homeLong, maxDistance, LocationCode,
 				proxy, queries, attempts)
 		} else {
-			fileErr1 := os.WriteFile("logs/facebookFirst.png", first, 0o644)
-			fileErr2 := os.WriteFile("logs/facebookSecond.png", second, 0o644)
-			fileErr3 := os.WriteFile("logs/facebookHTML.html", []byte(HTMLContent), 0o644)
-			slog.Error("Error in marketplace", slog.Any("error value", err),
-				slog.Any("File error 1", fileErr1),
-				slog.Any("file error 2", fileErr2),
-				slog.Any("file error 3", fileErr3),
-			)
+			slog.Error("Error in marketplace", slog.Any("error value", err))
 			attempts = append(attempts, makeAttemptObject(types.CrawlerFacebook,
 				types.ProxyDisabled, types.MethodChromeDP,
 				errOrMsg(err, "error object empty but not visited")))

@@ -163,9 +163,10 @@ func ChromeDPFailover(name, url, selector string, proxy []string, proxyIndexUsed
 	if len(proxy) != 0 {
 		proxyString = proxy[proxyIndexUsed]
 	}
-	logger.LogFileChannel <- makeCrawlFilesObject(name, types.CrawlerDefault,
+	CrawlObj := makeCrawlFilesObject(name, types.CrawlerDefault,
 		HTMLContent, proxyString, screenShot)
 	if err != nil {
+		logger.LogFileChannel <- CrawlObj
 		attempts = append(attempts, makeAttemptObject(types.CrawlerDefault,
 			proxyString, types.MethodChromeDP,
 			errOrMsg(err, "Price Text is empty in chromeDP")))
@@ -182,6 +183,7 @@ func ChromeDPFailover(name, url, selector string, proxy []string, proxyIndexUsed
 				slog.String("URL", url), slog.Any("ChromeDP Error", err),
 			)
 			loggIncident(url, attempts, false)
+			logger.WriteLogFiles(CrawlObj)
 			err = types.MakeError(types.ErrDefault, err.Error(), url)
 			return 0, err
 		}
@@ -198,6 +200,7 @@ func ChromeDPFailover(name, url, selector string, proxy []string, proxyIndexUsed
 	} else {
 		slog.Error("ChromeDP failed")
 		loggIncident(url, attempts, false)
+		logger.WriteLogFiles(CrawlObj)
 	}
 
 	return int(float64(res) * TaxRate), err

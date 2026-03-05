@@ -52,3 +52,24 @@ func processLogFiles(ctx context.Context) {
 		}
 	}
 }
+
+func WriteLogFiles(crawlFiles *CrawlFiles) {
+	fileName := "/logs/" + crawlFiles.ItemName + crawlFiles.CrawlType + crawlFiles.Proxy
+
+	if crawlFiles.HTMLString != "" {
+		err := os.WriteFile(fileName+"HTML.html", []byte(crawlFiles.HTMLString), 0o644)
+		if err != nil {
+			slog.Error("could not write log files",
+				slog.Any("err", err),
+			)
+		}
+	}
+	if len(crawlFiles.ScreenShot) != 0 {
+		err := os.WriteFile(fileName+"SS.png", crawlFiles.ScreenShot, 0o644)
+		if err != nil {
+			slog.Error("could not write log files",
+				slog.Any("err", err),
+			)
+		}
+	}
+}

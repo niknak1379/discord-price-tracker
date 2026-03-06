@@ -2,6 +2,7 @@ package discord
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 
 	database "priceTracker/Database"
@@ -112,11 +113,22 @@ func setAlternateNamesFields(Item *database.Item) []*discordgo.MessageEmbedField
 		Item.Timer = 8
 	}
 	timer := discordgo.MessageEmbedField{
-		Name:   embedSeparatorFormatter("Timer", 43),
+		Name:   embedSeparatorFormatter("Scraping Timer", 43),
 		Value:  strconv.Itoa(Item.Timer) + " h",
 		Inline: false,
 	}
-	Fields = append(Fields, &timer)
+	SecondHandPrice := Item.SecondHandPrice
+	if SecondHandPrice == 0 {
+		SecondHandPrice = Item.CurrentLowestPrice.Price
+	} else {
+		SecondHandPrice = int(math.Min(float64(SecondHandPrice), float64(Item.CurrentLowestPrice.Price)))
+	}
+	secondHandPrice := discordgo.MessageEmbedField{
+		Name:   embedSeparatorFormatter("Acceptable Second Hand Price", 43),
+		Value:  strconv.Itoa(Item.SecondHandPrice),
+		Inline: false,
+	}
+	Fields = append(Fields, &timer, &secondHandPrice)
 	for _, Name := range Item.AlternateTrackingQueries {
 		field := discordgo.MessageEmbedField{
 			Name:   embedSeparatorFormatter("Alternative Name", 43),

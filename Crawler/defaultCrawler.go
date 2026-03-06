@@ -225,15 +225,17 @@ func WgetFailover(url string, selector string, proxy []string, proxyIndexUsed in
 		"-qO-",
 		url,
 	}
+	proxyString := types.ProxyDisabled
 	if len(proxy) != 0 {
-		args = append(args, "-e", "use_proxy=yes", "-e", "http_proxy="+proxy[proxyIndexUsed])
+		proxyString = proxy[proxyIndexUsed]
+		args = append(args, "-e", "use_proxy=yes", "-e", "http_proxy="+proxyString)
 	}
 	cmd := exec.Command("wget", args...)
 	html, err := cmd.CombinedOutput()
 	if err != nil {
 		slog.Warn("wget failed to connect", slog.Any("error", err), slog.String("output", string(html)))
 		*attempts = append(*attempts, makeAttemptObject(types.CrawlerDefault,
-			proxy[proxyIndexUsed], types.MethodChromeDP,
+			proxyString, types.MethodChromeDP,
 			errOrMsg(err, "Price Text is empty in chromeDP")))
 
 		return 0, fmt.Errorf("wget failed: %w, output: %s", err, string(html))
@@ -242,7 +244,7 @@ func WgetFailover(url string, selector string, proxy []string, proxyIndexUsed in
 	if err != nil {
 		slog.Warn("wget failed, could not find element", slog.Any("error", err))
 		*attempts = append(*attempts, makeAttemptObject(types.CrawlerDefault,
-			proxy[proxyIndexUsed], types.MethodChromeDP,
+			proxyString, types.MethodChromeDP,
 			errOrMsg(err, "Price Text is empty in chromeDP")))
 
 		return 0, err

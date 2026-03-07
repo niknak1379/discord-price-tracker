@@ -184,6 +184,7 @@ func getLogFilesForItem(itemName, crawlType, ChannelID string) ([]*os.File, erro
 	// 	return nil, fmt.Errorf("could not get item: %w", err)
 	// }
 
+	slog.Info("log file dir", slog.Any("arr", entries))
 	var files []*os.File
 	for _, entry := range entries {
 		if !entry.IsDir() &&

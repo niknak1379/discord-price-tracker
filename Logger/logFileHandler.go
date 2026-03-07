@@ -53,7 +53,7 @@ func processLogFiles(ctx context.Context) {
 }
 
 func WriteLogFiles(crawlFiles *CrawlFiles) {
-	fileName := "/logs/" + crawlFiles.ItemName + crawlFiles.CrawlType + crawlFiles.Proxy
+	fileName := "logs/" + crawlFiles.ItemName + crawlFiles.CrawlType + crawlFiles.Proxy
 
 	if crawlFiles.HTMLString != "" {
 		err := os.WriteFile(fileName+"HTML.html", []byte(crawlFiles.HTMLString), 0o644)

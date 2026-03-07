@@ -24,7 +24,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
-var exludedFields = []string{"PriceHistory", "ListingsHistory", "EbayListings", "EbayBids"}
+var ExludedFields = []string{"PriceHistory", "ListingsHistory", "EbayListings", "EbayBids"}
 
 type ItemChangeEvent struct {
 	Item    *Item
@@ -382,7 +382,7 @@ func RemoveTrackingExclusionQuery(Name string, index int, ChannelID string) (Ite
 //
 // Returns the list of exclusion queries and any error encountered.
 func GetTrackingExclusionQueries(Name, ChannelID string) ([]string, error) {
-	item, err := GetItem(Name, ChannelID, exludedFields...)
+	item, err := GetItem(Name, ChannelID, ExludedFields...)
 	if err != nil {
 		return []string{}, err
 	}
@@ -410,13 +410,13 @@ func SetSecondHandPrice(Name, ChannelID string, price int) error {
 	if err != nil {
 		return err
 	}
-	item, _ = GetItem(Name, ChannelID, exludedFields...)
+	item, _ = GetItem(Name, ChannelID, ExludedFields...)
 	sendItemChangeEvent(&item, Edit, Channel{})
 	return err
 }
 
 func RemoveAllTrackers(Name, ChannelID string) error {
-	item, err := GetItem(Name, ChannelID, exludedFields...)
+	item, err := GetItem(Name, ChannelID, ExludedFields...)
 	if err != nil {
 		slog.Error("Error getting Item in setdesiredprice",
 			slog.Any("error", err),

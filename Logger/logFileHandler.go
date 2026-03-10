@@ -29,8 +29,8 @@ func processLogFiles(ctx context.Context) {
 	for {
 		select {
 		case crawlFiles := <-LogFileChannel:
-			fileName := "logs/" + crawlFiles.ItemName + crawlFiles.CrawlType + crawlFiles.Proxy
-			fileName = SanitizeFileName(fileName)
+			fileName := crawlFiles.ItemName + crawlFiles.CrawlType + crawlFiles.Proxy
+			fileName = "logs/" + SanitizeFileName(fileName)
 
 			if crawlFiles.HTMLString != "" {
 				err := os.WriteFile(fileName+"HTML.html", []byte(crawlFiles.HTMLString), 0o644)

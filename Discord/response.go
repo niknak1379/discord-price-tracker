@@ -188,10 +188,15 @@ func getLogFilesForItem(itemName, crawlType, ChannelID string) ([]*os.File, erro
 
 	slog.Info("log file dir", slog.Any("arr", entries))
 	var files []*os.File
+	SanitizedItemName := logger.SanitizeFileName(itemName)
+	SanitizedCrawlType := logger.SanitizeFileName(crawlType)
 	for _, entry := range entries {
+		slog.Info("file Name", slog.String("name", entry.Name()),
+			slog.String(SanitizedCrawlType, SanitizedItemName),
+		)
 		if !entry.IsDir() &&
-			strings.Contains(entry.Name(), logger.SanitizeFileName(itemName)) &&
-			strings.Contains(entry.Name(), logger.SanitizeFileName(crawlType)) {
+			strings.Contains(entry.Name(), SanitizedItemName) &&
+			strings.Contains(entry.Name(), SanitizedCrawlType) {
 			f, err := os.Open("logs/" + entry.Name())
 			if err != nil {
 				continue // skip files that can't be opened

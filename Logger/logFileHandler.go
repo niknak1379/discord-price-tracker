@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"strings"
 )
 
 type CrawlFiles struct {
@@ -29,6 +30,7 @@ func processLogFiles(ctx context.Context) {
 		select {
 		case crawlFiles := <-LogFileChannel:
 			fileName := "logs/" + crawlFiles.ItemName + crawlFiles.CrawlType + crawlFiles.Proxy
+			fileName = SanitizeFileName(fileName)
 
 			if crawlFiles.HTMLString != "" {
 				err := os.WriteFile(fileName+"HTML.html", []byte(crawlFiles.HTMLString), 0o644)
@@ -50,6 +52,17 @@ func processLogFiles(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func SanitizeFileName(fileName string) string {
+	invalidChars := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|", "\x00", "\x01", "\x02", ".."}
+
+	for _, char := range invalidChars {
+		fileName = strings.ReplaceAll(fileName, char, "_")
+	}
+	fileName = strings.Join(strings.Fields(fileName), "_")
+	fileName = strings.TrimSpace(fileName)
+	return fileName
 }
 
 func WriteLogFiles(crawlFiles *CrawlFiles) {

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	database "priceTracker/Database"
+	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 
 	"github.com/bwmarrin/discordgo"
@@ -179,6 +180,7 @@ func getLogFilesForItem(itemName, crawlType, ChannelID string) ([]*os.File, erro
 	if err != nil {
 		return nil, fmt.Errorf("could not read logs directory: %w", err)
 	}
+	// i forgot what i was trying to do here by adding channelID
 	// Item, err := database.GetItem(itemName, ChannelID, database.ExludedFields...)
 	// if err != nil {
 	// 	return nil, fmt.Errorf("could not get item: %w", err)
@@ -188,8 +190,8 @@ func getLogFilesForItem(itemName, crawlType, ChannelID string) ([]*os.File, erro
 	var files []*os.File
 	for _, entry := range entries {
 		if !entry.IsDir() &&
-			strings.Contains(entry.Name(), itemName) &&
-			strings.Contains(entry.Name(), crawlType) {
+			strings.Contains(entry.Name(), logger.SanitizeFileName(itemName)) &&
+			strings.Contains(entry.Name(), logger.SanitizeFileName(crawlType)) {
 			f, err := os.Open("logs/" + entry.Name())
 			if err != nil {
 				continue // skip files that can't be opened

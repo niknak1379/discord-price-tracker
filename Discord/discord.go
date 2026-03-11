@@ -22,6 +22,7 @@ import (
 var (
 	BotToken    string
 	Discord     *discordgo.Session
+	startTime   time.Time
 	commandList = []*discordgo.ApplicationCommand{
 		{
 			Name:        "setup",
@@ -523,6 +524,10 @@ var (
 		{
 			Name:        "help",
 			Description: "Show help and available commands",
+		},
+		{
+			Name:        "status",
+			Description: "Show crawler status and uptime",
 		},
 	}
 )
@@ -1296,10 +1301,28 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 					"• `/channel_item_summary_custom_ln` - Custom period summary\n\n" +
 					"**Utilities:**\n" +
 					"• `/get_logs` - Get debug logs and screenshots\n" +
+					"• `/status` - Show crawler status and uptime\n" +
 					"• `/restart` - Restart the bot\n\n" +
 					"For more information, visit: https://github.com/niknak1379/discord-price-tracker",
 			},
 		})
+	},
+	"status": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		uptime := time.Since(startTime)
+		days := int(uptime.Hours() / 24)
+		hours := int(uptime.Hours()) % 24
+		minutes := int(uptime.Minutes()) % 60
+
+		var uptimeStr string
+		if days > 0 {
+			uptimeStr = fmt.Sprintf("%d days, %d hours, %d minutes", days, hours, minutes)
+		} else if hours > 0 {
+			uptimeStr = fmt.Sprintf("%d hours, %d minutes", hours, minutes)
+		} else {
+			uptimeStr = fmt.Sprintf("%d minutes", minutes)
+		}
+
+		SendInfoEmbed(discord, i.ChannelID, "Crawler Status", "Uptime: "+uptimeStr)
 	},
 }
 
@@ -1364,6 +1387,7 @@ func Run(ctx context.Context) {
 
 	// open session
 	Discord.Open()
+	startTime = time.Now()
 
 	Discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := commandHandler[i.ApplicationCommandData().Name]; ok {

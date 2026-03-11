@@ -36,7 +36,10 @@ func SetChannelScheduler(ctx context.Context) {
 	// for running it once immediately on deployment
 	//
 	go func() {
-		for _, Channel := range database.ChannelMap {
+		database.ChannelLock.Lock()
+		ChannelMap := database.ChannelMap
+		database.ChannelLock.Unlock()
+		for _, Channel := range ChannelMap {
 			itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
 			for _, item := range itemsArr {
 				// this incident rate isnt really used for anything tho since its not passed down
@@ -74,7 +77,10 @@ func loadAndStartItems(ctx context.Context) {
 	// for tracking items that have been deleted and are no longer
 	// visible in the database.getallitmes call
 	currentItems := make(map[string]bool)
-	for _, Channel := range database.ChannelMap {
+	database.ChannelLock.Lock()
+	ChannelMap := database.ChannelMap
+	database.ChannelLock.Unlock()
+	for _, Channel := range ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
 		for _, item := range itemsArr {
 			activeRoutinesMutex.Lock()

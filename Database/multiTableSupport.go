@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"log/slog"
+	"sync"
 
 	crawler "priceTracker/Crawler"
 
@@ -32,8 +33,9 @@ var (
 	// has the mongo table stored
 	Tables = make(map[string]*mongo.Collection)
 	// has the distance, lat, long, and other facebook info stored
-	ChannelMap = make(map[string]*Channel)
-	// in-memory cache of joined guilds
+	ChannelMap  = make(map[string]*Channel)
+	ChannelLock sync.Mutex
+	// map of joined guilds(servers)
 	GuildMap = make(map[string]*Guild)
 )
 
@@ -49,6 +51,7 @@ func loadDBTables() {
 		log.Panic("could not read ChannelID results")
 	}
 	slog.Info("channels", slog.Any("IDs:", ChannelsArr))
+	ChannelLock.Lock()
 	for _, IDString := range ChannelsArr {
 		table := Client.Database("tracker").Collection(IDString.ChannelID)
 		Tables[IDString.ChannelID] = table
@@ -65,6 +68,7 @@ func loadDBTables() {
 		}
 	}
 	loadGuilds()
+	ChannelLock.Unlock()
 }
 
 // loadGuilds loads all tracked guilds from the database into memory.
@@ -96,6 +100,7 @@ func loadGuilds() {
 //   - guildID: ID of the guild the bot was added to
 //   - systemChannelID: the default channel automated messages are sent
 func IsFirstTimeJoin(guildID, systemChannelID string) bool {
+	ChannelLock.Lock()
 	if _, exists := GuildMap[guildID]; exists {
 		return false
 	}
@@ -114,6 +119,7 @@ func IsFirstTimeJoin(guildID, systemChannelID string) bool {
 	}
 
 	GuildMap[guildID] = guild
+	ChannelLock.Unlock()
 	return true
 }
 
@@ -123,9 +129,12 @@ func IsFirstTimeJoin(guildID, systemChannelID string) bool {
 //   - ChannelID: the Discord channel ID
 //
 // Returns the channel configuration or nil if not found.
-func GetChannelInfo(ChannelID string) *Channel {
+func GetChannelInfo(ChannelID string) (*Channel, bool) {
 	slog.Info("Getting Channel Info", slog.String("Channel ID", ChannelID))
-	return ChannelMap[ChannelID]
+	ChannelLock.Lock()
+	Channel, ok := ChannelMap[ChannelID]
+	ChannelLock.Unlock()
+	return Channel, ok
 }
 
 // UpdateChannelOrCreateChannelItemTableIfMissing creates or updates a channel configuration.
@@ -152,6 +161,7 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 		LocationCode: LocationCode,
 		TotalItems:   0,
 	}
+	ChannelLock.Lock()
 	// if channelID already exists, just update the Coordinates in DB and memory
 	if _, ok := Tables[ChannelID]; ok {
 		slog.Info("Channel Already Exists Updating")
@@ -206,6 +216,7 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 	table := Client.Database("tracker").Collection(ChannelID)
 	Tables[ChannelID] = table
 	ChannelMap[ChannelID] = &Channel
+	ChannelLock.Unlock()
 
 	return err
 }
@@ -215,12 +226,14 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 // Parameters:
 //   - ChannelID: the Discord channel ID to delete
 func ChannelDeleteHandler(ChannelID string) {
+	ChannelLock.Lock()
 	if _, ok := Tables[ChannelID]; ok {
 		ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
 		ChannelTable.FindOneAndDelete(ctx, bson.M{"ChannelID": ChannelID})
 		delete(Tables, ChannelID)
 		delete(ChannelMap, ChannelID)
 	}
+	ChannelLock.Unlock()
 }
 
 func loadChannelTable(ChannelID string) (*mongo.Collection, error) {
@@ -246,6 +259,7 @@ func getChannelLength(ChannelID string) (int, error) {
 }
 
 func updateChannelLength(ChannelID string, Diff int) error {
+	ChannelLock.Lock()
 	Len, err := getChannelLength(ChannelID)
 	if err != nil {
 		return err
@@ -271,5 +285,6 @@ func updateChannelLength(ChannelID string, Diff int) error {
 	Table := Client.Database("tracker").Collection("ChannelIDs")
 	res := Table.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
 	ChannelMap[ChannelID].TotalItems = Diff + Len
+	ChannelLock.Unlock()
 	return res.Err()
 }

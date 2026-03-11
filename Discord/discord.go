@@ -582,16 +582,21 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		}
 	},
 	"channel_info": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
-		info := database.GetChannelInfo(i.ChannelID)
-		em := formatChannelInfo(info)
-		err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Embeds: []*discordgo.MessageEmbed{em},
-			},
-		})
-		if err != nil {
-			slog.Error("Error in Sending ChannelInfo", slog.Any("error", err))
+		info, ok := database.GetChannelInfo(i.ChannelID)
+		if ok {
+			em := formatChannelInfo(info)
+			err := discord.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Embeds: []*discordgo.MessageEmbed{em},
+				},
+			})
+			if err != nil {
+				slog.Error("Error in Sending ChannelInfo", slog.Any("error", err))
+			}
+		} else {
+			SendErrorEmbed(discord, i.ChannelID,
+				"Channel Does Not Exist in Database. Call Setup Function First")
 		}
 	},
 	"channel_item_summary_one_week": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {

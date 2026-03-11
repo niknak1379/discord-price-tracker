@@ -139,13 +139,13 @@ func CrawlErrorAlert(itemName string, err error, ChannelID string) {
 	var fileErr error
 	switch {
 	case errors.Is(err, types.ErrFacebook):
-		files, fileErr = getLogFilesForItem(itemName, types.CrawlerFacebook, ChannelID)
+		files, fileErr = getLogFilesForItem(itemName, types.CrawlerFacebook)
 	case errors.Is(err, types.ErrEbay):
-		files, fileErr = getLogFilesForItem(itemName, types.CrawlerEbay, ChannelID)
+		files, fileErr = getLogFilesForItem(itemName, types.CrawlerEbay)
 	case errors.Is(err, types.ErrDefault):
-		files, fileErr = getLogFilesForItem(itemName, types.CrawlerDefault, ChannelID)
+		files, fileErr = getLogFilesForItem(itemName, types.CrawlerDefault)
 	case errors.Is(err, types.ErrDepop):
-		files, fileErr = getLogFilesForItem(itemName, types.CrawlerDepop, ChannelID)
+		files, fileErr = getLogFilesForItem(itemName, types.CrawlerDepop)
 	}
 	if fileErr != nil || len(files) == 0 {
 		slog.Error("Could not get log files", slog.Any("error", fileErr))
@@ -175,17 +175,11 @@ func CrawlErrorAlert(itemName string, err error, ChannelID string) {
 	})
 }
 
-func getLogFilesForItem(itemName, crawlType, ChannelID string) ([]*os.File, error) {
+func getLogFilesForItem(itemName, crawlType string) ([]*os.File, error) {
 	entries, err := os.ReadDir("logs")
 	if err != nil {
 		return nil, fmt.Errorf("could not read logs directory: %w", err)
 	}
-	// i forgot what i was trying to do here by adding channelID
-	// Item, err := database.GetItem(itemName, ChannelID, database.ExludedFields...)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("could not get item: %w", err)
-	// }
-
 	slog.Info("log file dir", slog.Any("arr", entries))
 	var files []*os.File
 	SanitizedItemName := logger.SanitizeFileName(itemName)

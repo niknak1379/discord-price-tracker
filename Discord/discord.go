@@ -1308,6 +1308,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		})
 	},
 	"status": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		customAcknowledge(discord, i)
 		uptime := time.Since(startTime)
 		days := int(uptime.Hours() / 24)
 		hours := int(uptime.Hours()) % 24

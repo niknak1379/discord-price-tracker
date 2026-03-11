@@ -690,7 +690,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			if err != nil {
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
-				content := fmt.Sprintf("Price Update Notification Timer: %d Hours", newTimer)
+				content := fmt.Sprintf("Updated Timer: %d Hours", newTimer)
 				SendSuccessEmbed(discord, i.ChannelID, content)
 			}
 		}
@@ -735,7 +735,7 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			if err != nil {
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
 			} else {
-				content := fmt.Sprintf("Price Update Notification Status: %t", suppressNotifications)
+				content := fmt.Sprintf("Notification Status: %t", suppressNotifications)
 				SendInfoEmbed(discord, i.ChannelID, "Notification Status Updated", content)
 			}
 		}

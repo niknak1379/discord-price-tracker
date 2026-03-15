@@ -169,13 +169,16 @@ func AutoCompleteQuery() map[string]string {
 	ret := map[string]string{
 		//div[data-feature-name='corePriceDisplay_desktop'] span.priceToPay
 		//"Amazon":       "form#addToCart span.a-price-whole",
+		// for products that also have a used listig
 		"Amazon_Default": "div#apex_desktop_newAccordionRow span.priceToPay",
-		"Amazon_Backup":  "div#apex_desktop span.priceToPay",
-		"NewEgg":         "div.price-current>strong",
-		"MicroCenter":    "#options-pricing2022",
-		"BHPhotoVideo":   "span[class^='price_']",
+		// for products that dont have used listings
+		"Amazon_Backup": "div#apex_desktop span.priceToPay",
+		"NewEgg":        "div.price-current>strong",
+		"MicroCenter":   "#options-pricing2022",
+		"BHPhotoVideo":  "span[class^='price_']",
 		// "BestBuy":      "div[data-component-name='LargePrice'] div[data-testid='price-block-customer-price']",
-		"BestBuy": "div[data-testid='price-block-customer-price']",
+		// "BestBuy": "div[data-testid='price-block-customer-price']",
+		"BestBuy": "div[data-component-name='StickyProductHeader'] div[data-testid='price-block-customer-price']",
 	}
 	return ret
 }

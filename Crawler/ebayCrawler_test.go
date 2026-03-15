@@ -81,24 +81,35 @@ func TestHTMLProcessingFunction(t *testing.T) {
 		HTMLFilePath    string
 		ExpectedListing []*types.EbayListing
 		ExpectedBids    []*types.EbayBids
-	}{{
-		Name:            "Samsung odyssey G80sd",
-		AdditionalNames: []string{},
-		ExclusionNames:  []string{},
-		DesiredPrice:    1000,
-		HTMLFilePath:    "testdata/listingTest1",
-		ExpectedListing: []*types.EbayListing{
-			{
-				ItemName:      "Samsung odyssey G80sd",
-				Title:         "SAMSUNG 32\" Odyssey G80SD 4K UHD Smart Gaming MonitorLS32D802UANXGO",
-				Price:         302,
-				URL:           "https://www.ebay.com/itm/277491998203",
-				Condition:     "Pre-Owned",
-				AcceptsOffers: true,
+	}{
+		{
+			Name:            "Samsung odyssey G80sd",
+			AdditionalNames: []string{},
+			ExclusionNames:  []string{},
+			DesiredPrice:    1000,
+			HTMLFilePath:    "testdata/listingTest1",
+			ExpectedListing: []*types.EbayListing{
+				{
+					ItemName:      "Samsung odyssey G80sd",
+					Title:         "SAMSUNG 32\" Odyssey G80SD 4K UHD Smart Gaming MonitorLS32D802UANXGO",
+					Price:         302,
+					URL:           "https://www.ebay.com/itm/277491998203",
+					Condition:     "Pre-Owned",
+					AcceptsOffers: true,
+				},
 			},
+			ExpectedBids: []*types.EbayBids{},
 		},
-		ExpectedBids: []*types.EbayBids{},
-	}}
+		{
+			Name:            "Lenovo Yoga 7i",
+			AdditionalNames: []string{},
+			ExclusionNames:  []string{`16"`},
+			DesiredPrice:    1000,
+			HTMLFilePath:    "testdata/listingTest2",
+			ExpectedListing: []*types.EbayListing{},
+			ExpectedBids:    []*types.EbayBids{},
+		},
+	}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			InitAntiTLSClients()

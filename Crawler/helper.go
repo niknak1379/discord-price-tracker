@@ -392,6 +392,20 @@ type ItemRegexInfo struct {
 	ExcludeSpecial []string
 }
 
+func QuoteNormalizer(listingTitle string) string {
+	listingTitle = strings.ReplaceAll(listingTitle, "\u201C", `"`) // Left curly double quote "
+	listingTitle = strings.ReplaceAll(listingTitle, "\u201D", `"`) // Right curly double quote "
+	listingTitle = strings.ReplaceAll(listingTitle, `\"`, `"`)     // Escaped \"
+
+	// Single quotes - curly quotes and escaped quotes
+	listingTitle = strings.ReplaceAll(listingTitle, "\u2018", `'`) // Left curly single quote '
+	listingTitle = strings.ReplaceAll(listingTitle, "\u2019", `'`) // Right curly single quote '
+	listingTitle = strings.ReplaceAll(listingTitle, `\'`, `'`)     // Escaped \'
+
+	listingTitle = strings.ToLower(listingTitle)
+	return listingTitle
+}
+
 // initTitleRegex compiles regex patterns for item matching and exclusion.
 // Words with special characters are matched exactly; others use word boundaries.
 // Returns inclusion patterns, inclusion special words, exclusion patterns, and exclusion special words.
@@ -409,6 +423,7 @@ func InitTitleRegex(itemNames []string, exclusionQueries []string) *ItemRegexInf
 		var specialWords []string
 
 		for _, word := range words {
+			word = QuoteNormalizer(word)
 			if strings.ContainsAny(word, "./-\"'()[]{}") {
 				// Has special characters - add to string array
 				specialWords = append(specialWords, word)
@@ -450,13 +465,6 @@ func InitTitleRegex(itemNames []string, exclusionQueries []string) *ItemRegexInf
 // checks the title to make sure the name is in the title and
 // no unwanted returned results by ebay
 //
-// this one i added when i was making the depop stuff, dont remember why
-// replacer := strings.NewReplacer(
-// 	".", " ",
-// 	"'", " ",
-// 	"'", " ",
-// )
-// listingTitle = replacer.Replace(listingTitle)
 //
 //
 // Use word boundaries for normal words
@@ -473,16 +481,7 @@ func InitTitleRegex(itemNames []string, exclusionQueries []string) *ItemRegexInf
 func titleCorrectnessCheck(listingTitle string, queries *ItemRegexInfo) bool {
 	// Normalize all quote variations to standard keyboard quotes
 	// Double quotes - curly quotes and escaped quotes
-	listingTitle = strings.ReplaceAll(listingTitle, "\u201C", `"`) // Left curly double quote "
-	listingTitle = strings.ReplaceAll(listingTitle, "\u201D", `"`) // Right curly double quote "
-	listingTitle = strings.ReplaceAll(listingTitle, `\"`, `"`)     // Escaped \"
-
-	// Single quotes - curly quotes and escaped quotes
-	listingTitle = strings.ReplaceAll(listingTitle, "\u2018", `'`) // Left curly single quote '
-	listingTitle = strings.ReplaceAll(listingTitle, "\u2019", `'`) // Right curly single quote '
-	listingTitle = strings.ReplaceAll(listingTitle, `\'`, `'`)     // Escaped \'
-
-	listingTitle = strings.ToLower(listingTitle)
+	listingTitle = QuoteNormalizer(listingTitle)
 	atLeastOneMatched := false
 outerloop:
 	for i := range queries.IncludeRegex {

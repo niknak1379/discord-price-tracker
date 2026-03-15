@@ -1,0 +1,86 @@
+<ul class="srp-results">
+	<li
+		data-viewport='{"trackableId":"01KHYQ6173TECCTQW8ZY85T4R0"}'
+		data-view="mi:1686|iid:1"
+		id="item409bcfddfa"
+		data-listingid="277491998204"
+		class="s-card s-card--horizontal"
+	>
+		<div class="su-card-container su-card-container--horizontal">
+			<div class="su-card-container__media">
+				<div class="s-card__media-wrapper">
+					<div class="su-media su-media--image">
+						<div class="su-media__primary">
+							<div class="su-media__image">
+								<a
+									class="s-card__link image-treatment"
+									href="https://www.ebay.com/itm/277491998204"
+									_sp="p2351460.m1686.l7400"
+									target="_blank"
+									style="--aspect-ratio: 1"
+									><img
+										class="s-card__image"
+										fetchpriority="high"
+										loading="eager"
+										src="https://i.ebayimg.com/images/g/abc123/s-l500.jpg"
+										alt="Lenovo Yoga 7i 16&quot; 2-in-1 Touch Laptop Core Ultra 5, 16GB RAM, 512GB SSD - Fair"
+										data-atftimer="1771631216600"
+										style="width: auto"
+								/></a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="su-card-container__content">
+				<div class="su-card-container__header">
+					<a
+						class="s-card__link"
+						_sp="p2351460.m1686.l7400"
+						target="_blank"
+						tabindex="-1"
+						href="https://www.ebay.com/itm/277491998204"
+						><div role="heading" aria-level="3" class="s-card__title">
+							<span class="su-styled-text primary default"
+								>Lenovo Yoga 7i 16" 2-in-1 Touch Laptop Core Ultra 5, 16GB RAM, 512GB SSD - Fair</span
+							><span class="clipped">Opens in a new window or tab</span>
+						</div></a
+					>
+					<div class="s-card__subtitle-row">
+						<div class="s-card__subtitle">
+							<span class="su-styled-text secondary default">Pre-Owned</span>
+						</div>
+					</div>
+				</div>
+				<div
+					class="su-card-container__attributes su-card-container__attributes--has-secondary"
+				>
+					<div class="su-card-container__attributes__primary">
+						<div class="s-card__attribute-row">
+							<span class="su-styled-text primary bold large-1 s-card__price"
+								>$299.99</span
+							><span class="su-spacer --spacing-100"></span
+							><span class="su-styled-text secondary strikethrough large"
+								>$899.00</span
+							>
+						</div>
+						<div class="s-card__attribute-row">
+							<span class="su-styled-text secondary large">or Best Offer</span>
+						</div>
+						<div class="s-card__attribute-row">
+							<span class="su-styled-text secondary large">Free delivery</span>
+						</div>
+						<div class="s-card__attribute-row">
+							<span class="su-styled-text secondary large"
+								>Located in United States</span
+							>
+						</div>
+						<div class="s-card__attribute-row">
+							<span class="su-styled-text secondary large">Free returns</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</li>
+</ul>

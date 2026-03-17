@@ -229,6 +229,10 @@ func ChannelDeleteHandler(ChannelID string) {
 	ChannelLock.Lock()
 	if _, ok := Tables[ChannelID]; ok {
 		ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
+		ItemArr := GetAllItems(ChannelID, ExludedFields)
+		for _, Item := range ItemArr {
+			sendItemChangeEvent(Item, Remove, *ChannelMap[ChannelID])
+		}
 		ChannelTable.FindOneAndDelete(ctx, bson.M{"ChannelID": ChannelID})
 		delete(Tables, ChannelID)
 		delete(ChannelMap, ChannelID)

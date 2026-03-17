@@ -112,6 +112,9 @@ func setAlternateNamesFields(Item *database.Item) []*discordgo.MessageEmbedField
 	if Item.Timer == 0 {
 		Item.Timer = 8
 	}
+	if Item.SecondHandPrice == 0 {
+		Item.SecondHandPrice = Item.CurrentLowestPrice.Price
+	}
 	timer := discordgo.MessageEmbedField{
 		Name:   embedSeparatorFormatter("Scraping Timer", 43),
 		Value:  strconv.Itoa(Item.Timer) + " h",

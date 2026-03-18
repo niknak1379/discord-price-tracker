@@ -121,7 +121,7 @@ func InitAntiTLSClients() {
 			Builder().
 			Impersonate().
 			Windows(). // Randomly selects Windows, macOS, Linux, Android, or iOS
-			Firefox()
+			Chrome()
 	}
 	surfClient5 := func() *surf.Builder {
 		return surf.NewClient().
@@ -130,8 +130,29 @@ func InitAntiTLSClients() {
 			MacOS(). // Randomly selects Windows, macOS, Linux, Android, or iOS
 			Firefox()
 	}
+	surfClient6 := func() *surf.Builder {
+		return surf.NewClient().
+			Builder().
+			Impersonate().
+			IOS(). // Randomly selects Windows, macOS, Linux, Android, or iOS
+			Chrome()
+	}
+	surfClient7 := func() *surf.Builder {
+		return surf.NewClient().
+			Builder().
+			Impersonate().
+			IOS(). // Randomly selects Windows, macOS, Linux, Android, or iOS
+			Firefox()
+	}
+	surfClient8 := func() *surf.Builder {
+		return surf.NewClient().
+			Builder().
+			Impersonate().
+			Android(). // Randomly selects Windows, macOS, Linux, Android, or iOS
+			Firefox()
+	}
 	HttpClients = append(HttpClients, &surfClient, &surfClient2, &surfClient3,
-		&surfClient4, &surfClient5)
+		&surfClient4, &surfClient5, &surfClient6, &surfClient7, &surfClient8)
 }
 
 func generateRandomClient(proxyURL string) *http.Client {

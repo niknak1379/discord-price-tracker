@@ -679,7 +679,10 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			})
 			if err != nil {
 				for _, embed := range em {
-					discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+					_, err := discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+					if err != nil {
+						slog.Error("could not send Embed", slog.Any("error", err))
+					}
 				}
 			}
 		}

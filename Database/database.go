@@ -640,7 +640,9 @@ func AddNewPrice(Name string, uri string, newPrice int, date time.Time, ChannelI
 	}}
 
 	var result Item
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
+	opts := options.FindOneAndUpdate().
+		SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).
+		SetReturnDocument(options.After)
 	err = Table.FindOneAndUpdate(ctx, filter, update, opts).Decode(&result)
 	if err != nil {
 		slog.Error("couldnt add new price", slog.Any("Error", err))
@@ -663,7 +665,8 @@ func GetLowestHistoricalPrice(Name string, ChannelID string) (Price, error) {
 		return Price{}, err
 	}
 	filter := bson.M{"Name": Name}
-	opts := options.FindOne().SetProjection(bson.M{"LowestPrice": 1})
+	opts := options.FindOne().
+		SetProjection(bson.M{"LowestPrice": 1})
 	var res Item
 	err = Table.FindOne(ctx, filter, opts).Decode(&res)
 	if err != nil {
@@ -687,7 +690,9 @@ func UpdateLowestHistoricalPrice(Name string, newLow Price, ChannelID string) (I
 		return Item{}, err
 	}
 	filter := bson.M{"Name": Name}
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
+	opts := options.FindOneAndUpdate().
+		SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).
+		SetReturnDocument(options.After)
 	update := bson.M{
 		"$set": bson.M{
 			"LowestPrice": newLow,
@@ -741,7 +746,9 @@ func UpdateLowestPrice(Name string, newLow *Price, ChannelID string) (Item, erro
 		return Item{}, err
 	}
 	filter := bson.M{"Name": bson.M{"$regex": "^" + Name + "$", "$options": "i"}}
-	opts := options.FindOneAndUpdate().SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).SetReturnDocument(options.After)
+	opts := options.FindOneAndUpdate().
+		SetProjection(bson.D{{Key: "PriceHistory", Value: 0}}).
+		SetReturnDocument(options.After)
 	update := bson.M{
 		"$set": bson.M{
 			"CurrentLowestPrice": newLow,

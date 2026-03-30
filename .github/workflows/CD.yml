@@ -22,23 +22,21 @@ jobs:
       - name: Run tests
         run: go test -v -race ./...
 
-  determine-runner:
+  choose-runner:
     runs-on: ubuntu-latest
     outputs:
-      runner: ${{ steps.set-runner.outputs.runner }}
+      runner: ${{ steps.choose-runner.outputs.runner }}
     steps:
-      - name: Determine which runner to use
-        id: set-runner
-        uses: benjaminmichaelis/get-soonest-available-runner@v1.1.0
+      - id: choose-runner
+        uses: QCDIS/choose-action-runner@v2
         with:
-          primary-runner: "self-hosted"
-          fallback-runner: "ubuntu-latest"
-          min-available-runners: 1
+          preferred-runner: self-hosted
+          fallback-runner: ubuntu-latest
           github-token: ${{ secrets.GHTOKEN_DETERMINERUNNER }}
 
   dockerize:
     needs: [test, determine-runner]
-    runs-on: ${{ needs.determine-runner.outputs.runner }}
+    runs-on: ${{ needs.choose-runner.outputs.runner }}
     environment: .env
     steps:
       - name: Checkout repository

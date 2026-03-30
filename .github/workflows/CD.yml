@@ -24,6 +24,7 @@ jobs:
 
   choose-runner:
     runs-on: ubuntu-latest
+    environment: .env
     outputs:
       runner: ${{ steps.choose-runner.outputs.runner }}
     steps:

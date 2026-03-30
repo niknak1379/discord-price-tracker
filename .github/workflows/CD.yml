@@ -22,8 +22,23 @@ jobs:
       - name: Run tests
         run: go test -v -race ./...
 
+  determine-runner:
+    runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ steps.set-runner.outputs.runner }}
+    steps:
+      - name: Determine which runner to use
+        id: set-runner
+        uses: benjaminmichaelis/get-soonest-available-runner@v1.1.0
+        with:
+          primary-runner: "self-hosted"
+          fallback-runner: "ubuntu-latest"
+          min-available-runners: 1
+          github-token: ${{ secrets.GHTOKEN_DETERMINERUNNER }}
+
   dockerize:
-    runs-on: self-hosted
+    needs: [test, determine-runner]
+    runs-on: ${{ needs.determine-runner.outputs.runner }}
     environment: .env
     steps:
       - name: Checkout repository
@@ -46,13 +61,13 @@ jobs:
           tags: |
             nikanostovan/price-tracker:latest
             nikanostovan/price-tracker:${{ github.sha }}
-          cache-from: type=gha,scope=main
-          cache-to: type=gha,mode=max,scope=main
+          cache-from: ${{ needs.determine-runner.outputs.runner == 'self-hosted' && 'type=gha,scope=main' || '' }}
+          cache-to: ${{ needs.determine-runner.outputs.runner == 'self-hosted' && 'type=gha,mode=max,scope=main' || '' }}
 
   deploy:
     runs-on: ubuntu-latest
     environment: .env
-    needs: [dockerize, test]
+    needs: [dockerize]
     steps:
       - name: Tailscale
         uses: tailscale/github-action@v4

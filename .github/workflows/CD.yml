@@ -31,7 +31,7 @@ jobs:
       - id: choose-runner
         uses: QCDIS/choose-action-runner@v2
         with:
-          preferred-runner: self-hosted
+          preferred-runner: nikans-Mac-mini
           fallback-runner: ubuntu-latest
           github-token: ${{ secrets.GHTOKEN_DETERMINERUNNER }}
 

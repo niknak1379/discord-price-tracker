@@ -20,6 +20,7 @@ const (
 const (
 	MethodColly    string = "colly"
 	MethodChromeDP string = "chromedp"
+	MethodWGet     string = "wget"
 )
 
 type Attempt struct {

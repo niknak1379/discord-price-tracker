@@ -235,7 +235,7 @@ func WgetFailover(url string, selector string, proxy []string, proxyIndexUsed in
 	if err != nil {
 		slog.Warn("wget failed to connect", slog.Any("error", err), slog.String("output", string(html)))
 		*attempts = append(*attempts, makeAttemptObject(types.CrawlerDefault,
-			proxyString, types.MethodChromeDP,
+			proxyString, types.MethodWGet,
 			errOrMsg(err, "Price Text is empty in chromeDP")))
 
 		return 0, fmt.Errorf("wget failed: %w, output: %s", err, string(html))

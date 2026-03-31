@@ -14,6 +14,7 @@ import (
 
 	charts "priceTracker/Charts"
 	database "priceTracker/Database"
+	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 
 	"github.com/bwmarrin/discordgo"
@@ -528,6 +529,10 @@ var (
 		{
 			Name:        "status",
 			Description: "Show crawler status and uptime",
+		},
+		{
+			Name:        "toggle_log_level",
+			Description: "Toggle slog level between info and debug",
 		},
 	}
 )
@@ -1160,7 +1165,13 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			return
 		}
 
-		if len(domainData) == 0 && len(methodProxyData) == 0 {
+		proxyData, err := database.GetIncidentsByProxy(startDate, endDate)
+		if err != nil {
+			SendErrorEmbed(discord, i.ChannelID, err.Error())
+			return
+		}
+
+		if len(domainData) == 0 && len(methodProxyData) == 0 && len(proxyData) == 0 {
 			SendErrorEmbed(discord, i.ChannelID, err.Error())
 			return
 		}
@@ -1178,6 +1189,14 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			if err != nil {
 				SendErrorEmbed(discord, i.ChannelID, err.Error())
 				slog.Error("failed to generate method proxy chart", slog.Any("error", err))
+			}
+		}
+
+		if len(proxyData) > 0 {
+			err = charts.IncidentsByProxyPieChart(proxyData)
+			if err != nil {
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
+				slog.Error("failed to generate proxy pie chart", slog.Any("error", err))
 			}
 		}
 
@@ -1199,6 +1218,17 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			if err == nil {
 				files = append(files, &discordgo.File{
 					Name:        "incidents_by_domain_method_proxy.png",
+					ContentType: "image/png",
+					Reader:      reader,
+				})
+			}
+		}
+
+		if len(proxyData) > 0 {
+			reader, err := os.Open("incidents_by_proxy.png")
+			if err == nil {
+				files = append(files, &discordgo.File{
+					Name:        "incidents_by_proxy.png",
 					ContentType: "image/png",
 					Reader:      reader,
 				})
@@ -1332,6 +1362,14 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 		}
 
 		SendInfoEmbed(discord, i.ChannelID, "Crawler Status", "Uptime: "+uptimeStr)
+	},
+	"toggle_log_level": func(discord *discordgo.Session, i *discordgo.InteractionCreate) {
+		newLevel := logger.ToggleLogLevel()
+		levelStr := "debug"
+		if newLevel == slog.LevelInfo {
+			levelStr = "info"
+		}
+		SendSuccessEmbed(discord, i.ChannelID, "Log level: "+levelStr)
 	},
 }
 

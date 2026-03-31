@@ -118,7 +118,7 @@ func EbayHTMLProcessorCallback(c *colly.Collector,
 
 		// check to see if listing is viable
 		if !titleCorrectnessCheck(title, queries) {
-			slog.Info("skipping title criteria not met", slog.String("Title", title))
+			slog.Debug("skipping title criteria not met", slog.String("Title", title))
 			return
 		}
 		condition := e.ChildText("div.s-card__subtitle-row:last-child")
@@ -136,7 +136,7 @@ func EbayHTMLProcessorCallback(c *colly.Collector,
 
 		// check wether bid or not
 		if isBid {
-			slog.Info("Bid Listing found", slog.String("Title", title),
+			slog.Debug("Bid Listing found", slog.String("Title", title),
 				slog.String("elementText", e.Text))
 			var basePrice, shippingCost int
 			var err error
@@ -172,7 +172,7 @@ func EbayHTMLProcessorCallback(c *colly.Collector,
 			} else if basePrice+shippingCost >= desiredPrice ||
 				basePrice+shippingCost <= int(float64(desiredPrice)*float64(0.25)) ||
 				time.Until(endTime) > 24*time.Hour {
-				slog.Info("price too high or end date too far, skipping bid",
+				slog.Debug("price too high or end date too far, skipping bid",
 					slog.String("Title", title),
 				)
 				return
@@ -187,7 +187,7 @@ func EbayHTMLProcessorCallback(c *colly.Collector,
 				EndDate:   endTime,
 				Bids:      bids,
 			}
-			slog.Info("bid", slog.Any("ebay listing information", listing))
+			slog.Debug("bid", slog.Any("ebay listing information", listing))
 			*bidArr = append(*bidArr, &listing)
 		} else {
 
@@ -227,7 +227,7 @@ func EbayHTMLProcessorCallback(c *colly.Collector,
 				return
 			} else if basePrice+shippingCost >= desiredPrice ||
 				basePrice <= int(float64(desiredPrice)*float64(0.25)) {
-				slog.Info("price too high skipping title", slog.String("Title", title))
+				slog.Debug("price too high skipping title", slog.String("Title", title))
 				return
 			}
 
@@ -242,7 +242,7 @@ func EbayHTMLProcessorCallback(c *colly.Collector,
 				Date:          crawlDate,
 				Duration:      0,
 			}
-			slog.Info("listing", slog.Any("ebay listing information", listing))
+			slog.Debug("listing", slog.Any("ebay listing information", listing))
 			*listingArr = append(*listingArr, &listing)
 		}
 	})

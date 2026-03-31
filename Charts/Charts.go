@@ -354,3 +354,69 @@ func IncidentsByDomainMethodProxyChart(data []database.IncidentTimeSeries) error
 	err := render.MakeChartSnapshot(line.RenderContent(), "incidents_by_domain_method_proxy.png")
 	return err
 }
+
+func IncidentsByProxyPieChart(data []database.IncidentTimeSeries) error {
+	if len(data) == 0 {
+		return errors.New("no incident data available")
+	}
+
+	pie := charts.NewPie()
+
+	pie.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title:    "Incidents by Proxy",
+			Subtitle: "Total incident count per proxy",
+			TitleStyle: &opts.TextStyle{
+				Color:      "Black",
+				FontWeight: "bold",
+				FontSize:   28,
+				Padding:    10,
+			},
+			TextAlign: "center",
+			Left:      "center",
+			Top:       "20px",
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			BackgroundColor: "white",
+			Width:           "900px",
+			Height:          "600px",
+		}),
+		charts.WithLegendOpts(
+			opts.Legend{
+				Bottom:  "0%",
+				Show:    opts.Bool(true),
+				Padding: 10,
+			},
+		),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Show:    opts.Bool(true),
+			Trigger: "item",
+		}),
+		charts.WithAnimation(false),
+	)
+
+	items := make([]opts.PieData, 0, len(data))
+	for _, d := range data {
+		items = append(items, opts.PieData{
+			Name:  d.Proxy,
+			Value: d.Count,
+		})
+	}
+
+	pie.AddSeries("Incidents", items,
+		charts.WithPieChartOpts(
+			opts.PieChart{
+				Radius: []string{"0%", "70%"},
+			},
+		),
+		charts.WithLabelOpts(
+			opts.Label{
+				Show:      opts.Bool(true),
+				Formatter: "{b}: {c} ({d}%)",
+			},
+		),
+	)
+
+	err := render.MakeChartSnapshot(pie.RenderContent(), "incidents_by_proxy.png")
+	return err
+}

@@ -476,3 +476,42 @@ func GetIncidentsByDomainMethodProxy(startDate, endDate time.Time) ([]IncidentTi
 	}
 	return results, nil
 }
+
+func GetIncidentsByProxy(startDate, endDate time.Time) ([]IncidentTimeSeries, error) {
+	collection := Client.Database("tracker").Collection("Incidents")
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "StartTime", Value: bson.D{
+				{Key: "$gte", Value: startDate},
+				{Key: "$lte", Value: endDate},
+			}},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$Attempts"}},
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: bson.D{
+				{Key: "Proxy", Value: "$Attempts.Proxy"},
+			}},
+			{Key: "Count", Value: bson.D{{Key: "$sum", Value: 1}}},
+		}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Proxy", Value: "$_id.Proxy"},
+			{Key: "Count", Value: 1},
+			{Key: "_id", Value: 0},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "Count", Value: -1},
+		}}},
+	}
+
+	var results []IncidentTimeSeries
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		slog.Error("failed to aggregate incidents by proxy", slog.Any("error", err))
+		return nil, err
+	}
+	if err := cursor.All(ctx, &results); err != nil {
+		slog.Error("failed to decode incidents by proxy", slog.Any("error", err))
+		return nil, err
+	}
+	return results, nil
+}

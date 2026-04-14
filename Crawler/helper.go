@@ -13,7 +13,6 @@ import (
 	logger "priceTracker/Logger"
 	types "priceTracker/Types"
 
-	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/dlclark/regexp2"
 	"github.com/enetx/g"
@@ -172,7 +171,7 @@ func generateRandomClient(proxyURL string) *http.Client {
 func NewChromedpContext(timeout time.Duration, proxy *[]string, proxyIndex int) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		// emulation.SetUserAgentOverride("Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:101.0) Gecko/20100101 Firefox/101.0"),
-		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+		// chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("disable-dev-shm-usage", true),
@@ -210,23 +209,23 @@ func NewChromedpContext(timeout time.Duration, proxy *[]string, proxyIndex int) 
 //
 // Returns a chromedp action that executes stealth JavaScript.
 func StealthActions(url string) chromedp.Action {
-	_, Referer := FormatHostAndRefererUrls(url)
-	headers := network.Headers{
-		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-		"Accept-Encoding":           "gzip, deflate, br, zstd",
-		"Accept-Language":           "en-US,en;q=0.9",
-		"Connection":                "keep-alive",
-		"Referer":                   Referer,
-		"DNT":                       "1",
-		"Upgrade-Insecure-Requests": "1",
-		"Sec-Fetch-Dest":            "document",
-		"Sec-Fetch-Mode":            "navigate",
-		"Sec-Fetch-Site":            "same-origin",
-	}
+	// _, Referer := FormatHostAndRefererUrls(url)
+	// headers := network.Headers{
+	// 	"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+	// 	"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+	// 	"Accept-Encoding":           "gzip, deflate, br, zstd",
+	// 	"Accept-Language":           "en-US,en;q=0.9",
+	// 	"Connection":                "keep-alive",
+	// 	"Referer":                   Referer,
+	// 	"DNT":                       "1",
+	// 	"Upgrade-Insecure-Requests": "1",
+	// 	"Sec-Fetch-Dest":            "document",
+	// 	"Sec-Fetch-Mode":            "navigate",
+	// 	"Sec-Fetch-Site":            "same-origin",
+	// }
 	return chromedp.Tasks{
-		network.Enable(),
-		network.SetExtraHTTPHeaders(headers),
+		// network.Enable(),
+		// network.SetExtraHTTPHeaders(headers),
 		chromedp.Evaluate(`
 		// Webdriver
 		Object.defineProperty(navigator, 'webdriver', {

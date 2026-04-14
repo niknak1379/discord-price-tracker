@@ -36,7 +36,7 @@ jobs:
           github-token: ${{ secrets.GHTOKEN_DETERMINERUNNER }}
 
   dockerize:
-    needs: [test, choose-runner]
+    needs: [choose-runner]
     runs-on: ${{ needs.choose-runner.outputs.runner }}
     environment: .env
     steps:

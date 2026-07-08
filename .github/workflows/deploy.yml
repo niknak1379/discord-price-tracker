@@ -47,12 +47,12 @@ jobs:
         run: |
           ssh -o "StrictHostKeyChecking no" ${{ secrets.RASPBERRYPI_USER }}@${{ secrets.RASPBERRYPI_TAILSCALE_IP }} << 'EOF'
               cd price-tracker
-              sudo docker compose pull
-              sudo docker compose down
-              sudo docker compose up --remove-orphans -d
+              docker compose pull
+              docker compose down
+              docker compose up --remove-orphans -d
               echo "Running containers:"
-              sudo docker compose ps
+              docker compose ps
               echo "Container logs:"
-              sudo docker compose logs --tail=50
-              sudo docker image prune -f
+              docker compose logs --tail=50
+              docker image prune -f
           EOF

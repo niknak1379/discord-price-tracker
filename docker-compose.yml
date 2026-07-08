@@ -22,6 +22,11 @@ services:
       - gluetun3
     volumes:
       - log-data:/app/logs
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
   gluetun:
     image: qmcgaw/gluetun
     restart: unless-stopped
@@ -44,6 +49,11 @@ services:
       - UPDATER_PERIOD=12h
       - HTTPPROXY_STEALTH=on
       - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"none"}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
   gluetun2:
     image: qmcgaw/gluetun
     restart: unless-stopped
@@ -59,6 +69,11 @@ services:
       - SERVER_COUNTRIES=USA
       - HTTPPROXY=on
       - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"none"}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
   gluetun3:
     image: qmcgaw/gluetun
     restart: unless-stopped
@@ -74,6 +89,73 @@ services:
       - SERVER_COUNTRIES=USA
       - HTTPPROXY=on
       - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"none"}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  loki:
+    image: grafana/loki:3.4.2
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./alloy-config.river:/etc/alloy/config.river
+    command: run --storage.path=/var/lib/alloy/data /etc/alloy/config.river
+    depends_on:
+      loki:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-provisioning:/etc/grafana/provisioning
+    depends_on:
+      loki:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   log-data:
   gluetun-data:
+  loki-data:
+  grafana-data:

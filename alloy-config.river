@@ -26,6 +26,6 @@ loki.write "loki" {
 
 loki.source.docker "default" {
   host       = "unix:///var/run/docker.sock"
-  targets    = discovery.relabel.containers.targets
+  targets    = discovery.relabel.containers.output
   forward_to = [loki.write.loki.receiver]
 }

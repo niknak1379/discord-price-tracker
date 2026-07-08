@@ -5,12 +5,20 @@ RUN go mod download
 COPY . .
 RUN go build -o priceTracker
 
-FROM chromedp/headless-shell:latest
+FROM debian:bookworm-slim
 
-# Install CA certificates
 USER root
 RUN apt-get update && \
-  apt-get install -y --no-install-recommends ca-certificates wget && \
+  apt-get install -y --no-install-recommends \
+    chromium \
+    ca-certificates \
+    fonts-liberation \
+    libnss3 \
+    libxss1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libgtk-3-0 \
+    wget && \
   rm -rf /var/lib/apt/lists/*
 ENV TZ=America/Los_Angeles
 WORKDIR /app

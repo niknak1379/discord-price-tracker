@@ -157,6 +157,7 @@ func InitAntiTLSClients() {
 func generateRandomClient(proxyURL string) *http.Client {
 	index := rand.IntN(len(HttpClients))
 	ClientFunc := *HttpClients[index]
+	slog.Info("picking surf client", slog.Int("Client", index))
 	return ClientFunc().Proxy(g.String(proxyURL)).Build().Unwrap().Std()
 }
 

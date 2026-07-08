@@ -1,0 +1,58 @@
+name: Deploy to Raspberry Pi
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: .env
+    steps:
+      - name: Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:master
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: copy compose.yml and .env
+        run: |
+          mkdir -p price-tracker
+          cp docker-compose.yml price-tracker/docker-compose.yml
+          cp loki-config.yml price-tracker/loki-config.yml
+          cp alloy-config.river price-tracker/alloy-config.river
+          mkdir -p price-tracker/grafana-provisioning/datasources
+          cp grafana-provisioning/datasources/loki.yml price-tracker/grafana-provisioning/datasources/loki.yml
+          cd price-tracker
+          cat > .env << EOL
+          APPLICATION_ID=${{ secrets.APPLICATION_ID }}
+          PUBLIC_KEY=${{ secrets.PUBLIC_KEY }}
+          MONGODB_URI=${{ secrets.MONGODB_URI }}
+          CHANNEL_ID=${{ secrets.CHANNEL_ID }}
+          GEO_API_KEY=${{ secrets.GEO_API_KEY }}
+          HOME_LAT=${{ secrets.HOME_LAT }}
+          HOME_LONG=${{ secrets.HOME_LONG }}
+          OPENVPN_USER=${{secrets.OPENVPN_USER}}
+          OPENVPN_PASSWORD=${{secrets.OPENVPN_PASSWORD}}
+          WIREGUARD_ADDRESSES=${{secrets.WIREGUARD_ADDRESSES}}
+          WIREGUARD_PRIVATE_KEY=${{secrets.WIREGUARD_PRIVATE_KEY}}
+          EOL
+          cd ..
+          scp -r -o "StrictHostKeyChecking no" price-tracker ${{ secrets.RASPBERRYPI_USER }}@${{ secrets.RASPBERRYPI_TAILSCALE_IP }}:~/
+      - name: Docker Compose Pull
+        run: |
+          ssh -o "StrictHostKeyChecking no" ${{ secrets.RASPBERRYPI_USER }}@${{ secrets.RASPBERRYPI_TAILSCALE_IP }} << 'EOF'
+              cd price-tracker
+              sudo docker compose pull
+              sudo docker compose down
+              sudo docker compose up --remove-orphans -d
+              echo "Running containers:"
+              sudo docker compose ps
+              echo "Container logs:"
+              sudo docker compose logs --tail=50
+              sudo docker image prune -f
+          EOF

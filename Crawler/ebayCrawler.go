@@ -86,6 +86,8 @@ func GetEbayListings(Name string,
 	if err != nil || !visited {
 		slog.Warn("Colly failed triggering chromeDP",
 			slog.String("proxy", proxyString),
+			slog.Any("error", err),
+			slog.Bool("Visited", visited),
 		)
 		attempts = append(attempts, makeAttemptObject(types.CrawlerEbay,
 			proxyString, types.MethodColly,

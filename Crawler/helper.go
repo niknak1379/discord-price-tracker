@@ -80,11 +80,6 @@ func initCrawler(url string, proxy *[]string) (*colly.Collector, int) {
 	c.SetClient(httpClient)
 	c.OnResponse(func(r *colly.Response) {
 		slog.Info("Response received", slog.Int("status", r.StatusCode))
-		if r.StatusCode == 200 && len(*proxy) != 0 {
-			slog.Info("sending porxyURL through proxy channel",
-				slog.String("proxy", proxyURL),
-			)
-		}
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
@@ -150,8 +145,23 @@ func InitAntiTLSClients() {
 			Android(). // Randomly selects Windows, macOS, Linux, Android, or iOS
 			Firefox()
 	}
+	surfClient9 := func() *surf.Builder {
+		return surf.NewClient().
+			Builder().
+			Impersonate().
+			Linux().
+			Chrome()
+	}
+	surfClient10 := func() *surf.Builder {
+		return surf.NewClient().
+			Builder().
+			Impersonate().
+			Linux().
+			Firefox()
+	}
 	HttpClients = append(HttpClients, &surfClient, &surfClient2, &surfClient3,
-		&surfClient4, &surfClient5, &surfClient6, &surfClient7, &surfClient8)
+		&surfClient4, &surfClient5, &surfClient6, &surfClient7, &surfClient8,
+		&surfClient9, &surfClient10)
 }
 
 func generateRandomClient(proxyURL string) *http.Client {

@@ -234,6 +234,10 @@ func ChannelDeleteHandler(ChannelID string) {
 			sendItemChangeEvent(Item, Remove, *ChannelMap[ChannelID])
 		}
 		ChannelTable.FindOneAndDelete(ctx, bson.M{"ChannelID": ChannelID})
+		err := Client.Database("tracker").Collection(ChannelID).Drop(ctx)
+		if err != nil {
+			slog.Error("failed to drop collection", slog.String("channelID", ChannelID), slog.Any("error", err))
+		}
 		delete(Tables, ChannelID)
 		delete(ChannelMap, ChannelID)
 	}

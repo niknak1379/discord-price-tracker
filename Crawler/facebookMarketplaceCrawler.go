@@ -182,7 +182,7 @@ func MarketPlaceCrawl(Name string, desiredPrice int, homeLat, homeLong float64,
 	if len(proxy) != 0 {
 		proxyIndexUsed = rand.IntN(len(proxy))
 	}
-	ctx, cancel = NewChromedpContext(90, &proxy, proxyIndexUsed)
+	ctx, cancel = NewChromedpContext(90*time.Second, &proxy, proxyIndexUsed)
 	if attempts == nil {
 		attempts = []*types.Attempt{}
 	}

@@ -20,21 +20,8 @@ import (
 
 func main() {
 	slog.SetDefault(logger.Logger)
-	// https://medium.com/@bobzsj87/demist-the-memory-ghost-d6b7cf45dd2a
-	// not an actual memory leak its just docker being weird
-	// go func() {
-	// 	slog.Info("Starting pprof on :6060")
-	// 	if err := http.ListenAndServe("0.0.0.0:6060", nil); err != nil {
-	// 		slog.Error("pprof failed:", slog.Any("error", err))
-	// 	}
-	// }()
 	godotenv.Load()
 	crawler.InitAntiTLSClients()
-	// amazonTest()
-	// ChromeDPFailoverTest()
-	// BestBuyTest()
-	// crawlerTest()
-	// WgetFailoverTest()
 	discord.BotToken = os.Getenv("PUBLIC_KEY")
 	ctx, cancel := context.WithCancel(context.Background())
 	database.InitDB(ctx)
@@ -42,16 +29,23 @@ func main() {
 	logger.InitLogFileChannel(ctx)
 	proxy.Init()
 	proxy.StartProxyCounter(ctx)
+
+	// amazonTest()
+	// ChromeDPFailoverTest()
+	// EbayFailoverTest()
+	// BestBuyTest()
+	// crawlerTest()
+	// WgetFailoverTest()
 	// AlienwareMonitorTest()
 	// InchMeasurement()
-	// EbayFailoverTest()
+	//
 	go scheduler.SetChannelScheduler(ctx)
 	var wg sync.WaitGroup
 	wg.Go(func() {
 		discord.Run(ctx)
 	})
-
-	// make the program run unless sigINT is recieved
+	//
+	// // make the program run unless sigINT is recieved
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	slog.Info("Graceful Shutdown setup")

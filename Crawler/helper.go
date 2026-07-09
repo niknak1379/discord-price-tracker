@@ -181,14 +181,15 @@ func generateRandomClient(proxyURL string) *http.Client {
 // Returns the context and cancel function.
 func NewChromedpContext(timeout time.Duration, proxy *[]string, proxyIndex int) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		// emulation.SetUserAgentOverride("Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:101.0) Gecko/20100101 Firefox/101.0"),
-		// chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+		chromedp.ExecPath("/usr/bin/chromium"),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("disable-dev-shm-usage", true),
+		chromedp.Flag("disable-gpu", true),
+		chromedp.Flag("disable-software-rasterizer", true),
 		chromedp.Flag("log-level", "3"),
 		chromedp.Flag("blink-settings", "imagesEnabled=false"),
-		chromedp.Flag("headless", false),
+		chromedp.Flag("headless", "new"),
 	)
 
 	var proxyURL string

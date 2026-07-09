@@ -137,7 +137,7 @@ func ChromeDPFailover(name, url, selector string, proxy []string, proxyIndexUsed
 	time.Sleep(5 * time.Second)
 	var ctx context.Context
 	var cancel context.CancelFunc
-	ctx, cancel = NewChromedpContext(90, &proxy, proxyIndexUsed)
+	ctx, cancel = NewChromedpContext(90*time.Second, &proxy, proxyIndexUsed)
 
 	var screenShot []byte
 	var HTMLContent string

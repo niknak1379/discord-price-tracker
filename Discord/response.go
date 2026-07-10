@@ -107,7 +107,10 @@ func PriceChangeAlert(itemName string, newPrice int, oldPrice database.Price, UR
 		URL:         URL,
 		Fields:      Fields,
 	}
-	Discord.ChannelMessageSendEmbed(ChannelID, &em)
+	_, err := Discord.ChannelMessageSendEmbed(ChannelID, &em)
+	if err != nil {
+		slog.Error("error in send info embed", slog.Any("error", err))
+	}
 }
 
 // CrawlErrorAlert sends a Discord embed notification when a crawler error occurs.
@@ -177,11 +180,14 @@ func CrawlErrorAlert(itemName string, err error, ChannelID string) {
 			)
 		}
 	}
-	Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
+	_, err = Discord.ChannelMessageSendEmbed(ChannelID, &discordgo.MessageEmbed{
 		Title:  "Error",
 		Fields: Fields,
 		Color:  red,
 	})
+	if err != nil {
+		slog.Error("error in send info embed", slog.Any("error", err))
+	}
 }
 
 func getLogFilesForItem(itemName, crawlType string) ([]*os.File, error) {
@@ -220,7 +226,10 @@ func SendGraphPng(discord *discordgo.Session, ChannelID string) {
 	if err != nil {
 		slog.Error("Could not load graph image", slog.Any("Error", err))
 	}
-	discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
+	_, err = discord.ChannelFileSend(ChannelID, "my-chart.png", reader)
+	if err != nil {
+		slog.Error("error in send info embed", slog.Any("error", err))
+	}
 }
 
 // autoComplete handles Discord autocomplete interactions for command options.
@@ -354,7 +363,10 @@ func EbayListingPriceChangeAlert(newListing *types.EbayListing,
 		Color:  colorCode,
 		Fields: append(newFields, oldFields...),
 	}
-	Discord.ChannelMessageSendEmbed(ChannelID, &em)
+	_, err := Discord.ChannelMessageSendEmbed(ChannelID, &em)
+	if err != nil {
+		slog.Error("error in send info embed", slog.Any("error", err))
+	}
 }
 
 // NewEbayListingAlert sends an alert when a new second-hand listing is found.
@@ -376,7 +388,10 @@ func NewEbayListingAlert(newListing *types.EbayListing,
 		Color:  color,
 		Fields: fields,
 	}
-	Discord.ChannelMessageSendEmbed(ChannelID, &em)
+	_, err := Discord.ChannelMessageSendEmbed(ChannelID, &em)
+	if err != nil {
+		slog.Error("error in send info embed", slog.Any("error", err))
+	}
 }
 
 // NewBidAlert sends an alert when a new bid is found for an item.
@@ -398,7 +413,10 @@ func NewBidAlert(newListing *types.EbayBids,
 		Color:  color,
 		Fields: fields,
 	}
-	Discord.ChannelMessageSendEmbed(ChannelID, &em)
+	_, err := Discord.ChannelMessageSendEmbed(ChannelID, &em)
+	if err != nil {
+		slog.Error("error in send info embed", slog.Any("error", err))
+	}
 }
 
 // BidPriceChangeAlert sends an alert when a bid price changes.
@@ -432,7 +450,10 @@ func BidPriceChangeAlert(newListing *types.EbayBids,
 		Color:  colorCode,
 		Fields: append(newFields, oldFields...),
 	}
-	Discord.ChannelMessageSendEmbed(ChannelID, &em)
+	_, err := Discord.ChannelMessageSendEmbed(ChannelID, &em)
+	if err != nil {
+		slog.Error("error in send info embed", slog.Any("error", err))
+	}
 }
 
 // sendWelcomeMessage sends the welcome message when the bot joins a new server.

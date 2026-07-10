@@ -36,8 +36,8 @@ func ConstructEbaySearchURL(Name string, newPrice int) string {
 	usedQuery := "&LH_ItemCondition=3000|2030|2020|2010|2000|1500|1000"
 	priceQuery := fmt.Sprintf("_udlo=%d&rt=nc&_udhi=%d", int(float64(newPrice)*float64(0.25)), newPrice)
 	noAuction := "&LH_ALL=1"
-	location := "&_stpos=90274&_fcid=1"
-	return baseURL + url.PathEscape(Name) + usedQuery + priceQuery + noAuction + location
+	location := "&_stpos=94104&_fcid=1"
+	return baseURL + url.PathEscape(Name) + usedQuery + noAuction + location + priceQuery
 }
 
 // GetEbayListings retrieves eBay listings matching the search criteria.

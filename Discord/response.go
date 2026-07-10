@@ -38,7 +38,10 @@ func SendErrorEmbed(s *discordgo.Session, channelID, message string) {
 		Description: message,
 		Color:       red,
 	}
-	s.ChannelMessageSendEmbed(channelID, embed)
+	_, err := s.ChannelMessageSendEmbed(channelID, embed)
+	if err != nil {
+		slog.Error("error in send error embed", slog.Any("error", err))
+	}
 }
 
 func SendSuccessEmbed(s *discordgo.Session, channelID, message string) {
@@ -47,7 +50,10 @@ func SendSuccessEmbed(s *discordgo.Session, channelID, message string) {
 		Description: message,
 		Color:       green,
 	}
-	s.ChannelMessageSendEmbed(channelID, embed)
+	_, err := s.ChannelMessageSendEmbed(channelID, embed)
+	if err != nil {
+		slog.Error("error in send success embed", slog.Any("error", err))
+	}
 }
 
 func SendInfoEmbed(s *discordgo.Session, channelID, title, message string) {
@@ -56,7 +62,10 @@ func SendInfoEmbed(s *discordgo.Session, channelID, title, message string) {
 		Description: message,
 		Color:       blue,
 	}
-	s.ChannelMessageSendEmbed(channelID, embed)
+	_, err := s.ChannelMessageSendEmbed(channelID, embed)
+	if err != nil {
+		slog.Error("error in send info embed", slog.Any("error", err))
+	}
 }
 
 func ready(discord *discordgo.Session, ready *discordgo.Ready) {

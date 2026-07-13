@@ -80,10 +80,10 @@ func loadAndStartItems(ctx context.Context) {
 	database.ChannelLock.Lock()
 	ChannelMap := database.ChannelMap
 	database.ChannelLock.Unlock()
+	activeRoutinesMutex.Lock()
 	for _, Channel := range ChannelMap {
 		itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
 		for _, item := range itemsArr {
-			activeRoutinesMutex.Lock()
 			itemKey := item.ID.String()
 			currentItems[itemKey] = true
 
@@ -99,7 +99,6 @@ func loadAndStartItems(ctx context.Context) {
 					removeRoutine(crawlDetails.Item)
 				} else {
 					slog.Info("suppression and timer unchanged skipping")
-					activeRoutinesMutex.Unlock()
 					continue // Timer unchanged, skip
 				}
 			}
@@ -108,11 +107,9 @@ func loadAndStartItems(ctx context.Context) {
 			r := rand.IntN(240) + 60
 			time.Sleep(time.Duration(r) * time.Second)
 			addRoutine(ctx, item, Channel)
-			activeRoutinesMutex.Unlock()
 		}
 		// delete if not found in current items
 	}
-	activeRoutinesMutex.Lock()
 	for itemKey, crawl := range activeRoutines {
 		if _, ok := currentItems[itemKey]; !ok {
 			slog.Info("stopping routine for deleted item", slog.String("item", itemKey))

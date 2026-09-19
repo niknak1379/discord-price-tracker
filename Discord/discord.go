@@ -665,29 +665,26 @@ var commandHandler = map[string]func(discord *discordgo.Session, i *discordgo.In
 			htmlQuery := options[2].StringValue()
 			timer := int(options[3].IntValue())
 			itemType := options[4].StringValue()
-			content := ""
-			var em []*discordgo.MessageEmbed
+			// Locked lookup: direct ChannelMap read races with delete/setup.
+			channel, ok := database.GetChannelInfo(i.ChannelID)
+			if !ok || channel == nil {
+				SendErrorEmbed(discord, i.ChannelID, "channel not set up, call setup function first")
+				return
+			}
 			// add tracker to database
-			addRes, err := database.AddItem(itemName, uri, htmlQuery, itemType, timer,
-				database.ChannelMap[i.ChannelID],
-			)
+			addRes, err := database.AddItem(itemName, uri, htmlQuery, itemType, timer, channel)
 			if err != nil {
 				CrawlErrorAlert(itemName, err, i.ChannelID)
+				SendErrorEmbed(discord, i.ChannelID, err.Error())
 				return
-			} else {
-				em = setEmbed(&addRes)
 			}
-			// set up response to discord client
-			_, err = discord.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Content: content,
-				Embeds:  em,
-			})
-			if err != nil {
-				for _, embed := range em {
-					_, err := discord.ChannelMessageSendEmbed(i.ChannelID, embed)
-					if err != nil {
-						slog.Error("could not send Embed", slog.Any("error", err))
-					}
+			em := setEmbed(&addRes)
+			// Normal channel message, decoupled from the interaction token:
+			// no 15-minute followup deadline, survives long crawls.
+			for _, embed := range em {
+				_, err := discord.ChannelMessageSendEmbed(i.ChannelID, embed)
+				if err != nil {
+					slog.Error("could not send Embed", slog.Any("error", err))
 				}
 			}
 		}

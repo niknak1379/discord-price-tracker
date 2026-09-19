@@ -36,10 +36,15 @@ func SetChannelScheduler(ctx context.Context) {
 	// for running it once immediately on deployment
 	//
 	go func() {
+		// Snapshot values, not the map header: iterating the live map
+		// after Unlock races with setup/delete writers.
 		database.ChannelLock.Lock()
-		ChannelMap := database.ChannelMap
+		channels := make([]*database.Channel, 0, len(database.ChannelMap))
+		for _, ch := range database.ChannelMap {
+			channels = append(channels, ch)
+		}
 		database.ChannelLock.Unlock()
-		for _, Channel := range ChannelMap {
+		for _, Channel := range channels {
 			itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
 			for _, item := range itemsArr {
 				// this incident rate isnt really used for anything tho since its not passed down

@@ -101,7 +101,12 @@ func loadGuilds() {
 //   - systemChannelID: the default channel automated messages are sent
 func IsFirstTimeJoin(guildID, systemChannelID string) bool {
 	ChannelLock.Lock()
-	if _, exists := GuildMap[guildID]; exists {
+	exists := false
+	if _, ok := GuildMap[guildID]; ok {
+		exists = true
+	}
+	ChannelLock.Unlock()
+	if exists {
 		return false
 	}
 
@@ -112,12 +117,14 @@ func IsFirstTimeJoin(guildID, systemChannelID string) bool {
 	}
 
 	guildTable := Client.Database("tracker").Collection("Guilds")
+	// mongo I/O outside ChannelLock so slow DB can't wedge add/delete.
 	_, err := guildTable.InsertOne(ctx, guild)
 	if err != nil {
 		slog.Error("could not insert guild", slog.Any("Error", err))
 		return false
 	}
 
+	ChannelLock.Lock()
 	GuildMap[guildID] = guild
 	ChannelLock.Unlock()
 	return true
@@ -162,10 +169,14 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 		TotalItems:   0,
 	}
 	ChannelLock.Lock()
-	// if channelID already exists, just update the Coordinates in DB and memory
+	exists := false
 	if _, ok := Tables[ChannelID]; ok {
+		exists = true
+	}
+	ChannelLock.Unlock()
+	// if channelID already exists, just update the Coordinates in DB and memory
+	if exists {
 		slog.Info("Channel Already Exists Updating")
-		ChannelMap[ChannelID] = &Channel
 		update := bson.M{
 			"$set": bson.M{
 				"Distance":     maxDistance,
@@ -174,13 +185,22 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 				"LocationCode": LocationCode,
 			},
 		}
-		ChannelMap[ChannelID].Distance = maxDistance
-		ChannelMap[ChannelID].Lat = Lat
-		ChannelMap[ChannelID].Long = Long
-		ChannelMap[ChannelID].LocationCode = LocationCode
 
 		ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
-		ChannelTable.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
+		// mongo I/O outside ChannelLock so slow DB can't wedge add/delete.
+		if res := ChannelTable.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update); res.Err() != nil {
+			slog.Error("failed updating channel coords", slog.Any("error", res.Err()))
+		}
+		ChannelLock.Lock()
+		if ch, ok := ChannelMap[ChannelID]; ok {
+			ch.Distance = maxDistance
+			ch.Lat = Lat
+			ch.Long = Long
+			ch.LocationCode = LocationCode
+		} else {
+			ChannelMap[ChannelID] = &Channel
+		}
+		ChannelLock.Unlock()
 		return nil
 	}
 	slog.Info("New Channel, creating in DB")
@@ -214,7 +234,11 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 	// 	return err
 	// }
 	table := Client.Database("tracker").Collection(ChannelID)
-	Tables[ChannelID] = table
+	ChannelLock.Lock()
+	// Re-check: another setup may have won the race while mongo I/O ran.
+	if _, ok := Tables[ChannelID]; !ok {
+		Tables[ChannelID] = table
+	}
 	ChannelMap[ChannelID] = &Channel
 	ChannelLock.Unlock()
 
@@ -258,7 +282,9 @@ func ChannelDeleteHandler(ChannelID string) {
 }
 
 func loadChannelTable(ChannelID string) (*mongo.Collection, error) {
+	ChannelLock.Lock()
 	Table, ok := Tables[ChannelID]
+	ChannelLock.Unlock()
 	if !ok {
 		slog.Error("failed load Channel, channel has to be setup",
 			slog.String("ChannelID", ChannelID),
@@ -271,7 +297,8 @@ func loadChannelTable(ChannelID string) (*mongo.Collection, error) {
 	return Table, nil
 }
 
-func getChannelLength(ChannelID string) (int, error) {
+// getChannelLengthLocked reads ChannelMap; caller must hold ChannelLock.
+func getChannelLengthLocked(ChannelID string) (int, error) {
 	Channel, ok := ChannelMap[ChannelID]
 	if !ok {
 		return 0, errors.New("Channel Not found")
@@ -279,9 +306,18 @@ func getChannelLength(ChannelID string) (int, error) {
 	return Channel.TotalItems, nil
 }
 
-func updateChannelLength(ChannelID string, Diff int) error {
+func getChannelLength(ChannelID string) (int, error) {
 	ChannelLock.Lock()
-	Len, err := getChannelLength(ChannelID)
+	defer ChannelLock.Unlock()
+	return getChannelLengthLocked(ChannelID)
+}
+
+func updateChannelLength(ChannelID string, Diff int) error {
+	// Snapshot under short lock; mongo I/O runs outside it so a slow DB
+	// can't wedge all ChannelLock users (add/delete/setup/scheduler).
+	ChannelLock.Lock()
+	Len, err := getChannelLengthLocked(ChannelID)
+	ChannelLock.Unlock()
 	if err != nil {
 		return err
 	} else if Diff+Len < 0 {
@@ -305,7 +341,13 @@ func updateChannelLength(ChannelID string, Diff int) error {
 
 	Table := Client.Database("tracker").Collection("ChannelIDs")
 	res := Table.FindOneAndUpdate(ctx, bson.M{"ChannelID": ChannelID}, update)
-	ChannelMap[ChannelID].TotalItems = Diff + Len
+	if res.Err() != nil {
+		return res.Err()
+	}
+	ChannelLock.Lock()
+	if ch, ok := ChannelMap[ChannelID]; ok {
+		ch.TotalItems = Diff + Len
+	}
 	ChannelLock.Unlock()
-	return res.Err()
+	return nil
 }

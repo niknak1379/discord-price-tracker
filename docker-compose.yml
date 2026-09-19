@@ -49,7 +49,7 @@ services:
       # Step 5: pin exit city to match EBAY_ZIP (default 94104 = San Francisco CA).
       # Gluetun requires the full "City ST" form, e.g. "San Francisco CA".
       # Set PROTON_CITY / MULLVAD_CITY in .env if you change EBAY_ZIP.
-      - SERVER_CITIES=${PROTON_CITY:-San Francisco CA}
+      - SERVER_CITIES=${PROTON_CITY:-San Jose}
       - HTTPPROXY=on
       - UPDATER_PERIOD=12h
       - HTTPPROXY_STEALTH=on

@@ -40,6 +40,11 @@ jobs:
           OPENVPN_PASSWORD=${{secrets.OPENVPN_PASSWORD}}
           WIREGUARD_ADDRESSES=${{secrets.WIREGUARD_ADDRESSES}}
           WIREGUARD_PRIVATE_KEY=${{secrets.WIREGUARD_PRIVATE_KEY}}
+          WIREGUARD_ADDRESSES_2=${{secrets.WIREGUARD_ADDRESSES_2}}
+          WIREGUARD_PRIVATE_KEY_2=${{secrets.WIREGUARD_PRIVATE_KEY_2}}
+          EBAY_ZIP=${{secrets.EBAY_ZIP}}
+          MULLVAD_CITY=${{secrets.MULLVAD_CITY}}
+          PROTON_CITY=${{secrets.PROTON_CITY}}
           EOL
           cd ..
           scp -r -o "StrictHostKeyChecking no" price-tracker ${{ secrets.RASPBERRYPI_USER }}@${{ secrets.RASPBERRYPI_TAILSCALE_IP }}:~/

@@ -77,49 +77,77 @@ func loadAndStartItems(ctx context.Context) {
 	// for tracking items that have been deleted and are no longer
 	// visible in the database.getallitmes call
 	currentItems := make(map[string]bool)
+	// Snapshot ChannelMap under short lock; DB I/O + sleeps below run
+	// outside activeRoutinesMutex so Remove/Add events are never starved.
 	database.ChannelLock.Lock()
-	ChannelMap := database.ChannelMap
+	channels := make([]*database.Channel, 0, len(database.ChannelMap))
+	for _, ch := range database.ChannelMap {
+		channels = append(channels, ch)
+	}
 	database.ChannelLock.Unlock()
-	activeRoutinesMutex.Lock()
-	for _, Channel := range ChannelMap {
+	for _, Channel := range channels {
+		// DB call outside mutex.
 		itemsArr := database.GetAllItems(Channel.ChannelID, exludedFields)
 		for _, item := range itemsArr {
 			itemKey := item.ID.String()
-			currentItems[itemKey] = true
 
-			// Check if item already running and wether timer and suppression
-			// status have changed
-			if crawlDetails, ok := activeRoutines[itemKey]; ok {
-				// Item exists, check if timer or suppression have changed
-				slog.Info("cancel function found for item", slog.String("itemName", item.Name))
-				// check weather tracking list was changed
-				oldItem := crawlDetails.Item
-				if HaveItemPropertiesChanged(item, oldItem) {
-					slog.Info("item Properties changed, resetting goroutine")
-					removeRoutine(crawlDetails.Item)
+			// Fast decision under short lock.
+			activeRoutinesMutex.Lock()
+			existing, ok := activeRoutines[itemKey]
+			needsReset := false
+			if ok {
+				if HaveItemPropertiesChanged(item, existing.Item) {
+					slog.Info("item Properties changed, resetting goroutine",
+						slog.String("itemName", item.Name))
+					needsReset = true
 				} else {
-					slog.Info("suppression and timer unchanged skipping")
-					continue // Timer unchanged, skip
+					slog.Info("suppression and timer unchanged skipping",
+						slog.String("itemName", item.Name))
+					currentItems[itemKey] = true
+					activeRoutinesMutex.Unlock()
+					continue
 				}
 			}
+			activeRoutinesMutex.Unlock()
 
-			// Start new routine for this item
+			if needsReset {
+				// Cancel outside the decision lock; removeRoutine locks internally.
+				removeRoutine(existing.Item)
+			}
+
+			// Stagger startups outside any lock.
 			r := rand.IntN(240) + 60
 			time.Sleep(time.Duration(r) * time.Second)
-			addRoutine(ctx, item, Channel)
+
+			// Re-check under lock before insert: event bus may have added
+			// the same item while we slept.
+			activeRoutinesMutex.Lock()
+			if _, already := activeRoutines[itemKey]; already {
+				activeRoutinesMutex.Unlock()
+				currentItems[itemKey] = true
+				continue
+			}
+			addRoutineLocked(ctx, item, Channel)
+			activeRoutinesMutex.Unlock()
+			currentItems[itemKey] = true
 		}
-		// delete if not found in current items
 	}
+	// Collect deletions under short lock, remove outside it.
+	activeRoutinesMutex.Lock()
+	toDelete := make([]*database.Item, 0)
 	for itemKey, crawl := range activeRoutines {
 		if _, ok := currentItems[itemKey]; !ok {
 			slog.Info("stopping routine for deleted item", slog.String("item", itemKey))
-			removeRoutine(crawl.Item)
+			toDelete = append(toDelete, crawl.Item)
 		}
 	}
 	activeRoutinesMutex.Unlock()
+	for _, it := range toDelete {
+		removeRoutine(it)
+	}
 }
 
-func addRoutine(ctx context.Context, Item *database.Item, Channel *database.Channel) {
+func addRoutineLocked(ctx context.Context, Item *database.Item, Channel *database.Channel) {
 	itemKey := Item.ID.String()
 	itemCtx, cancel := context.WithCancel(ctx)
 	// Get new timer value
@@ -139,8 +167,13 @@ func addRoutine(ctx context.Context, Item *database.Item, Channel *database.Chan
 	go itemCrawlRoutine(itemCtx, Item, Channel)
 }
 
-func removeRoutine(Item *database.Item) {
-	slog.Info("removing crawl Routine for Item", slog.Any("item", Item))
+func addRoutine(ctx context.Context, Item *database.Item, Channel *database.Channel) {
+	activeRoutinesMutex.Lock()
+	addRoutineLocked(ctx, Item, Channel)
+	activeRoutinesMutex.Unlock()
+}
+
+func removeRoutineLocked(Item *database.Item) {
 	itemKey := Item.ID.String()
 	if crawlDetails, ok := activeRoutines[itemKey]; ok && crawlDetails.Cancel != nil {
 		crawlDetails.Cancel()
@@ -148,6 +181,13 @@ func removeRoutine(Item *database.Item) {
 	} else {
 		slog.Warn("trying to remove non-existatnt crawl routine")
 	}
+}
+
+func removeRoutine(Item *database.Item) {
+	slog.Info("removing crawl Routine for Item", slog.Any("item", Item))
+	activeRoutinesMutex.Lock()
+	removeRoutineLocked(Item)
+	activeRoutinesMutex.Unlock()
 }
 
 func itemCrawlRoutine(ctx context.Context, item *database.Item, Channel *database.Channel) {

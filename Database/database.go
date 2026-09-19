@@ -44,7 +44,14 @@ func sendItemChangeEvent(item *Item, change int, channel Channel) {
 	if ItemChangeChannel != nil && item != nil {
 		Event := ItemChangeEvent{Item: item, Change: change, Channel: channel}
 		slog.Info("sending item change event", slog.Any("event", Event))
-		ItemChangeChannel <- Event
+		select {
+		case ItemChangeChannel <- Event:
+		default:
+			// Never block DB writers on a slow scheduler consumer.
+			// The 4h refresh ticker reconciles missed events.
+			slog.Warn("ItemChangeChannel full, dropping event",
+				slog.String("item", item.Name), slog.Int("change", change))
+		}
 	}
 }
 

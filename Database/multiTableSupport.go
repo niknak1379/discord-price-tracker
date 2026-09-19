@@ -226,21 +226,34 @@ func UpdateChannelOrCreateChannelItemTableIfMissing(ChannelID string, Location s
 // Parameters:
 //   - ChannelID: the Discord channel ID to delete
 func ChannelDeleteHandler(ChannelID string) {
+	// Snapshot under short lock; sends + mongo I/O run outside ChannelLock
+	// so a slow/stalled scheduler consumer can't wedge all DB writers.
 	ChannelLock.Lock()
-	if _, ok := Tables[ChannelID]; ok {
-		ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
-		ItemArr := GetAllItems(ChannelID, ExludedFields)
-		for _, Item := range ItemArr {
-			sendItemChangeEvent(Item, Remove, *ChannelMap[ChannelID])
-		}
-		ChannelTable.FindOneAndDelete(ctx, bson.M{"ChannelID": ChannelID})
-		err := Client.Database("tracker").Collection(ChannelID).Drop(ctx)
-		if err != nil {
-			slog.Error("failed to drop collection", slog.String("channelID", ChannelID), slog.Any("error", err))
-		}
-		delete(Tables, ChannelID)
-		delete(ChannelMap, ChannelID)
+	_, ok := Tables[ChannelID]
+	var channelCopy *Channel
+	if ch, exists := ChannelMap[ChannelID]; exists {
+		c := *ch
+		channelCopy = &c
 	}
+	ChannelLock.Unlock()
+	if !ok {
+		return
+	}
+	ItemArr := GetAllItems(ChannelID, ExludedFields)
+	if channelCopy != nil {
+		for _, Item := range ItemArr {
+			sendItemChangeEvent(Item, Remove, *channelCopy)
+		}
+	}
+	ChannelTable := Client.Database("tracker").Collection("ChannelIDs")
+	ChannelTable.FindOneAndDelete(ctx, bson.M{"ChannelID": ChannelID})
+	err := Client.Database("tracker").Collection(ChannelID).Drop(ctx)
+	if err != nil {
+		slog.Error("failed to drop collection", slog.String("channelID", ChannelID), slog.Any("error", err))
+	}
+	ChannelLock.Lock()
+	delete(Tables, ChannelID)
+	delete(ChannelMap, ChannelID)
 	ChannelLock.Unlock()
 }
 

@@ -144,9 +144,11 @@ func GetSecondHandListings(Names []string, Price int, homeLat float64, homeLong 
 // Returns the constructed Facebook Marketplace search URL.
 func FacebookURLGenerator(Name string, Price int, LocationCode string) string {
 	baseURL := "https://www.facebook.com/marketplace/" + LocationCode + "/search"
-	priceQuery := fmt.Sprintf("?maxPrice=%d", Price)
-	query := "&query=" + url.PathEscape(Name) + "&exact=false"
-	return baseURL + priceQuery + query
+	q := url.Values{}
+	q.Set("maxPrice", fmt.Sprintf("%d", Price))
+	q.Set("query", Name)
+	q.Set("exact", "false")
+	return baseURL + "?" + q.Encode()
 }
 
 // MarketPlaceCrawl retrieves listings from Facebook Marketplace using chromedp.

@@ -6,11 +6,12 @@ package crawler
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -23,6 +24,16 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
+// EbayZipCode returns the zip used for _stpos. Set EBAY_ZIP to match your
+// VPN exit city (default 94104 San Francisco). Set EBAY_ZIP=none to omit
+// location params entirely and avoid geo-mismatch flags.
+func EbayZipCode() string {
+	if z := strings.TrimSpace(os.Getenv("EBAY_ZIP")); z != "" {
+		return z
+	}
+	return "94104"
+}
+
 // ConstructEbaySearchURL builds an eBay search URL with filters for used items.
 // The price range is set to 25%-100% of the desired price to find comparable used listings.
 //
@@ -32,12 +43,19 @@ import (
 //
 // Returns the constructed eBay search URL.
 func ConstructEbaySearchURL(Name string, newPrice int) string {
-	baseURL := "https://www.ebay.com/sch/i.html?_nkw="
-	usedQuery := "&LH_ItemCondition=3000|2030|2020|2010|2000|1500|1000"
-	priceQuery := fmt.Sprintf("_udlo=%d&rt=nc&_udhi=%d", int(float64(newPrice)*float64(0.25)), newPrice)
-	noAuction := "&LH_ALL=1"
-	location := "&_stpos=94104&_fcid=1"
-	return baseURL + url.PathEscape(Name) + usedQuery + noAuction + location + priceQuery
+	q := url.Values{}
+	q.Set("_nkw", Name)
+	q.Set("LH_ItemCondition", "3000|2030|2020|2010|2000|1500|1000")
+	q.Set("LH_ALL", "1")
+	q.Set("rt", "nc")
+	q.Set("_udlo", strconv.Itoa(int(float64(newPrice)*0.25)))
+	q.Set("_udhi", strconv.Itoa(newPrice))
+	q.Set("_ipg", "240")
+	if zip := EbayZipCode(); zip != "" && !strings.EqualFold(zip, "none") {
+		q.Set("_stpos", zip)
+		q.Set("_fcid", "1")
+	}
+	return "https://www.ebay.com/sch/i.html?" + q.Encode()
 }
 
 // GetEbayListings retrieves eBay listings matching the search criteria.
@@ -280,12 +298,16 @@ func EbayFailover(url string, desiredPrice int, Name string, proxy []string,
 	var first []byte
 	var rawHTML string
 
+	// Step 7: stealth init persists across Navigate; wait for the real
+	// results selector instead of fixed 10s+7s sleeps (less hold time on
+	// a flagged IP, faster return on success).
 	err := chromedp.Run(ctx,
 		StealthActions(url),
 		chromedp.Navigate(url),
-		chromedp.Sleep(10*time.Second),
+		chromedp.Sleep(time.Duration(rand.IntN(3)+2)*time.Second),
+		chromedp.WaitVisible("ul.srp-results > li, ul.srp-results", chromedp.ByQuery),
 		chromedp.FullScreenshot(&first, 70),
-		chromedp.Sleep(7*time.Second),
+		chromedp.Sleep(time.Duration(rand.IntN(2)+1)*time.Second),
 		chromedp.OuterHTML("html", &rawHTML),
 	)
 	cancel()

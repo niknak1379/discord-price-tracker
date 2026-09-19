@@ -16,11 +16,11 @@ import (
 )
 
 func depopURLGenerator(Name string, price int) string {
-	base := "https://www.depop.com/search/?q="
-	Name = url.PathEscape(Name)
-	Price := fmt.Sprintf("&_suggestion-type=recent&priceMax=%d", price)
-
-	return base + Name + Price
+	q := url.Values{}
+	q.Set("q", Name)
+	q.Set("_suggestion-type", "recent")
+	q.Set("priceMax", fmt.Sprintf("%d", price))
+	return "https://www.depop.com/search/?" + q.Encode()
 }
 
 // CrawlDepop retrieves clothing listings from Depop.

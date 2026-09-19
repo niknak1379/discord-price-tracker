@@ -7,6 +7,7 @@ services:
       - .env
     environment:
       - PROXY_URL_LIST=gluetun,gluetun2,gluetun3
+      - EBAY_ZIP=${EBAY_ZIP:-94104}
       - APPLICATION_ID=${APPLICATION_ID}
       - PUBLIC_KEY=${PUBLIC_KEY}
       - MONGODB_URI=${MONGODB_URI}
@@ -45,6 +46,9 @@ services:
       - OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
       - FREE_ONLY=on
       - SERVER_COUNTRIES=United States
+      # Step 5: pin exit city to match EBAY_ZIP (default 94104 = San Francisco).
+      # Set PROTON_CITY / MULLVAD_CITY in .env if you change EBAY_ZIP.
+      - SERVER_CITIES=${PROTON_CITY:-San Francisco}
       - HTTPPROXY=on
       - UPDATER_PERIOD=12h
       - HTTPPROXY_STEALTH=on
@@ -64,10 +68,13 @@ services:
     environment:
       - VPN_SERVICE_PROVIDER=mullvad
       - VPN_TYPE=wireguard
+      # gluetun2 uses your existing key pair.
       - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
       - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
       - SERVER_COUNTRIES=USA
+      - SERVER_CITIES=${MULLVAD_CITY:-San Francisco}
       - HTTPPROXY=on
+      - HTTPPROXY_STEALTH=on
       - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"none"}
     logging:
       driver: json-file
@@ -84,10 +91,14 @@ services:
     environment:
       - VPN_SERVICE_PROVIDER=mullvad
       - VPN_TYPE=wireguard
-      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
-      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
+      # gluetun3 MUST use a different device/key than gluetun2.
+      # Generate a 2nd key in Mullvad and set these in .env.
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY_2}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES_2}
       - SERVER_COUNTRIES=USA
+      - SERVER_CITIES=${MULLVAD_CITY:-San Francisco}
       - HTTPPROXY=on
+      - HTTPPROXY_STEALTH=on
       - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"none"}
     logging:
       driver: json-file
